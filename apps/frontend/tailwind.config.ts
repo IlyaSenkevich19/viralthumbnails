@@ -36,6 +36,15 @@ const config: Config = {
         premium: "0 25px 50px -12px rgba(0,0,0,0.35)",
         soft: "0 10px 30px -15px rgba(0,0,0,0.35)",
       },
+      keyframes: {
+        shimmer: {
+          "0%": { transform: "translateX(-100%)" },
+          "100%": { transform: "translateX(100%)" },
+        },
+      },
+      animation: {
+        shimmer: "shimmer 1.5s ease-in-out infinite",
+      },
       backgroundImage: {
         accent: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
       },

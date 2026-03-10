@@ -5,7 +5,7 @@ export interface CampaignInput {
   keywords: string[];
   subreddits: string[];
   score_threshold?: number;
-  project_id?: number | null;
+  project_id: number; // required: campaign belongs to a project (User → Projects → Campaigns → Leads)
 }
 
 export async function listCampaigns(projectId?: number | null) {
@@ -38,7 +38,7 @@ export async function createCampaign(row: CampaignInput) {
       keywords: row.keywords,
       subreddits: row.subreddits,
       score_threshold: row.score_threshold ?? 80,
-      project_id: row.project_id ?? null,
+      project_id: row.project_id,
     })
     .select()
     .single();

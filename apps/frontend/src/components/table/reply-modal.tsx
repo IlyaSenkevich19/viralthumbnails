@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Copy, X } from 'lucide-react';
@@ -25,20 +26,22 @@ export function ReplyModal({ reply, onClose }: { reply: string; onClose: () => v
     setTimeout(() => setCopied(false), 2000);
   }
 
-  return (
-    <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="reply-modal-title"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <Card
-        className="max-w-2xl w-full max-h-[80vh] flex flex-col"
-        onMouseDown={(e) => e.stopPropagation()}
-      >
+  return typeof document === 'undefined'
+    ? null
+    : createPortal(
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm overflow-y-auto"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="reply-modal-title"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) onClose();
+          }}
+        >
+          <Card
+            className="max-w-2xl w-full max-h-[calc(100vh-3rem)] flex flex-col my-6 mx-4 shrink-0 rounded-2xl border border-slate-200/80 shadow-xl"
+            onMouseDown={(e) => e.stopPropagation()}
+          >
         <CardHeader className="flex flex-row items-center justify-between">
           <h3 id="reply-modal-title" className="font-semibold">
             AI Reply Draft
@@ -56,6 +59,7 @@ export function ReplyModal({ reply, onClose }: { reply: string; onClose: () => v
           <p className="text-sm whitespace-pre-wrap">{reply}</p>
         </CardContent>
       </Card>
-    </div>
+    </div>,
+    document.body,
   );
 }

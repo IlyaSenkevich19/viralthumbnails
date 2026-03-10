@@ -12,13 +12,16 @@ import {
   LayoutDashboard,
   Megaphone,
   Settings,
-  ChevronUpDown,
+  ChevronsUpDown,
   Plus,
   Zap,
   MessageSquare,
   LogOut,
   MoreVertical,
-  Leaf,
+  Folder,
+  Search,
+  AtSign,
+  Archive,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { authApi } from '@/lib/api';
@@ -27,7 +30,11 @@ import { useRouter } from 'next/navigation';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/searchbox', label: 'Searchbox', icon: Search },
   { href: '/campaigns', label: 'Campaigns', icon: Megaphone },
+  { href: '/leads', label: 'Leads', icon: MessageSquare },
+  { href: '/mentions', label: 'Mentions', icon: AtSign },
+  { href: '/archive', label: 'Archive', icon: Archive },
   { href: '/settings', label: 'Settings', icon: Settings },
 ];
 
@@ -56,10 +63,12 @@ function SidebarProjectSelector() {
     return (
       <Link
         href="/new-project/website"
-        className="flex items-center gap-2 rounded-xl border border-orange-200 bg-orange-50/80 px-3 py-2.5 text-sm font-medium text-orange-700 hover:bg-orange-100 transition-colors"
+        className="flex items-center gap-2.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-100 hover:border-slate-300 transition-colors"
       >
-        <Plus className="h-4 w-4 shrink-0" />
-        New project
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-orange-500 to-red-500 text-white">
+          <Plus className="h-4 w-4" />
+        </span>
+        <span>New project</span>
       </Link>
     );
   }
@@ -69,21 +78,26 @@ function SidebarProjectSelector() {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-left text-sm font-medium text-slate-800 shadow-sm hover:border-slate-300 transition-colors"
+        className="flex w-full items-center gap-2.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-left shadow-sm hover:bg-slate-100 hover:border-slate-300 transition-colors"
         aria-expanded={open}
         aria-haspopup="listbox"
       >
-        <span className="flex h-6 w-6 items-center justify-center rounded-md bg-emerald-100 text-emerald-600">
-          <Leaf className="h-3.5 w-3.5" />
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-orange-500 to-red-500 text-white shadow-sm">
+          <Folder className="h-3.5 w-3.5 text-white" />
         </span>
-        <span className="min-w-0 flex-1 truncate">{current?.name ?? 'Select project'}</span>
-        <ChevronUpDown className="h-4 w-4 shrink-0 text-slate-400" />
+        <span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-800">
+          {current?.name ?? 'Select project'}
+        </span>
+        <ChevronsUpDown className="h-4 w-4 shrink-0 text-slate-400" />
       </button>
       {open && (
         <div
-          className="absolute left-0 right-0 top-full z-50 mt-1 rounded-xl border border-slate-200 bg-white py-1 shadow-lg"
+          className="absolute left-0 right-0 top-full z-50 mt-1.5 min-w-[200px] rounded-xl border border-slate-200 bg-white py-2 shadow-lg"
           role="listbox"
         >
+          <p className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
+            Projects
+          </p>
           {projects.map((p) => (
             <button
               key={p.id}
@@ -95,21 +109,35 @@ function SidebarProjectSelector() {
                 setOpen(false);
               }}
               className={cn(
-                'flex w-full items-center gap-2 px-3 py-2 text-left text-sm',
-                p.id === projectId ? 'bg-orange-50 font-medium text-orange-800' : 'hover:bg-slate-50',
+                'flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm',
+                p.id === projectId
+                  ? 'bg-orange-50 font-medium text-orange-800'
+                  : 'text-slate-700 hover:bg-slate-50',
               )}
             >
+              <span
+                className={cn(
+                  'flex h-6 w-6 shrink-0 items-center justify-center rounded-md',
+                  p.id === projectId
+                    ? 'bg-gradient-to-br from-orange-500 to-red-500 text-white shadow-sm'
+                    : 'bg-slate-100 text-slate-600',
+                )}
+              >
+                <Folder className="h-3 w-3" />
+              </span>
               <span className="truncate">{p.name}</span>
             </button>
           ))}
-          <div className="my-1 border-t border-slate-100" />
+          <div className="my-1.5 border-t border-slate-100" />
           <Link
             href="/new-project/website"
-            className="flex w-full items-center gap-2 px-3 py-2 text-sm text-orange-600 hover:bg-orange-50"
+            className="flex w-full items-center gap-2.5 px-3 py-2.5 text-sm text-slate-600 hover:bg-slate-50 rounded-b-xl"
             onClick={() => setOpen(false)}
           >
-            <Plus className="h-4 w-4" />
-            New project
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-dashed border-slate-300 text-slate-400">
+              <Plus className="h-3.5 w-3.5" />
+            </span>
+            <span className="font-medium">New project</span>
           </Link>
         </div>
       )}
@@ -177,7 +205,7 @@ function SidebarUserBlock() {
   );
 }
 
-export function Sidebar({ onNewCampaign, inDrawer }: { onNewCampaign?: () => void; inDrawer?: boolean }) {
+export function Sidebar({ onNewCampaign, inDrawer, onClose }: { onNewCampaign?: () => void; inDrawer?: boolean; onClose?: () => void }) {
   const pathname = usePathname();
   const { projectId } = useProject();
   const { data: stats } = useDashboardStats(projectId);
@@ -187,8 +215,8 @@ export function Sidebar({ onNewCampaign, inDrawer }: { onNewCampaign?: () => voi
   return (
     <aside
       className={cn(
-        'flex h-full w-72 shrink-0 flex-col border-r border-slate-200 bg-white/95 shadow-sm',
-        inDrawer ? 'border-0' : 'hidden lg:flex',
+        'flex h-full min-h-screen w-72 shrink-0 flex-col border-r border-slate-200 bg-white shadow-sm',
+        inDrawer ? 'border-0 min-h-0' : 'hidden lg:flex',
       )}
     >
       {/* Top: logo */}
@@ -216,6 +244,7 @@ export function Sidebar({ onNewCampaign, inDrawer }: { onNewCampaign?: () => voi
             <Link
               key={href}
               href={href}
+              onClick={inDrawer ? onClose : undefined}
               className={cn(
                 'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors',
                 pathname.startsWith(href)

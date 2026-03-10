@@ -1,18 +1,18 @@
-# Reddit LeadGen SaaS
+# Reddit Community Insights
 
-AI-powered Reddit lead generation. **Hybrid architecture**: Supabase (Auth + DB + CRUD) + NestJS (Reddit scanner + AI).
+Full-stack app for monitoring Reddit: **Supabase** (Auth + DB) + **NestJS** (Reddit API + optional AI).
 
 ## Architecture
 
 ```
 Frontend (Next.js)
-  ├→ Supabase REST (campaigns, leads) — direct, 0 backend
-  └→ NestJS API (scan-now, AI score/reply)
+  ├→ Supabase REST (campaigns, data) — direct
+  └→ NestJS API (scan, AI)
 
 NestJS Backend
   ├→ Reddit API (snoowrap, cron hourly)
-  ├→ OpenAI (scoring + reply)
-  └→ Supabase (insert leads via service_role)
+  ├→ OpenAI (optional)
+  └→ Supabase (service_role)
 
 Supabase
   ├→ Postgres + RLS
@@ -66,12 +66,12 @@ yarn dev:frontend  # :3000 (перед стартом синхронизируе
 
 **Supabase REST** (direct from frontend):
 - `campaigns` — CRUD via Supabase client
-- `leads` — SELECT via Supabase client (RLS)
+- App data — SELECT via Supabase client (RLS)
 
-**NestJS** (heavy jobs):
-- `POST /api/reddit/scan-now` — manual scan trigger
-- `POST /api/ai/score-lead` — rescore lead (Bearer token)
-- `POST /api/ai/generate-reply-lead` — AI reply (Bearer token)
+**NestJS**:
+- `POST /api/reddit/scan-now` — manual scan
+- `POST /api/ai/score-lead` — (Bearer token)
+- `POST /api/ai/generate-reply-lead` — (Bearer token)
 - `GET /api/jobs/status` — service status
 
 ## Reddit API

@@ -1,4 +1,4 @@
-# Reddit LeadGen — Frontend
+# Frontend
 
 Next.js 14 App Router + Supabase Auth + shadcn/ui.
 

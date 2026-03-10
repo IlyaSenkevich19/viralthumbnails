@@ -33,8 +33,7 @@ export class RedditService implements OnModuleInit {
 
     if (clientId && clientSecret && refreshToken) {
       this.client = new Snoowrap({
-        // Neutral UA: avoid "leadgen" wording (Reddit may auto-reject)
-        userAgent: 'RedditResearchTool/1.0 (B2B community insights)',
+        userAgent: 'CommunityInsights/1.0',
         clientId,
         clientSecret,
         refreshToken,
@@ -84,8 +83,6 @@ export class RedditService implements OnModuleInit {
     return { processed: campaigns.length, leadsAdded };
   }
 
-  // Stay under ~100 Reddit API requests/hour to avoid throttle/ban.
-  // Runs hourly; each run = 1 request per subreddit per campaign.
   @Cron('0 * * * *')
   async handleCronScan() {
     if (!this.client) return;

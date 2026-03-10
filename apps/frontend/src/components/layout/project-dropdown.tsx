@@ -22,7 +22,6 @@ export function ProjectDropdown() {
     return () => document.removeEventListener('mousedown', onOutside);
   }, []);
 
-  // Auto-select first project when none selected but projects exist
   useEffect(() => {
     if (projectId === null && projects.length > 0) {
       setProjectId(projects[0].id);

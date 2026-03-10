@@ -74,11 +74,10 @@ yarn dev:frontend  # :3000 (перед стартом синхронизируе
 - `POST /api/ai/generate-reply-lead` — AI reply (Bearer token)
 - `GET /api/jobs/status` — service status
 
-## Reddit API (compliance)
+## Reddit API
 
-- **Cron**: scan runs **hourly** to stay under ~100 Reddit API requests/hour and avoid throttle/ban.
-- **User-Agent**: neutral (`RedditResearchTool/1.0`); no "leadgen" wording.
-- **When applying for API access**: do **not** use "lead generation" in the description (auto-reject). Use e.g. "B2B community insights", "market research", "discovery of high-intent discussions in public subreddits". Read-only, no automated posting.
+- **Cron**: hourly.
+- **User-Agent**: `CommunityInsights/1.0`.
 
 ## Deploy
 

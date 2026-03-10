@@ -36,7 +36,6 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // If authenticated user has no projects and no campaigns, send to onboarding.
   if (user && request.nextUrl.pathname === '/dashboard') {
     const [
       { count: projectsCount },

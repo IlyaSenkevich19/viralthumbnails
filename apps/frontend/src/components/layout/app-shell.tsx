@@ -12,7 +12,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [showCreateCampaign, setShowCreateCampaign] = useState(false);
 
-  // Sync ?project= from URL into context (e.g. after onboarding redirect)
   useEffect(() => {
     const fromUrl = searchParams.get('project');
     if (fromUrl) {

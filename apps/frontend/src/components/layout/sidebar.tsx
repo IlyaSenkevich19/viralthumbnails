@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, type ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { siteName } from '@/config/site';
@@ -14,6 +14,8 @@ import {
   Settings,
   LogOut,
   MoreVertical,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { useSignOutMutation } from '@/lib/hooks';
 import { toast } from 'sonner';
@@ -27,12 +29,48 @@ const navItems = [
   { href: '/settings', label: 'Settings', icon: Settings },
 ];
 
-function SidebarUserBlock() {
+function SidebarSlidingLabel({
+  show,
+  children,
+  className,
+  maxWidthClass = 'max-w-[13rem]',
+  collapseHeight = true,
+}: {
+  show: boolean;
+  children: ReactNode;
+  className?: string;
+  maxWidthClass?: string;
+  collapseHeight?: boolean;
+}) {
+  return (
+    <span
+      className={cn(
+        'block min-w-0 overflow-hidden transition-[max-width,max-height] duration-300 ease-[var(--ease-standard)]',
+        show ? cn(maxWidthClass, collapseHeight && 'max-h-24') : 'max-w-0',
+        !show && collapseHeight && 'max-h-0',
+        className,
+      )}
+      aria-hidden={!show}
+    >
+      <span
+        className={cn(
+          'inline-block whitespace-nowrap transition-[transform,opacity] duration-300 ease-[var(--ease-standard)]',
+          show ? 'translate-x-0 opacity-100 delay-[55ms]' : 'translate-x-full opacity-0',
+        )}
+      >
+        {children}
+      </span>
+    </span>
+  );
+}
+
+function SidebarUserBlock({ collapsed, inDrawer }: { collapsed: boolean; inDrawer: boolean }) {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const signOut = useSignOutMutation();
+  const compact = collapsed && !inDrawer;
 
   useEffect(() => {
     if (!ref.current) return;
@@ -67,20 +105,38 @@ function SidebarUserBlock() {
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="motion-base flex w-full items-center gap-3 rounded-xl px-2 py-2.5 text-left hover:bg-secondary"
+        title={compact ? `${displayName} — ${email}` : undefined}
+        className={cn(
+          'motion-base flex w-full items-center gap-3 rounded-xl py-2.5 text-left hover:bg-secondary',
+          compact ? 'justify-center px-0' : 'px-2',
+        )}
         aria-expanded={open}
       >
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-medium text-white">
           {displayName.charAt(0).toUpperCase()}
         </span>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium text-foreground">{displayName}</p>
-          <p className="truncate text-xs text-muted-foreground">{email}</p>
-        </div>
-        <MoreVertical className="h-4 w-4 shrink-0 text-muted-foreground" />
+        <SidebarSlidingLabel
+          show={!compact}
+          maxWidthClass="max-w-[min(12rem,calc(100vw-8rem))]"
+          className={cn(!compact && 'min-w-0 flex-1')}
+        >
+          <span className="flex min-w-0 items-center gap-2">
+            <span className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium text-foreground">{displayName}</p>
+              <p className="truncate text-xs text-muted-foreground">{email}</p>
+            </span>
+            <MoreVertical className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+          </span>
+        </SidebarSlidingLabel>
+        {compact && <span className="sr-only">{displayName}</span>}
       </button>
       {open && (
-        <div className="absolute bottom-full left-0 right-0 z-50 mb-1 rounded-xl border border-border bg-card py-1 shadow-soft">
+        <div
+          className={cn(
+            'absolute z-50 rounded-xl border border-border bg-card py-1 shadow-soft',
+            compact ? 'bottom-full left-0 mb-1 w-48' : 'bottom-full left-0 right-0 mb-1',
+          )}
+        >
           <button
             type="button"
             onClick={handleSignOut}
@@ -96,9 +152,20 @@ function SidebarUserBlock() {
   );
 }
 
-export function Sidebar({ inDrawer, onClose }: { inDrawer?: boolean; onClose?: () => void }) {
+export function Sidebar({
+  inDrawer,
+  onClose,
+  collapsed = false,
+  onToggleCollapsed,
+}: {
+  inDrawer?: boolean;
+  onClose?: () => void;
+  collapsed?: boolean;
+  onToggleCollapsed?: () => void;
+}) {
   const pathname = usePathname();
   const [pendingHref, setPendingHref] = useState<string | null>(null);
+  const compact = collapsed && !inDrawer;
 
   useEffect(() => {
     setPendingHref(null);
@@ -109,46 +176,111 @@ export function Sidebar({ inDrawer, onClose }: { inDrawer?: boolean; onClose?: (
   return (
     <aside
       className={cn(
-        'flex h-full min-h-screen w-72 shrink-0 flex-col border-r border-border bg-sidebar',
-        inDrawer ? 'border-0 min-h-0' : 'hidden lg:flex',
+        'relative flex h-full min-h-screen shrink-0 flex-col border-r border-border bg-sidebar',
+        'transition-[width] duration-300 ease-[var(--ease-standard)]',
+        inDrawer ? 'w-full min-h-0 border-0' : 'z-10 hidden lg:flex',
+        !inDrawer && (compact ? 'w-[4.5rem]' : 'w-72'),
       )}
     >
-      <div className="p-4 pb-3">
-        <Link href="/dashboard" className="flex items-center gap-2">
-          <div className="h-9 w-9 rounded-xl bg-primary shadow-md shadow-primary/25" />
-          <span className="text-base font-semibold tracking-tight text-foreground">{siteName}</span>
+      {!inDrawer && onToggleCollapsed && (
+        <button
+          type="button"
+          onClick={onToggleCollapsed}
+          title={compact ? 'Expand sidebar' : 'Collapse sidebar'}
+          aria-label={compact ? 'Expand sidebar' : 'Collapse sidebar'}
+          className={cn(
+            'absolute left-full top-[2.85rem] z-[60] -translate-x-1/2',
+            'group flex h-7 w-7 shrink-0 items-center justify-center rounded-full',
+            'border border-border bg-sidebar/95 text-muted-foreground',
+            'shadow-[0_4px_24px_-6px_rgba(0,0,0,0.55),0_2px_8px_-2px_rgba(0,0,0,0.35)]',
+            'backdrop-blur-md',
+            'motion-base',
+            'hover:border-border-hover hover:bg-card hover:text-foreground',
+            'hover:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.6),0_4px_12px_-4px_rgba(0,0,0,0.4)]',
+            'active:scale-[0.94]',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--sidebar)]',
+          )}
+        >
+          <span
+            className="pointer-events-none absolute inset-0 rounded-full opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+            style={{
+              background:
+                'radial-gradient(120% 120% at 30% 20%, rgba(255,59,59,0.14), transparent 55%)',
+            }}
+            aria-hidden
+          />
+          {compact ? (
+            <ChevronRight
+              className="relative h-3.5 w-3.5 transition-transform duration-300 ease-[var(--ease-standard)] group-hover:translate-x-px"
+              strokeWidth={2.25}
+              aria-hidden
+            />
+          ) : (
+            <ChevronLeft
+              className="relative h-3.5 w-3.5 transition-transform duration-300 ease-[var(--ease-standard)] group-hover:-translate-x-px"
+              strokeWidth={2.25}
+              aria-hidden
+            />
+          )}
+        </button>
+      )}
+
+      <div className={cn('overflow-x-hidden p-4 pb-3', compact && 'px-2')}>
+        <Link
+          href="/dashboard"
+          className={cn('flex items-center gap-2', compact && 'justify-center')}
+          title={compact ? siteName : undefined}
+        >
+          <div className="h-9 w-9 shrink-0 rounded-xl bg-primary shadow-md shadow-primary/25" />
+          <SidebarSlidingLabel show={!compact} maxWidthClass="max-w-[11rem]" className="text-left">
+            <span className="block truncate text-base font-semibold tracking-tight text-foreground">
+              {siteName}
+            </span>
+          </SidebarSlidingLabel>
+          {compact && <span className="sr-only">{siteName}</span>}
         </Link>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-3 pb-4">
-        <p className="mb-2 px-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-          Menu
-        </p>
-        <nav className="space-y-0.5">
-          {navItems.map(({ href, label, icon: Icon }) => (
-            <Link
-              key={href}
-              href={href}
-              onClick={() => {
-                setPendingHref(href);
-                if (inDrawer) onClose?.();
-              }}
-              className={cn(
-                'motion-base flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                effectivePath === href || (href !== '/dashboard' && effectivePath.startsWith(`${href}/`))
-                  ? 'bg-secondary text-foreground'
-                  : 'text-muted-foreground hover:bg-card hover:text-foreground',
-              )}
-            >
-              <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
-              {label}
-            </Link>
-          ))}
+      <div className="flex-1 overflow-y-auto overflow-x-hidden px-3 pb-4 pt-1">
+        <nav className={cn('flex flex-col', compact ? 'items-center gap-1' : 'space-y-0.5')}>
+          {navItems.map(({ href, label, icon: Icon }) => {
+            const active =
+              effectivePath === href ||
+              (href !== '/dashboard' && effectivePath.startsWith(`${href}/`));
+            return (
+              <Link
+                key={href}
+                href={href}
+                title={compact ? label : undefined}
+                onClick={() => {
+                  setPendingHref(href);
+                  if (inDrawer) onClose?.();
+                }}
+                className={cn(
+                  'motion-base flex items-center text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                  compact
+                    ? 'size-10 shrink-0 justify-center rounded-xl p-0'
+                    : 'gap-3 rounded-xl px-3 py-2.5',
+                  active
+                    ? 'bg-secondary text-foreground'
+                    : 'text-muted-foreground hover:bg-card hover:text-foreground',
+                )}
+              >
+                <Icon className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+                {!compact && (
+                  <SidebarSlidingLabel show maxWidthClass="max-w-[12rem]" className="min-w-0 flex-1 text-left">
+                    {label}
+                  </SidebarSlidingLabel>
+                )}
+                {compact && <span className="sr-only">{label}</span>}
+              </Link>
+            );
+          })}
         </nav>
       </div>
 
-      <div className="border-t border-border p-3">
-        <SidebarUserBlock />
+      <div className="mt-auto border-t border-border p-3">
+        <SidebarUserBlock collapsed={collapsed} inDrawer={!!inDrawer} />
       </div>
     </aside>
   );

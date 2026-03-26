@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ImageIcon, Sparkles } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
+import { useNewProject } from '@/contexts/new-project-context';
 import { useProjectsList } from '@/lib/hooks';
 import { humanizeKey } from '@/lib/format';
 import { statusToneClass } from '@/lib/status-tone';
@@ -15,6 +16,25 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+
+/** Opens new-project modal when user lands from /projects/new (middleware adds ?openNewProject=1). */
+function DashboardOpenNewProjectFromUrl() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const { openNewProject } = useNewProject();
+
+  useEffect(() => {
+    if (searchParams.get('openNewProject') !== '1') return;
+    const q: Record<string, string> = {};
+    searchParams.forEach((v, k) => {
+      if (k !== 'openNewProject') q[k] = v;
+    });
+    openNewProject(q);
+    router.replace('/dashboard');
+  }, [searchParams, openNewProject, router]);
+
+  return null;
+}
 
 function ProjectCardSkeleton() {
   return (
@@ -30,7 +50,7 @@ function ProjectCardSkeleton() {
 
 export function DashboardClient() {
   const { user, accessToken, isLoading: authLoading } = useAuth();
-  const router = useRouter();
+  const { openNewProject } = useNewProject();
   const [url, setUrl] = useState('');
   const { data: projects = [], isPending, isError, error } = useProjectsList();
 
@@ -44,12 +64,14 @@ export function DashboardClient() {
         : null;
 
   function goCreate(extra?: Record<string, string>) {
-    const q = new URLSearchParams(extra);
-    router.push(`/projects/new${q.toString() ? `?${q}` : ''}`);
+    openNewProject(extra ?? {});
   }
 
   return (
     <div className="space-y-8">
+      <Suspense fallback={null}>
+        <DashboardOpenNewProjectFromUrl />
+      </Suspense>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight text-foreground">Dashboard</h1>

@@ -3,7 +3,6 @@ import type {
   ProjectRow,
   ProjectSourceType,
   ProjectWithVariants,
-  ThumbnailVariantRow,
 } from '@/lib/types/project';
 import { fetchJson } from './fetch-json';
 
@@ -42,11 +41,4 @@ export async function generateThumbnails(
     method: 'POST',
     body: JSON.stringify(options ?? {}),
   });
-}
-
-export async function listVariants(
-  token: string | null,
-  projectId: string,
-): Promise<ThumbnailVariantRow[]> {
-  return fetchJson<ThumbnailVariantRow[]>(`/projects/${projectId}/variants`, token);
 }

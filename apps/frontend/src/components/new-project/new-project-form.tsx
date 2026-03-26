@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { useCreateProjectAndGenerateMutation } from '@/lib/hooks';
 import type { ProjectSourceType } from '@/lib/types/project';
@@ -14,24 +14,29 @@ import { tabs } from './constants';
 import type { Tab } from './types';
 import { tabFromSearchParams } from './utils';
 
-export function NewProjectForm() {
+export type NewProjectFormProps = {
+  initialQuery?: Record<string, string>;
+  onRequestClose?: () => void;
+};
+
+export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { accessToken } = useAuth();
   const createAndGenerate = useCreateProjectAndGenerateMutation();
 
-  const [tab, setTab] = useState<Tab>(() => tabFromSearchParams(searchParams));
+  const sp = useMemo(() => new URLSearchParams(initialQuery ?? {}), [initialQuery]);
+
+  const [tab, setTab] = useState<Tab>(() => tabFromSearchParams(sp));
   const [title, setTitle] = useState('');
-  const [youtubeUrl, setYoutubeUrl] = useState(() => searchParams.get('youtube_url') ?? '');
+  const [youtubeUrl, setYoutubeUrl] = useState(() => sp.get('youtube_url') ?? '');
   const [script, setScript] = useState('');
   const [text, setText] = useState('');
   const [videoName, setVideoName] = useState<string | null>(null);
 
   useEffect(() => {
-    setTab(tabFromSearchParams(searchParams));
-    const y = searchParams.get('youtube_url');
-    if (y) setYoutubeUrl(y);
-  }, [searchParams]);
+    setTab(tabFromSearchParams(sp));
+    setYoutubeUrl(sp.get('youtube_url') ?? '');
+  }, [sp]);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -102,6 +107,7 @@ export function NewProjectForm() {
           } else {
             toast.warning(`${ok} of ${total} thumbnails ready; some failed.`, { id: toastId });
           }
+          onRequestClose?.();
           router.push(`/projects/${project.id}/variants`);
           router.refresh();
         },
@@ -114,19 +120,12 @@ export function NewProjectForm() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground">New project</h1>
-        <p className="text-sm text-muted-foreground">
-          Choose a source, then we&apos;ll create variants you can download or refine.
-        </p>
-      </div>
-
-      <Card>
-        <CardHeader className="pb-2">
+    <div className="space-y-0">
+      <Card className="border-0 bg-transparent shadow-none ring-0 hover:border-transparent hover:shadow-none">
+        <CardHeader className="px-0 pb-2 pt-0">
           <CardTitle className="text-base">Source</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-0 pb-0">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div
               className="flex flex-wrap gap-2"
@@ -145,6 +144,7 @@ export function NewProjectForm() {
                     tab === id
                       ? 'border-primary bg-primary/10 text-foreground'
                       : 'border-border bg-card text-muted-foreground hover:border-border-hover hover:text-foreground',
+                    tab !== id && 'bg-background/60',
                   )}
                 >
                   {label}

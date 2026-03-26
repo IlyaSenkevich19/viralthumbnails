@@ -5,10 +5,10 @@ import { siteName } from '@/config/site';
 import { cn } from '@/lib/utils';
 
 export function HeaderShell({
-  onMenuClick,
+  onMobileMenuClick,
   className,
 }: {
-  onMenuClick?: () => void;
+  onMobileMenuClick?: () => void;
   className?: string;
 }) {
   return (
@@ -24,8 +24,8 @@ export function HeaderShell({
       </div>
       <button
         type="button"
-        onClick={onMenuClick}
-        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border text-muted-foreground motion-base hover:border-border-hover hover:bg-secondary hover:text-foreground focus-ring lg:hidden"
+        onClick={onMobileMenuClick}
+        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border text-muted-foreground motion-base hover:border-border-hover hover:bg-secondary hover:text-foreground focus-ring"
         aria-label="Open menu"
       >
         <Menu className="h-4 w-4" />

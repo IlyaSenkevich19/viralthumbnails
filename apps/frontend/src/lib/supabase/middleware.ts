@@ -36,22 +36,5 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (user && request.nextUrl.pathname === '/dashboard') {
-    const [
-      { count: projectsCount },
-      { count: campaignsCount },
-    ] = await Promise.all([
-      supabase.from('projects').select('id', { head: true, count: 'exact' }),
-      supabase.from('campaigns').select('id', { head: true, count: 'exact' }),
-    ]);
-    const hasProjects = (projectsCount ?? 0) > 0;
-    const hasCampaigns = (campaignsCount ?? 0) > 0;
-    if (!hasProjects && !hasCampaigns) {
-      const url = request.nextUrl.clone();
-      url.pathname = '/new-project/website';
-      return NextResponse.redirect(url);
-    }
-  }
-
   return response;
 }

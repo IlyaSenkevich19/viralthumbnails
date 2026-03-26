@@ -3,146 +3,18 @@
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useProject } from '@/contexts/project-context';
-import { useProjects } from '@/lib/queries';
+import { siteName } from '@/config/site';
 import { useAuth } from '@/contexts/auth-context';
 import { cn } from '@/lib/utils';
-import {
-  LayoutDashboard,
-  Megaphone,
-  Settings,
-  ChevronsUpDown,
-  Plus,
-  Zap,
-  MessageSquare,
-  LogOut,
-  MoreVertical,
-  Folder,
-  Search,
-  AtSign,
-  Archive,
-} from 'lucide-react';
+import { LayoutDashboard, Settings, LogOut, MoreVertical } from 'lucide-react';
 import { authApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/opportunities', label: 'New Opportunities', icon: Zap },
-  { href: '/searchbox', label: 'Searchbox', icon: Search },
-  { href: '/campaigns', label: 'Campaigns', icon: Megaphone },
-  { href: '/leads', label: 'Leads', icon: MessageSquare },
-  { href: '/mentions', label: 'Mentions', icon: AtSign },
-  { href: '/archive', label: 'Archive', icon: Archive },
   { href: '/settings', label: 'Settings', icon: Settings },
 ];
-
-function SidebarProjectSelector() {
-  const { projectId, setProjectId } = useProject();
-  const { data: projects = [], isLoading } = useProjects();
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!ref.current) return;
-    const onOutside = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('mousedown', onOutside);
-    return () => document.removeEventListener('mousedown', onOutside);
-  }, []);
-
-  useEffect(() => {
-    if (projectId === null && projects.length > 0) setProjectId(projects[0].id);
-  }, [projects, projectId, setProjectId]);
-
-  const current = projects.find((p) => p.id === projectId);
-
-  if (isLoading || projects.length === 0) {
-    return (
-      <Link
-        href="/new-project/website"
-        className="flex items-center gap-2.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-100 hover:border-slate-300 transition-colors"
-      >
-        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-orange-500 to-red-500 text-white">
-          <Plus className="h-4 w-4" />
-        </span>
-        <span>New project</span>
-      </Link>
-    );
-  }
-
-  return (
-    <div className="relative" ref={ref}>
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center gap-2.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-left shadow-sm hover:bg-slate-100 hover:border-slate-300 transition-colors"
-        aria-expanded={open}
-        aria-haspopup="listbox"
-      >
-        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-orange-500 to-red-500 text-white shadow-sm">
-          <Folder className="h-3.5 w-3.5 text-white" />
-        </span>
-        <span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-800">
-          {current?.name ?? 'Select project'}
-        </span>
-        <ChevronsUpDown className="h-4 w-4 shrink-0 text-slate-400" />
-      </button>
-      {open && (
-        <div
-          className="absolute left-0 right-0 top-full z-50 mt-1.5 min-w-[200px] rounded-xl border border-slate-200 bg-white py-2 shadow-lg"
-          role="listbox"
-        >
-          <p className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
-            Projects
-          </p>
-          {projects.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              role="option"
-              aria-selected={p.id === projectId}
-              onClick={() => {
-                setProjectId(p.id);
-                setOpen(false);
-              }}
-              className={cn(
-                'flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm',
-                p.id === projectId
-                  ? 'bg-orange-50 font-medium text-orange-800'
-                  : 'text-slate-700 hover:bg-slate-50',
-              )}
-            >
-              <span
-                className={cn(
-                  'flex h-6 w-6 shrink-0 items-center justify-center rounded-md',
-                  p.id === projectId
-                    ? 'bg-gradient-to-br from-orange-500 to-red-500 text-white shadow-sm'
-                    : 'bg-slate-100 text-slate-600',
-                )}
-              >
-                <Folder className="h-3 w-3" />
-              </span>
-              <span className="truncate">{p.name}</span>
-            </button>
-          ))}
-          <div className="my-1.5 border-t border-slate-100" />
-          <Link
-            href="/new-project/website"
-            className="flex w-full items-center gap-2.5 px-3 py-2.5 text-sm text-slate-600 hover:bg-slate-50 rounded-b-xl"
-            onClick={() => setOpen(false)}
-          >
-            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-dashed border-slate-300 text-slate-400">
-              <Plus className="h-3.5 w-3.5" />
-            </span>
-            <span className="font-medium">New project</span>
-          </Link>
-        </div>
-      )}
-    </div>
-  );
-}
 
 function SidebarUserBlock() {
   const { user } = useAuth();
@@ -180,7 +52,7 @@ function SidebarUserBlock() {
         className="flex w-full items-center gap-3 rounded-xl px-2 py-2.5 text-left hover:bg-slate-100 transition-colors"
         aria-expanded={open}
       >
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-red-500 text-white text-sm font-medium">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-slate-600 to-slate-800 text-white text-sm font-medium">
           {displayName.charAt(0).toUpperCase()}
         </span>
         <div className="min-w-0 flex-1">
@@ -204,11 +76,10 @@ function SidebarUserBlock() {
   );
 }
 
-export function Sidebar({ inDrawer, onClose }: { onNewCampaign?: () => void; inDrawer?: boolean; onClose?: () => void }) {
+export function Sidebar({ inDrawer, onClose }: { inDrawer?: boolean; onClose?: () => void }) {
   const pathname = usePathname();
   const [pendingHref, setPendingHref] = useState<string | null>(null);
 
-  // Clear optimistic state when pathname catches up or changes (e.g. browser back)
   useEffect(() => {
     setPendingHref(null);
   }, [pathname]);
@@ -222,25 +93,16 @@ export function Sidebar({ inDrawer, onClose }: { onNewCampaign?: () => void; inD
         inDrawer ? 'border-0 min-h-0' : 'hidden lg:flex',
       )}
     >
-      {/* Top: logo */}
       <div className="p-4 pb-3">
         <Link href="/dashboard" className="flex items-center gap-2">
-          <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-orange-500 to-red-500 shadow-sm" />
-          <span className="text-base font-semibold tracking-tight text-slate-900">
-            Reddit LeadGen
-          </span>
+          <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-slate-600 to-slate-900 shadow-sm" />
+          <span className="text-base font-semibold tracking-tight text-slate-900">{siteName}</span>
         </Link>
       </div>
 
-      {/* Project selector */}
-      <div className="px-4 pb-4">
-        <SidebarProjectSelector />
-      </div>
-
-      {/* Main menu */}
       <div className="flex-1 overflow-y-auto px-3 pb-4">
         <p className="mb-2 px-3 text-[11px] font-medium uppercase tracking-wider text-slate-400">
-          Main menu
+          Menu
         </p>
         <nav className="space-y-0.5">
           {navItems.map(({ href, label, icon: Icon }) => (
@@ -249,7 +111,7 @@ export function Sidebar({ inDrawer, onClose }: { onNewCampaign?: () => void; inD
               href={href}
               onClick={() => {
                 setPendingHref(href);
-                inDrawer && onClose?.();
+                if (inDrawer) onClose?.();
               }}
               className={cn(
                 'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors',
@@ -265,7 +127,6 @@ export function Sidebar({ inDrawer, onClose }: { onNewCampaign?: () => void; inD
         </nav>
       </div>
 
-      {/* User block */}
       <div className="border-t border-slate-100 p-3">
         <SidebarUserBlock />
       </div>

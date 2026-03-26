@@ -1,5 +1,5 @@
 {
-  "name": "reddit-leadgen",
+  "name": "fullstack-template",
   "private": true,
   "workspaces": [
     "apps/*"

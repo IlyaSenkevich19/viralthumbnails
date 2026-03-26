@@ -21,8 +21,8 @@ async function bootstrap() {
   });
 
   const config = new DocumentBuilder()
-    .setTitle('Reddit LeadGen API')
-    .setDescription('API for Reddit lead generation SaaS')
+    .setTitle('API')
+    .setDescription('NestJS API template (auth + health)')
     .setVersion('1.0')
     .addBearerAuth()
     .build();

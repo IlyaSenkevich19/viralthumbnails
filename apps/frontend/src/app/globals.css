@@ -3,32 +3,31 @@
 @tailwind utilities;
 
 :root {
-  /* Light theme (engain-like palette) */
-  --background: #fff6f2;
-  --foreground: #1f2933;
+  --background: #f8fafc;
+  --foreground: #0f172a;
 
   --card: #ffffff;
-  --card-foreground: #1f2933;
+  --card-foreground: #0f172a;
   --popover: #ffffff;
-  --popover-foreground: #1f2933;
+  --popover-foreground: #0f172a;
 
-  --primary: #f97316; /* orange */
-  --primary-foreground: #fff7ed;
-  --secondary: #ffe6d5;
-  --secondary-foreground: #7c2d12;
-  --muted: #ffe6d5;
-  --muted-foreground: #9a3412;
-  --accent: #ffedd5;
-  --accent-foreground: #7c2d12;
+  --primary: #334155;
+  --primary-foreground: #f8fafc;
+  --secondary: #e2e8f0;
+  --secondary-foreground: #1e293b;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --accent: #e2e8f0;
+  --accent-foreground: #1e293b;
 
   --success: #16a34a;
-  --score-high: #16a34a;
+
   --destructive: #dc2626;
   --destructive-foreground: #fef2f2;
 
-  --border: #fed7aa;
-  --input: #fed7aa;
-  --ring: rgba(248, 113, 22, 0.5);
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --ring: rgba(51, 65, 85, 0.35);
 }
 
 body {

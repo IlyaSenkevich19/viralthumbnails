@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
+import { siteName } from '@/config/site';
 import { AuthProvider } from '@/contexts/auth-context';
 import { QueryProvider } from '@/components/providers/query-provider';
 import { ThemeProvider } from '@/components/providers/theme-provider';
@@ -12,8 +13,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'Reddit LeadGen',
-  description: 'AI-powered Reddit lead generation for B2B SaaS',
+  title: siteName,
+  description: 'Next.js + Supabase + NestJS monorepo template',
 };
 
 export default function RootLayout({

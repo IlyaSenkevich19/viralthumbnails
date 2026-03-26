@@ -1,8 +1,1 @@
-'use client';
-
-export * from './campaigns';
-export * from './leads';
-export * from './dashboard';
-export * from './reddit';
-export * from './projects';
-
+/** Feature hooks: export your TanStack Query hooks from here. */

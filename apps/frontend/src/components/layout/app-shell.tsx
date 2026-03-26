@@ -1,32 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useState } from 'react';
 import { Sidebar } from './sidebar';
-import { useProject } from '@/contexts/project-context';
 import { Menu } from 'lucide-react';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const searchParams = useSearchParams();
-  const { setProjectId } = useProject();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [showCreateCampaign, setShowCreateCampaign] = useState(false);
-
-  useEffect(() => {
-    const fromUrl = searchParams.get('project');
-    if (fromUrl) {
-      const n = parseInt(fromUrl, 10);
-      if (!Number.isNaN(n)) setProjectId(n);
-      window.history.replaceState(null, '', '/dashboard');
-    }
-  }, [searchParams, setProjectId]);
 
   return (
     <div className="flex min-h-screen flex-col bg-[var(--background)]">
       <div className="flex flex-1 min-h-0">
-        <Sidebar onNewCampaign={() => setShowCreateCampaign(true)} />
+        <Sidebar />
         <div className="flex min-w-0 flex-1 flex-col">
-          {/* Mobile: bar with menu button to open sidebar */}
           <div className="lg:hidden sticky top-0 z-30 flex h-14 shrink-0 items-center border-b border-border/60 bg-card/80 backdrop-blur-sm px-4">
             <button
               type="button"
@@ -45,7 +30,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </div>
 
-      {/* Mobile drawer */}
       {mobileSidebarOpen && (
         <div
           className="fixed inset-0 z-40 lg:hidden bg-black/50 backdrop-blur-sm"
@@ -55,15 +39,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             className="absolute inset-y-0 left-0 w-80 max-w-full bg-white shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <Sidebar
-              inDrawer
-              onNewCampaign={() => setShowCreateCampaign(true)}
-              onClose={() => setMobileSidebarOpen(false)}
-            />
+            <Sidebar inDrawer onClose={() => setMobileSidebarOpen(false)} />
           </div>
         </div>
       )}
     </div>
   );
 }
-

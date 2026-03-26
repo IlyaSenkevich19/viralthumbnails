@@ -20,7 +20,6 @@ const config: Config = {
         accent: { DEFAULT: "var(--accent)", foreground: "var(--accent-foreground)" },
         destructive: { DEFAULT: "var(--destructive)", foreground: "var(--destructive-foreground)" },
         success: "var(--success)",
-        "score-high": "var(--score-high)",
         border: "var(--border)",
         input: "var(--input)",
         ring: "var(--ring)",

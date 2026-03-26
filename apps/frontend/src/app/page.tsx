@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { siteName } from '@/config/site';
 import { useAuth } from '@/contexts/auth-context';
 import { Button } from '@/components/ui/button';
 
@@ -11,11 +12,11 @@ export default function HomePage() {
     <div className="min-h-screen flex flex-col items-center justify-center px-4">
       <div className="max-w-2xl text-center space-y-8">
         <h1 className="text-4xl md:text-6xl font-bold tracking-tight">
-          Reddit <span className="text-primary">LeadGen</span>
+          {siteName}{' '}
+          <span className="text-primary">template</span>
         </h1>
         <p className="text-lg text-muted-foreground">
-          AI-powered Reddit lead generation. Monitor keywords, score buying intent,
-          and draft natural replies—all in one dashboard.
+          Next.js + Supabase Auth + NestJS API in a Turborepo monorepo. Add your domain on top.
         </p>
         <div className="flex gap-4 justify-center flex-wrap">
           {!isLoading && (
@@ -23,15 +24,17 @@ export default function HomePage() {
               {!user ? (
                 <>
                   <Link href="/auth/login">
-                    <Button size="lg">Sign In</Button>
+                    <Button size="lg">Sign in</Button>
                   </Link>
                   <Link href="/auth/register">
-                    <Button variant="outline" size="lg">Sign Up</Button>
+                    <Button variant="outline" size="lg">
+                      Sign up
+                    </Button>
                   </Link>
                 </>
               ) : (
                 <Link href="/dashboard">
-                  <Button size="lg">Go to Dashboard</Button>
+                  <Button size="lg">Dashboard</Button>
                 </Link>
               )}
             </>

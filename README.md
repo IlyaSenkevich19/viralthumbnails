@@ -1,89 +1,64 @@
-# Reddit Community Insights
+# Full-stack monorepo template
 
-Full-stack app for monitoring Reddit: **Supabase** (Auth + DB) + **NestJS** (Reddit API + optional AI).
+**Next.js** (App Router) + **Supabase Auth** + **NestJS** API, managed with **Turborepo** and **Yarn** workspaces.
 
-## Architecture
+## Layout
 
 ```
-Frontend (Next.js)
-  ├→ Supabase REST (campaigns, data) — direct
-  └→ NestJS API (scan, AI)
-
-NestJS Backend
-  ├→ Reddit API (snoowrap, cron hourly)
-  ├→ OpenAI (optional)
-  └→ Supabase (service_role)
-
-Supabase
-  ├→ Postgres + RLS
-  └→ Auth (Email)
+apps/frontend   — Next.js, protected routes via Supabase middleware
+apps/backend    — NestJS, global prefix /api, Swagger at /api/docs
+supabase/migrations — optional SQL (e.g. profiles table)
 ```
 
-## Quick Start
+The frontend rewrites `/api/*` to the backend (`next.config.mjs`). Set **`NEXT_PUBLIC_BACKEND_URL`** in root `.env` (e.g. production API origin, no trailing slash). Defaults to `http://localhost:3001`.
 
-### 0. Node
+## Quick start
 
-В корне лежит `.nvmrc` с рекомендуемой версией Node (20.19+). С nvm:
+1. **Node**: use `.nvmrc` (`nvm use`).
 
-```bash
-nvm use
-# или: nvm install
+2. **Supabase**: create a project, enable Email (or other) auth. Optionally run `supabase/migrations/001_optional_profiles.sql` in the SQL Editor.
+
+3. **Env**: `cp .env.example .env` and fill Supabase keys. `yarn dev` / `yarn build` sync `NEXT_PUBLIC_*` into `apps/frontend/.env.local` via `scripts/sync-frontend-env.js`.
+
+Required auth-related variables:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_or_publishable_key
+SUPABASE_URL=https://your-project-id.supabase.co
+SUPABASE_ANON_KEY=your_supabase_anon_or_publishable_key
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 ```
 
-Если `yarn install` ругается на версию Node, используй: `yarn install --ignore-engines`.
-
-### 1. Supabase Setup
-
-1. Create project at [supabase.com](https://supabase.com)
-2. Run SQL: `supabase/migrations/001_initial_schema.sql` (Dashboard → SQL Editor)
-3. Enable Email auth in Authentication → Providers
-
-### 2. Environment
-
-Один источник переменных — корневой `.env`:
-
-```bash
-cp .env.example .env
-# Заполни: SUPABASE_*, REDDIT_*, AI_*, NEXT_PUBLIC_* и др.
-```
-
-Переменные `NEXT_PUBLIC_*` при запуске `yarn dev` / `yarn build` автоматически копируются в `apps/frontend/.env.local` (скрипт `scripts/sync-frontend-env.js`). Ручной копировать не нужно.
-
-### 3. Run
-
-Запуск из корня репозитория (чтобы подхватывался `.env`):
+4. **Run** (from repo root):
 
 ```bash
 yarn install
-# Оба приложения
 yarn dev
-# Или по отдельности:
-yarn dev:backend   # :3001
-yarn dev:frontend  # :3000 (перед стартом синхронизирует env из корня)
 ```
 
-## API
+- Frontend: http://localhost:3000  
+- Backend: http://localhost:3001 — `GET /api/health`, `GET /api/auth/me` (Bearer JWT from Supabase)
 
-**Supabase REST** (direct from frontend):
-- `campaigns` — CRUD via Supabase client
-- App data — SELECT via Supabase client (RLS)
+## Auth flow
 
-**NestJS**:
-- `POST /api/reddit/scan-now` — manual scan
-- `POST /api/ai/score-lead` — (Bearer token)
-- `POST /api/ai/generate-reply-lead` — (Bearer token)
-- `GET /api/jobs/status` — service status
+- Frontend sign-in/sign-up uses Supabase client auth in `apps/frontend/src/lib/api/auth.ts`.
+- Frontend middleware in `apps/frontend/src/lib/supabase/middleware.ts` protects non-public routes.
+- Backend validates Bearer JWT with Supabase in `apps/backend/src/modules/auth/guards/supabase.guard.ts`.
+- Backend `GET /api/auth/me` reads user by id through Supabase Admin API in `apps/backend/src/modules/auth/auth.service.ts`.
 
-## Reddit API
+## Troubleshooting
 
-- **Cron**: hourly.
-- **User-Agent**: `CommunityInsights/1.0`.
+- Users not visible in Supabase Dashboard -> Authentication -> Users:
+  - ensure `NEXT_PUBLIC_SUPABASE_URL` points to the same project you are checking;
+  - ensure `NEXT_PUBLIC_SUPABASE_ANON_KEY` is set (the code does not read `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY`);
+  - restart `yarn dev` after env changes so `NEXT_PUBLIC_*` gets resynced to `apps/frontend/.env.local`.
 
-## Deploy
+## Where to extend
 
-- Frontend: Vercel
-- Backend: Render / Railway
-- DB + Auth: Supabase
+- **Backend**: register new modules in `apps/backend/src/app.module.ts`.
+- **Frontend**: add routes under `apps/frontend/src/app`, API clients under `src/lib/api`, React Query hooks under `src/lib/queries`.
+- **Branding**: set **`NEXT_PUBLIC_APP_NAME`** in `.env` (used for document title, sidebar, landing). Override in `src/config/site.ts` if you need more logic.
 
 ## License
 

@@ -6,13 +6,24 @@ import { usePathname } from 'next/navigation';
 import { siteName } from '@/config/site';
 import { useAuth } from '@/contexts/auth-context';
 import { cn } from '@/lib/utils';
-import { LayoutDashboard, Settings, LogOut, MoreVertical } from 'lucide-react';
+import {
+  LayoutDashboard,
+  FolderKanban,
+  LayoutTemplate,
+  FlaskConical,
+  Settings,
+  LogOut,
+  MoreVertical,
+} from 'lucide-react';
 import { authApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/projects', label: 'Projects', icon: FolderKanban },
+  { href: '/templates', label: 'Templates', icon: LayoutTemplate },
+  { href: '/ab-tests', label: 'A/B Tests', icon: FlaskConical },
   { href: '/settings', label: 'Settings', icon: Settings },
 ];
 
@@ -114,8 +125,8 @@ export function Sidebar({ inDrawer, onClose }: { inDrawer?: boolean; onClose?: (
                 if (inDrawer) onClose?.();
               }}
               className={cn(
-                'motion-base flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium',
-                effectivePath.startsWith(href)
+                'motion-base flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                effectivePath === href || (href !== '/dashboard' && effectivePath.startsWith(`${href}/`))
                   ? 'bg-secondary text-foreground'
                   : 'text-muted-foreground hover:bg-card hover:text-foreground',
               )}

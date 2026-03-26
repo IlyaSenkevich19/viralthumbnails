@@ -22,7 +22,7 @@ async function bootstrap() {
 
   const config = new DocumentBuilder()
     .setTitle('API')
-    .setDescription('NestJS API template (auth + health)')
+    .setDescription('NestJS API: auth, health, projects, thumbnail generation')
     .setVersion('1.0')
     .addBearerAuth()
     .build();

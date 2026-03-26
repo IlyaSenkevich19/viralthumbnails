@@ -3,29 +3,56 @@
 @tailwind utilities;
 
 :root {
+  /* Dark soft premium palette — layered: sidebar < background < card < secondary */
+  --sidebar: #141417;
+  --background: #1c1c20;
+  --foreground: #ececef;
+  --card: #252529;
+  --card-foreground: #ececef;
+  --popover: #252529;
+  --popover-foreground: #ececef;
+  --primary: #ff3b3b;
+  --primary-foreground: #ffffff;
+  --secondary: #2d2d33;
+  --secondary-foreground: #ececef;
+  --muted: #1f1f24;
+  --muted-foreground: #8b8b96;
+  --accent: #ff3b3b;
+  --accent-foreground: #ffffff;
+  --success: #22c55e;
+  --warning: #fbbf24;
+  --destructive: #ef4444;
+  --destructive-foreground: #fff1f2;
+  --border: #35353c;
+  --border-hover: #43434c;
+  --input: #35353c;
+  --ring: rgba(255, 59, 59, 0.35);
+  --radius: 0.75rem;
+  --shadow-soft: 0 8px 24px -10px rgba(0, 0, 0, 0.25);
+  --shadow-elevated: 0 16px 40px -18px rgba(0, 0, 0, 0.35);
+  --duration-fast: 150ms;
+  --duration-normal: 220ms;
+  --duration-slow: 320ms;
+  --ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.light {
   --background: #f8fafc;
   --foreground: #0f172a;
-
   --card: #ffffff;
   --card-foreground: #0f172a;
   --popover: #ffffff;
   --popover-foreground: #0f172a;
-
   --primary: #334155;
   --primary-foreground: #f8fafc;
   --secondary: #e2e8f0;
   --secondary-foreground: #1e293b;
   --muted: #f1f5f9;
   --muted-foreground: #64748b;
-  --accent: #e2e8f0;
-  --accent-foreground: #1e293b;
-
-  --success: #16a34a;
-
-  --destructive: #dc2626;
-  --destructive-foreground: #fef2f2;
-
+  --accent: #334155;
+  --accent-foreground: #ffffff;
   --border: #e2e8f0;
+  --border-hover: #cbd5e1;
   --input: #e2e8f0;
   --ring: rgba(51, 65, 85, 0.35);
 }
@@ -33,20 +60,36 @@
 body {
   color: var(--foreground);
   background: var(--background);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 @layer utilities {
   .text-balance {
     text-wrap: balance;
   }
+
+  .motion-base {
+    transition-property: color, background-color, border-color, box-shadow, transform, opacity;
+    transition-duration: var(--duration-normal);
+    transition-timing-function: var(--ease-standard);
+  }
+
+  .focus-ring {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0;
+  }
 }
 
 @layer components {
   .glass {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
+    background: color-mix(in oklab, var(--card) 75%, transparent);
+    border: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+  }
+
+  .surface {
+    @apply rounded-xl border border-border bg-card shadow-[var(--shadow-soft)] ring-1 ring-white/[0.04];
   }
 
   .shimmer {
@@ -62,7 +105,7 @@ body {
     background: linear-gradient(
       120deg,
       transparent,
-      rgba(255, 255, 255, 0.18),
+      rgba(255, 255, 255, 0.12),
       transparent
     );
     animation: shimmer 1.8s infinite;
@@ -75,5 +118,11 @@ body {
   }
   100% {
     transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .motion-base {
+    transition: none;
   }
 }

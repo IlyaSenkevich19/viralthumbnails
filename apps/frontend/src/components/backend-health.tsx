@@ -24,14 +24,14 @@ export function BackendHealth() {
   }, []);
 
   if (state === 'loading') {
-    return <Badge className="border-slate-200 bg-slate-50 text-slate-600">API: …</Badge>;
+    return <Badge className="border-border bg-secondary text-muted-foreground">API: ...</Badge>;
   }
   if (state === 'ok') {
     return (
       <Badge
         className={cn(
           'border-emerald-500/30 bg-emerald-600 text-white shadow-sm',
-          'hover:bg-emerald-600',
+          'hover:bg-emerald-600 motion-base',
         )}
       >
         API: OK
@@ -39,6 +39,8 @@ export function BackendHealth() {
     );
   }
   return (
-    <Badge className="border-red-200 bg-red-600 text-white hover:bg-red-600">API: unreachable</Badge>
+    <Badge className="motion-base border-red-800/50 bg-red-700 text-white hover:bg-red-600">
+      API: unreachable
+    </Badge>
   );
 }

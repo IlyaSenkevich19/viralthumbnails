@@ -10,6 +10,7 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        sidebar: "var(--sidebar)",
         background: "var(--background)",
         foreground: "var(--foreground)",
         card: { DEFAULT: "var(--card)", foreground: "var(--card-foreground)" },
@@ -20,20 +21,22 @@ const config: Config = {
         accent: { DEFAULT: "var(--accent)", foreground: "var(--accent-foreground)" },
         destructive: { DEFAULT: "var(--destructive)", foreground: "var(--destructive-foreground)" },
         success: "var(--success)",
-        border: "var(--border)",
+        warning: "var(--warning)",
+        border: { DEFAULT: "var(--border)", hover: "var(--border-hover)" },
         input: "var(--input)",
         ring: "var(--ring)",
-        glass: "rgba(255,255,255,0.07)",
-        "glass-hover": "rgba(255,255,255,0.12)",
-        bgdark: "#0a0e1a",
+        glass: "rgba(37,37,41,0.82)",
+        "glass-hover": "rgba(45,45,51,0.90)",
       },
       borderRadius: {
-        xl: "1.25rem",
-        "2xl": "1.5rem",
+        md: "calc(var(--radius) - 2px)",
+        lg: "var(--radius)",
+        xl: "calc(var(--radius) + 4px)",
+        "2xl": "calc(var(--radius) + 8px)",
       },
       boxShadow: {
-        premium: "0 25px 50px -12px rgba(0,0,0,0.35)",
-        soft: "0 10px 30px -15px rgba(0,0,0,0.35)",
+        premium: "var(--shadow-elevated)",
+        soft: "var(--shadow-soft)",
       },
       keyframes: {
         shimmer: {
@@ -43,9 +46,6 @@ const config: Config = {
       },
       animation: {
         shimmer: "shimmer 1.5s ease-in-out infinite",
-      },
-      backgroundImage: {
-        accent: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
       },
     },
   },

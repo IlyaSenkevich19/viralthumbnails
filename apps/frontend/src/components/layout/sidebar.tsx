@@ -49,23 +49,23 @@ function SidebarUserBlock() {
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="flex w-full items-center gap-3 rounded-xl px-2 py-2.5 text-left hover:bg-slate-100 transition-colors"
+        className="motion-base flex w-full items-center gap-3 rounded-xl px-2 py-2.5 text-left hover:bg-secondary"
         aria-expanded={open}
       >
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-slate-600 to-slate-800 text-white text-sm font-medium">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-medium text-white">
           {displayName.charAt(0).toUpperCase()}
         </span>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium text-slate-800">{displayName}</p>
-          <p className="truncate text-xs text-slate-500">{email}</p>
+          <p className="truncate text-sm font-medium text-foreground">{displayName}</p>
+          <p className="truncate text-xs text-muted-foreground">{email}</p>
         </div>
-        <MoreVertical className="h-4 w-4 shrink-0 text-slate-400" />
+        <MoreVertical className="h-4 w-4 shrink-0 text-muted-foreground" />
       </button>
       {open && (
-        <div className="absolute left-0 right-0 bottom-full z-50 mb-1 rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
+        <div className="absolute bottom-full left-0 right-0 z-50 mb-1 rounded-xl border border-border bg-card py-1 shadow-soft">
           <button
             onClick={handleSignOut}
-            className="flex w-full items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+            className="motion-base flex w-full items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:bg-secondary hover:text-foreground"
           >
             <LogOut className="h-4 w-4" />
             Sign out
@@ -89,19 +89,19 @@ export function Sidebar({ inDrawer, onClose }: { inDrawer?: boolean; onClose?: (
   return (
     <aside
       className={cn(
-        'flex h-full min-h-screen w-72 shrink-0 flex-col border-r border-slate-200 bg-white shadow-sm',
+        'flex h-full min-h-screen w-72 shrink-0 flex-col border-r border-border bg-sidebar',
         inDrawer ? 'border-0 min-h-0' : 'hidden lg:flex',
       )}
     >
       <div className="p-4 pb-3">
         <Link href="/dashboard" className="flex items-center gap-2">
-          <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-slate-600 to-slate-900 shadow-sm" />
-          <span className="text-base font-semibold tracking-tight text-slate-900">{siteName}</span>
+          <div className="h-9 w-9 rounded-xl bg-primary shadow-md shadow-primary/25" />
+          <span className="text-base font-semibold tracking-tight text-foreground">{siteName}</span>
         </Link>
       </div>
 
       <div className="flex-1 overflow-y-auto px-3 pb-4">
-        <p className="mb-2 px-3 text-[11px] font-medium uppercase tracking-wider text-slate-400">
+        <p className="mb-2 px-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
           Menu
         </p>
         <nav className="space-y-0.5">
@@ -114,20 +114,20 @@ export function Sidebar({ inDrawer, onClose }: { inDrawer?: boolean; onClose?: (
                 if (inDrawer) onClose?.();
               }}
               className={cn(
-                'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors',
+                'motion-base flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium',
                 effectivePath.startsWith(href)
-                  ? 'bg-slate-100 text-slate-900'
-                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900',
+                  ? 'bg-secondary text-foreground'
+                  : 'text-muted-foreground hover:bg-card hover:text-foreground',
               )}
             >
-              <Icon className="h-4 w-4 shrink-0 text-slate-500" />
+              <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
               {label}
             </Link>
           ))}
         </nav>
       </div>
 
-      <div className="border-t border-slate-100 p-3">
+      <div className="border-t border-border p-3">
         <SidebarUserBlock />
       </div>
     </aside>

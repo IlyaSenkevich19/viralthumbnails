@@ -10,7 +10,7 @@ export function ToastProvider() {
       closeButton
       toastOptions={{
         classNames: {
-          toast: 'backdrop-blur-xl bg-glass/80 border border-glass-hover shadow-2xl',
+          toast: 'backdrop-blur-xl bg-glass border border-border shadow-premium',
         },
       }}
     />

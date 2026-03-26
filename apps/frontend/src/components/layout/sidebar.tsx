@@ -20,6 +20,7 @@ import {
 import { useSignOutMutation } from '@/lib/hooks';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
+import { SidebarCreditsBlock } from '@/components/layout/sidebar-credits';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -101,40 +102,54 @@ function SidebarUserBlock({ collapsed, inDrawer }: { collapsed: boolean; inDrawe
   const email = user.email ?? '';
 
   return (
-    <div className="relative" ref={ref}>
+    <div className={cn('relative', compact && 'flex w-full justify-center')} ref={ref}>
       <button
         type="button"
         onClick={() => setOpen(!open)}
         title={compact ? `${displayName} — ${email}` : undefined}
         className={cn(
-          'motion-base flex w-full items-center gap-3 rounded-xl py-2.5 text-left hover:bg-secondary',
-          compact ? 'justify-center px-0' : 'px-2',
+          'motion-base flex items-center gap-3 text-left',
+          compact
+            ? 'size-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-primary p-0 text-sm font-semibold text-primary-foreground shadow-md shadow-primary/35 outline-none ring-offset-2 ring-offset-[var(--sidebar)] hover:brightness-110 focus-visible:ring-2 focus-visible:ring-ring'
+            : 'w-full min-w-0 rounded-xl px-2 py-2.5 hover:bg-secondary',
         )}
         aria-expanded={open}
       >
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-medium text-white">
-          {displayName.charAt(0).toUpperCase()}
-        </span>
-        <SidebarSlidingLabel
-          show={!compact}
-          maxWidthClass="max-w-[min(12rem,calc(100vw-8rem))]"
-          className={cn(!compact && 'min-w-0 flex-1')}
-        >
-          <span className="flex min-w-0 items-center gap-2">
-            <span className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-foreground">{displayName}</p>
-              <p className="truncate text-xs text-muted-foreground">{email}</p>
+        {compact ? (
+          <>
+            <span className="sr-only">{displayName}</span>
+            {displayName.charAt(0).toUpperCase()}
+          </>
+        ) : (
+          <>
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-medium text-white">
+              {displayName.charAt(0).toUpperCase()}
             </span>
-            <MoreVertical className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-          </span>
-        </SidebarSlidingLabel>
-        {compact && <span className="sr-only">{displayName}</span>}
+          </>
+        )}
+        {!compact && (
+          <SidebarSlidingLabel
+            show
+            maxWidthClass="max-w-[min(12rem,calc(100vw-8rem))]"
+            className="min-w-0 flex-1"
+          >
+            <span className="flex min-w-0 items-center gap-2">
+              <span className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium text-foreground">{displayName}</p>
+                <p className="truncate text-xs text-muted-foreground">{email}</p>
+              </span>
+              <MoreVertical className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+            </span>
+          </SidebarSlidingLabel>
+        )}
       </button>
       {open && (
         <div
           className={cn(
-            'absolute z-50 rounded-xl border border-border bg-card py-1 shadow-soft',
-            compact ? 'bottom-full left-0 mb-1 w-48' : 'bottom-full left-0 right-0 mb-1',
+            'absolute z-[70] rounded-xl border border-border bg-card py-1 shadow-soft',
+            compact
+              ? 'left-full top-1/2 ml-2 w-48 -translate-y-1/2'
+              : 'bottom-full left-0 right-0 mb-1',
           )}
         >
           <button
@@ -232,11 +247,13 @@ export function Sidebar({
           title={compact ? siteName : undefined}
         >
           <div className="h-9 w-9 shrink-0 rounded-xl bg-primary shadow-md shadow-primary/25" />
-          <SidebarSlidingLabel show={!compact} maxWidthClass="max-w-[11rem]" className="text-left">
-            <span className="block truncate text-base font-semibold tracking-tight text-foreground">
-              {siteName}
-            </span>
-          </SidebarSlidingLabel>
+          {!compact && (
+            <SidebarSlidingLabel show maxWidthClass="max-w-[11rem]" className="text-left">
+              <span className="block truncate text-base font-semibold tracking-tight text-foreground">
+                {siteName}
+              </span>
+            </SidebarSlidingLabel>
+          )}
           {compact && <span className="sr-only">{siteName}</span>}
         </Link>
       </div>
@@ -279,7 +296,13 @@ export function Sidebar({
         </nav>
       </div>
 
-      <div className="mt-auto border-t border-border p-3">
+      <div
+        className={cn(
+          'mt-auto border-t border-border pt-4',
+          compact ? 'flex flex-col items-center gap-2 px-2 pb-3' : 'space-y-3 p-3',
+        )}
+      >
+        <SidebarCreditsBlock collapsed={collapsed} inDrawer={!!inDrawer} />
         <SidebarUserBlock collapsed={collapsed} inDrawer={!!inDrawer} />
       </div>
     </aside>

@@ -16,4 +16,8 @@ export const queryKeys = {
     all: ['templates'] as const,
     list: (userId: string) => [...queryKeys.templates.all, 'list', userId] as const,
   },
+
+  billing: {
+    credits: (userId: string) => ['billing', 'credits', userId] as const,
+  },
 } as const;

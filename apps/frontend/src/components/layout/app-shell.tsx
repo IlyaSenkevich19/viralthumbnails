@@ -49,7 +49,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           collapsed={hydrated && sidebarCollapsed}
           onToggleCollapsed={toggleSidebarCollapsed}
         />
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <HeaderShell
             className="lg:hidden"
             onMobileMenuClick={() => setMobileSidebarOpen(true)}

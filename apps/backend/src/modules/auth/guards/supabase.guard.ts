@@ -2,22 +2,31 @@ import {
   CanActivate,
   ExecutionContext,
   Injectable,
+  InternalServerErrorException,
   UnauthorizedException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Request } from 'express';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 @Injectable()
 export class SupabaseGuard implements CanActivate {
-  private supabase: SupabaseClient;
+  private supabase: SupabaseClient | null = null;
 
-  constructor() {
-    const url = process.env.SUPABASE_URL;
-    const key = process.env.SUPABASE_ANON_KEY;
-    if (!url || !key) {
-      throw new Error('SUPABASE_URL and SUPABASE_ANON_KEY are required');
+  constructor(private readonly config: ConfigService) {}
+
+  private getSupabaseAuthClient(): SupabaseClient {
+    if (!this.supabase) {
+      const url = this.config.get<string>('SUPABASE_URL')?.trim();
+      const key = this.config.get<string>('SUPABASE_ANON_KEY')?.trim();
+      if (!url || !key) {
+        throw new InternalServerErrorException('Auth is not configured');
+      }
+      this.supabase = createClient(url, key, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
     }
-    this.supabase = createClient(url, key);
+    return this.supabase;
   }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -34,13 +43,13 @@ export class SupabaseGuard implements CanActivate {
     const {
       data: { user },
       error,
-    } = await this.supabase.auth.getUser(token);
+    } = await this.getSupabaseAuthClient().auth.getUser(token);
 
     if (error || !user) {
       throw new UnauthorizedException('Invalid or expired token');
     }
 
-    (request as Request & { userId: string }).userId = user.id;
+    request.userId = user.id;
     return true;
   }
 }

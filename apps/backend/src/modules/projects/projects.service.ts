@@ -283,6 +283,13 @@ export class ProjectsService {
       return { variant_ids: createdIds, results };
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Generation failed';
+      if (createdIds.length > 0) {
+        await client
+          .from('thumbnail_variants')
+          .update({ status: 'failed', error_message: msg })
+          .in('id', createdIds)
+          .eq('status', 'generating');
+      }
       await client
         .from('projects')
         .update({ status: 'failed', updated_at: now() })

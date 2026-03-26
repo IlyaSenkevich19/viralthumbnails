@@ -164,20 +164,36 @@ export class AiService {
       this.config.get<string>('GEMINI_IMAGEN_MODEL')?.trim() || 'imagen-4.0-fast-generate-001';
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:predict`;
 
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'x-goog-api-key': apiKey,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        instances: [{ prompt: prompt.slice(0, 2000) }],
-        parameters: {
-          sampleCount: 1,
-          aspectRatio: '16:9',
+    const controller = new AbortController();
+    const imagenTimeoutMs =
+      Number(this.config.get<string>('GEMINI_IMAGEN_TIMEOUT_MS')) || 120_000;
+    const timeout = setTimeout(() => controller.abort(), imagenTimeoutMs);
+
+    let res: Response;
+    try {
+      res = await fetch(url, {
+        method: 'POST',
+        signal: controller.signal,
+        headers: {
+          'x-goog-api-key': apiKey,
+          'Content-Type': 'application/json',
         },
-      }),
-    });
+        body: JSON.stringify({
+          instances: [{ prompt: prompt.slice(0, 2000) }],
+          parameters: {
+            sampleCount: 1,
+            aspectRatio: '16:9',
+          },
+        }),
+      });
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        throw new Error(`Gemini Imagen: request timed out after ${imagenTimeoutMs}ms`);
+      }
+      throw err;
+    } finally {
+      clearTimeout(timeout);
+    }
 
     const rawText = await res.text();
     if (!res.ok) {

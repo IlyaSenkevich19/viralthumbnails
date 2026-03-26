@@ -22,20 +22,45 @@ export class HttpExceptionFilter implements ExceptionFilter {
         ? exception.getStatus()
         : HttpStatus.INTERNAL_SERVER_ERROR;
 
-    const message =
-      exception instanceof HttpException
-        ? exception.getResponse()
-        : { message: 'Internal server error' };
+    const isProd = process.env.NODE_ENV === 'production';
 
+    if (exception instanceof HttpException) {
+      const responseBody = exception.getResponse();
+      const logLine = `${req.method} ${req.url} - ${status}: ${JSON.stringify(responseBody)}`;
+      if (status >= 500) {
+        this.logger.error(logLine);
+      } else {
+        this.logger.warn(logLine);
+      }
+      const payload =
+        typeof responseBody === 'string'
+          ? { message: responseBody }
+          : responseBody !== null &&
+              typeof responseBody === 'object' &&
+              !Array.isArray(responseBody)
+            ? (responseBody as Record<string, unknown>)
+            : { message: String(responseBody) };
+      res.status(status).json({
+        statusCode: status,
+        timestamp: new Date().toISOString(),
+        path: req.url,
+        ...payload,
+      });
+      return;
+    }
+
+    const internalMsg =
+      exception instanceof Error ? exception.message : 'Internal server error';
     this.logger.error(
-      `${req.method} ${req.url} - ${status}: ${JSON.stringify(message)}`,
+      `${req.method} ${req.url} - ${status}: ${internalMsg}`,
+      exception instanceof Error ? exception.stack : undefined,
     );
 
     res.status(status).json({
       statusCode: status,
       timestamp: new Date().toISOString(),
       path: req.url,
-      ...(typeof message === 'object' ? message : { message }),
+      message: isProd ? 'Internal server error' : internalMsg,
     });
   }
 }

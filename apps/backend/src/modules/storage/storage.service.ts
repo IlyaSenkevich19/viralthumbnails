@@ -43,9 +43,12 @@ export class StorageService {
     slug: string;
     body: Buffer;
     contentType: string;
+    /** When set, file is stored as `{userId}/{niche}/{slug}.ext` for filters + RLS (first folder is still user id). */
+    niche?: string | null;
   }): Promise<{ path: string }> {
     const ext = extensionForMime(params.contentType);
-    const path = `${params.userId}/${params.slug}.${ext}`;
+    const nicheSeg = params.niche ? `${params.niche}/` : '';
+    const path = `${params.userId}/${nicheSeg}${params.slug}.${ext}`;
     const client = this.supabase.getAdminClient();
     const { error } = await client.storage.from(BUCKET_THUMBNAIL_TEMPLATES).upload(path, params.body, {
       contentType: params.contentType,
@@ -66,6 +69,16 @@ export class StorageService {
       throw new Error(error?.message ?? 'createSignedUrl failed');
     }
     return data.signedUrl;
+  }
+
+  async removeObjectsIfPresent(bucket: string, paths: string[]): Promise<void> {
+    const unique = [...new Set(paths.filter((p) => typeof p === 'string' && p.length > 0))];
+    if (unique.length === 0) return;
+    const client = this.supabase.getAdminClient();
+    const { error } = await client.storage.from(bucket).remove(unique);
+    if (error) {
+      console.warn(`[storage] removeObjectsIfPresent: ${error.message}`);
+    }
   }
 }
 

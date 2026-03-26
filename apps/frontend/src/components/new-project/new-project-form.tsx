@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { useCreateProjectAndGenerateMutation } from '@/lib/hooks';
@@ -23,6 +23,7 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
   const router = useRouter();
   const { accessToken } = useAuth();
   const createAndGenerate = useCreateProjectAndGenerateMutation();
+  const submitLock = useRef(false);
 
   const sp = useMemo(() => new URLSearchParams(initialQuery ?? {}), [initialQuery]);
 
@@ -40,6 +41,7 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (submitLock.current) return;
     if (!accessToken) {
       toast.error('Not signed in');
       return;
@@ -86,37 +88,34 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
         break;
     }
 
-    const toastId = toast.loading('Creating project and generating thumbnails…');
-    createAndGenerate.mutate(
-      {
-        title: title.trim() || undefined,
-        platform: 'youtube',
-        source_type,
-        source_data,
+    submitLock.current = true;
+    onRequestClose?.();
+
+    const body = {
+      title: title.trim() || undefined,
+      platform: 'youtube',
+      source_type,
+      source_data,
+    };
+
+    createAndGenerate.mutate(body, {
+      onSuccess: ({ project, gen }) => {
+        const ok = gen.results.filter((r) => r.status === 'done').length;
+        const total = gen.results.length;
+        if (ok === 0) {
+          toast.error(
+            'Generation failed for all variants. Check GEMINI_API_KEY and Imagen access.',
+          );
+        } else if (ok < total) {
+          toast.warning(`${ok} of ${total} thumbnails ready; some failed.`);
+        }
+        router.push(`/projects/${project.id}/variants`);
+        router.refresh();
       },
-      {
-        onSuccess: ({ project, gen }) => {
-          const ok = gen.results.filter((r) => r.status === 'done').length;
-          const total = gen.results.length;
-          if (ok === total) {
-            toast.success(`${ok} thumbnail${ok === 1 ? '' : 's'} ready`, { id: toastId });
-          } else if (ok === 0) {
-            toast.error('Generation failed for all variants. Check GEMINI_API_KEY and Imagen access.', {
-              id: toastId,
-            });
-          } else {
-            toast.warning(`${ok} of ${total} thumbnails ready; some failed.`, { id: toastId });
-          }
-          onRequestClose?.();
-          router.push(`/projects/${project.id}/variants`);
-          router.refresh();
-        },
-        onError: (err) => {
-          const message = err instanceof Error ? err.message : 'Something went wrong';
-          toast.error(message, { id: toastId });
-        },
+      onSettled: () => {
+        submitLock.current = false;
       },
-    );
+    });
   }
 
   return (
@@ -231,8 +230,8 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
               </div>
             )}
 
-            <Button type="submit" className="w-full sm:w-auto" disabled={createAndGenerate.isPending}>
-              {createAndGenerate.isPending ? 'Working…' : 'Create & generate'}
+            <Button type="submit" className="w-full sm:w-auto">
+              Create & generate
             </Button>
           </form>
         </CardContent>

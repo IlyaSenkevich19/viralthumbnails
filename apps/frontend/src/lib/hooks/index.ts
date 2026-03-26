@@ -3,8 +3,10 @@ export {
   useProjectsList,
   useProjectWithVariants,
   useCreateProjectAndGenerateMutation,
+  useDeleteProjectMutation,
+  useDeleteVariantMutation,
 } from './use-projects';
-export { useTemplatesList } from './use-templates';
+export { NICHE_ALL, useTemplateNiches, useTemplatesList } from './use-templates';
 export {
   useSignInMutation,
   useSignUpMutation,

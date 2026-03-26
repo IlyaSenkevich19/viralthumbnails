@@ -1,4 +1,16 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Put, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Put,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { SupabaseGuard } from '../auth/guards/supabase.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -35,5 +47,11 @@ export class ProjectsController {
     @Body() dto: UpdateProjectDto,
   ) {
     return this.projects.update(id, userId, dto);
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  remove(@CurrentUser() userId: string, @Param('id', ParseUUIDPipe) id: string) {
+    return this.projects.deleteProject(id, userId);
   }
 }

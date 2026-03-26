@@ -11,6 +11,8 @@ import {
   StorageService,
 } from '../storage/storage.service';
 import { CreateTemplateDto } from './dto/create-template.dto';
+import { TEMPLATE_NICHE_CODE_LIST } from './constants/template-niches';
+import { inferNicheFromTemplatePath, resolveTemplateNiche } from './lib/infer-niche-from-path';
 
 /** Files in Storage without a `thumbnail_templates` row still appear in the API (e.g. manual Dashboard uploads). */
 @Injectable()
@@ -20,7 +22,7 @@ export class TemplatesService {
     private readonly storage: StorageService,
   ) {}
 
-  async listForUser(userId: string) {
+  async listForUser(userId: string, nicheFilter?: string) {
     const client = this.supabase.getAdminClient();
     const { data, error } = await client
       .from('thumbnail_templates')
@@ -35,17 +37,24 @@ export class TemplatesService {
     const orphanPaths = fromStorage.filter((f) => !dbPaths.has(f.path));
     const synthetic = orphanPaths.map((f) => this.rowFromStorageObject(f, userId));
 
-    const combined = [...rows, ...synthetic].sort((a, b) => {
+    let combined = [...rows, ...synthetic].sort((a, b) => {
       const ta = String(a.created_at ?? '');
       const tb = String(b.created_at ?? '');
       if (ta !== tb) return ta.localeCompare(tb);
       return String(a.storage_path).localeCompare(String(b.storage_path));
     });
 
+    if (nicheFilter) {
+      combined = combined.filter((row) => (row.niche as string | null | undefined) === nicheFilter);
+    }
+
     return Promise.all(combined.map((row) => this.attachPreviewUrl(row)));
   }
 
-  /** Lists image objects under `system/`, `{userId}/`, and bucket root (Dashboard uploads often land there). */
+  /**
+   * Lists images under `system/`, root niche folders (`cooking/`, `vlog/`, …), `{userId}/`,
+   * and loose files at bucket root.
+   */
   private async listTemplateImagePaths(
     userId: string,
   ): Promise<{ path: string; mimeType: string; updatedAt: string }[]> {
@@ -75,6 +84,9 @@ export class TemplatesService {
 
     await visitPrefix('system');
     await visitPrefix(userId);
+    for (const nicheCode of TEMPLATE_NICHE_CODE_LIST) {
+      await visitPrefix(nicheCode);
+    }
 
     const { data: rootList, error: rootErr } = await bucket.list('', {
       limit: 1000,
@@ -112,6 +124,7 @@ export class TemplatesService {
       slug,
       storage_path: file.path,
       mime_type: file.mimeType,
+      niche: inferNicheFromTemplatePath(file.path),
       created_at: file.updatedAt,
       updated_at: file.updatedAt,
     };
@@ -139,6 +152,7 @@ export class TemplatesService {
       slug: dto.slug,
       body: buffer,
       contentType: mimeType,
+      niche: dto.niche ?? null,
     });
 
     const { data, error } = await client
@@ -149,6 +163,7 @@ export class TemplatesService {
         slug: dto.slug,
         storage_path: path,
         mime_type: mimeType,
+        niche: dto.niche ?? null,
       })
       .select()
       .single();

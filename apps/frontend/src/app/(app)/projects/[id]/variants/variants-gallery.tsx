@@ -1,17 +1,18 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Download, ExternalLink, Pencil, RefreshCw } from 'lucide-react';
+import { ArrowLeft, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
-import { useProjectWithVariants } from '@/lib/hooks';
+import { useProjectWithVariants, useDeleteVariantMutation } from '@/lib/hooks';
 import { humanizeKey } from '@/lib/format';
-import { statusToneClass } from '@/lib/status-tone';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { VariantThumbnailCard } from '@/components/projects/variant-thumbnail-card';
+import { ConfirmationModal } from '@/components/ui/confirmation-modal';
 
 function VariantCardSkeleton() {
   return (
@@ -19,7 +20,6 @@ function VariantCardSkeleton() {
       <Skeleton className="aspect-video w-full rounded-none" />
       <CardContent className="flex justify-between gap-2 p-4">
         <Skeleton className="h-6 w-20 rounded-full" />
-        <Skeleton className="h-9 w-28" />
       </CardContent>
     </Card>
   );
@@ -29,6 +29,8 @@ export function VariantsGallery({ projectId }: { projectId: string }) {
   const { user, accessToken, isLoading: authLoading } = useAuth();
   const hasSession = Boolean(user?.id && accessToken);
   const { data, error, isPending, isError, refetch, isFetching } = useProjectWithVariants(projectId);
+  const deleteVariant = useDeleteVariantMutation(projectId);
+  const [variantToDelete, setVariantToDelete] = useState<string | null>(null);
 
   async function handleRefresh() {
     const result = await refetch();
@@ -95,6 +97,24 @@ export function VariantsGallery({ projectId }: { projectId: string }) {
 
   return (
     <div className="space-y-6">
+      <ConfirmationModal
+        open={variantToDelete !== null}
+        onOpenChange={(open) => {
+          if (!open) setVariantToDelete(null);
+        }}
+        title="Remove this image?"
+        description="This generated thumbnail will be permanently deleted. This cannot be undone."
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        variant="destructive"
+        onConfirm={() => {
+          if (!variantToDelete) return;
+          const id = variantToDelete;
+          setVariantToDelete(null);
+          deleteVariant.mutate(id);
+        }}
+      />
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link
           href="/projects"
@@ -137,80 +157,13 @@ export function VariantsGallery({ projectId }: { projectId: string }) {
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {variants.map((v) => (
-            <Card key={v.id} className="overflow-hidden">
-              <div className="relative aspect-video bg-muted">
-                {v.generated_image_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={v.generated_image_url}
-                    alt={`Thumbnail variant for ${data.title}`}
-                    className="h-full w-full object-cover"
-                    loading="lazy"
-                  />
-                ) : (
-                  <div className="flex h-full flex-col items-center justify-center gap-1 px-4 text-center text-sm text-muted-foreground">
-                    {v.status === 'failed' ? (
-                      <span>{v.error_message ?? 'Generation failed'}</span>
-                    ) : (
-                      <span>No image yet</span>
-                    )}
-                  </div>
-                )}
-              </div>
-              <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-                <Badge variant="default" className={cn('w-fit capitalize', statusToneClass(v.status))}>
-                  {v.status}
-                </Badge>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="gap-1"
-                    disabled={!v.generated_image_url}
-                    onClick={() => toast.message('Edit flow coming soon')}
-                  >
-                    <Pencil className="h-3.5 w-3.5" aria-hidden />
-                    Edit
-                  </Button>
-                  {v.generated_image_url ? (
-                    <>
-                      <a
-                        href={v.generated_image_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className={cn(
-                          buttonVariants({ variant: 'outline', size: 'sm' }),
-                          'inline-flex gap-1',
-                        )}
-                      >
-                        <ExternalLink className="h-3.5 w-3.5" aria-hidden />
-                        Open
-                      </a>
-                      <a
-                        href={v.generated_image_url}
-                        download
-                        target="_blank"
-                        rel="noreferrer"
-                        className={cn(
-                          buttonVariants({ variant: 'outline', size: 'sm' }),
-                          'inline-flex gap-1',
-                        )}
-                        title="May open in a new tab if the host blocks download"
-                      >
-                        <Download className="h-3.5 w-3.5" aria-hidden />
-                        Download
-                      </a>
-                    </>
-                  ) : (
-                    <Button type="button" variant="outline" size="sm" disabled className="gap-1">
-                      <Download className="h-3.5 w-3.5" aria-hidden />
-                      Download
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+            <VariantThumbnailCard
+              key={v.id}
+              projectTitle={data.title}
+              variant={v}
+              hasImage={Boolean(v.generated_image_url)}
+              onDelete={() => setVariantToDelete(v.id)}
+            />
           ))}
         </div>
       )}

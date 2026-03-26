@@ -1,10 +1,10 @@
 'use client';
 
-import Link from 'next/link';
+import { useState } from 'react';
 import { FolderOpen, Plus } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import { useNewProject } from '@/contexts/new-project-context';
-import { useProjectsList } from '@/lib/hooks';
+import { useProjectsList, useDeleteProjectMutation } from '@/lib/hooks';
 import { humanizeKey } from '@/lib/format';
 import { statusToneClass } from '@/lib/status-tone';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -12,11 +12,18 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { ConfirmationModal } from '@/components/ui/confirmation-modal';
+import { ProjectRowMenu } from '@/components/projects/project-row-menu';
 
 export default function ProjectsListPage() {
   const { user, accessToken, isLoading: authLoading } = useAuth();
   const { openNewProject } = useNewProject();
   const { data: projects = [], isPending, isError, error } = useProjectsList();
+  const deleteProject = useDeleteProjectMutation();
+
+  const [projectToDelete, setProjectToDelete] = useState<{ id: string; title: string } | null>(
+    null,
+  );
 
   const hasSession = Boolean(user?.id && accessToken);
   const showSkeleton = authLoading || (hasSession && isPending);
@@ -29,6 +36,28 @@ export default function ProjectsListPage() {
 
   return (
     <div className="space-y-6">
+      <ConfirmationModal
+        open={projectToDelete !== null}
+        onOpenChange={(open) => {
+          if (!open) setProjectToDelete(null);
+        }}
+        title="Delete project?"
+        description={
+          projectToDelete
+            ? `“${projectToDelete.title}” and all its generated images will be removed. This cannot be undone.`
+            : undefined
+        }
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        variant="destructive"
+        onConfirm={() => {
+          if (!projectToDelete) return;
+          const { id } = projectToDelete;
+          setProjectToDelete(null);
+          deleteProject.mutate(id);
+        }}
+      />
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight text-foreground">Projects</h1>
@@ -55,7 +84,7 @@ export default function ProjectsListPage() {
                   <Skeleton className="h-4 w-48 max-w-full" />
                   <Skeleton className="h-3 w-32" />
                 </div>
-                <Skeleton className="hidden h-8 w-16 sm:block" />
+                <Skeleton className="hidden h-8 w-8 shrink-0 rounded-md sm:block" />
               </div>
             ))}
           </div>
@@ -123,13 +152,12 @@ export default function ProjectsListPage() {
                       {p.status}
                     </Badge>
                   </td>
-                  <td className="px-4 py-2 text-right">
-                    <Link
-                      href={`/projects/${p.id}/variants`}
-                      className={buttonVariants({ variant: 'ghost', size: 'sm' })}
-                    >
-                      Open
-                    </Link>
+                  <td className="px-4 py-2">
+                    <ProjectRowMenu
+                      projectId={p.id}
+                      projectTitle={p.title}
+                      onDeleteClick={() => setProjectToDelete({ id: p.id, title: p.title })}
+                    />
                   </td>
                 </tr>
               ))}

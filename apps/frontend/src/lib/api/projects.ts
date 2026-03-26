@@ -42,3 +42,15 @@ export async function generateThumbnails(
     body: JSON.stringify(options ?? {}),
   });
 }
+
+export async function deleteProject(token: string | null, projectId: string): Promise<void> {
+  await fetchJson(`/projects/${projectId}`, token, { method: 'DELETE' });
+}
+
+export async function deleteVariant(
+  token: string | null,
+  projectId: string,
+  variantId: string,
+): Promise<void> {
+  await fetchJson(`/projects/${projectId}/variants/${variantId}`, token, { method: 'DELETE' });
+}

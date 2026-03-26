@@ -112,6 +112,100 @@ export class ProjectsService {
     );
   }
 
+  async deleteProject(projectId: string, userId: string) {
+    const project = await this.getByIdForUser(projectId, userId);
+    const client = this.supabase.getAdminClient();
+    const { data: variants, error: vErr } = await client
+      .from('thumbnail_variants')
+      .select('generated_image_storage_path')
+      .eq('project_id', projectId);
+    if (vErr) throw new InternalServerErrorException(vErr.message);
+
+    const paths: string[] = [];
+    const coverPath = (project as { cover_thumbnail_storage_path?: string | null })
+      .cover_thumbnail_storage_path;
+    if (typeof coverPath === 'string' && coverPath.length > 0) paths.push(coverPath);
+    for (const row of variants ?? []) {
+      const p = (row as { generated_image_storage_path?: string | null })
+        .generated_image_storage_path;
+      if (typeof p === 'string' && p.length > 0) paths.push(p);
+    }
+
+    await this.storage.removeObjectsIfPresent(BUCKET_PROJECT_THUMBNAILS, paths);
+
+    const { error: delErr } = await client.from('projects').delete().eq('id', projectId).eq('user_id', userId);
+    if (delErr) throw new InternalServerErrorException(delErr.message);
+  }
+
+  async deleteVariant(projectId: string, variantId: string, userId: string) {
+    await this.getByIdForUser(projectId, userId);
+    const client = this.supabase.getAdminClient();
+    const { data: row, error: findErr } = await client
+      .from('thumbnail_variants')
+      .select('id, generated_image_storage_path')
+      .eq('id', variantId)
+      .eq('project_id', projectId)
+      .maybeSingle();
+    if (findErr) throw new InternalServerErrorException(findErr.message);
+    if (!row) throw new NotFoundException('Variant not found');
+
+    const path = (row as { generated_image_storage_path?: string | null })
+      .generated_image_storage_path;
+    if (typeof path === 'string' && path.length > 0) {
+      await this.storage.removeObjectsIfPresent(BUCKET_PROJECT_THUMBNAILS, [path]);
+    }
+
+    const { error: delErr } = await client
+      .from('thumbnail_variants')
+      .delete()
+      .eq('id', variantId)
+      .eq('project_id', projectId);
+    if (delErr) throw new InternalServerErrorException(delErr.message);
+
+    await this.reconcileProjectCover(projectId);
+  }
+
+  private async reconcileProjectCover(projectId: string): Promise<void> {
+    const client = this.supabase.getAdminClient();
+    const { data: variants, error } = await client
+      .from('thumbnail_variants')
+      .select('*')
+      .eq('project_id', projectId)
+      .order('created_at', { ascending: true });
+    if (error) throw new InternalServerErrorException(error.message);
+    const list = variants ?? [];
+    let cover_thumbnail_storage_path: string | null = null;
+    let cover_thumbnail_url: string | null = null;
+    for (const v of list) {
+      const row = v as {
+        status: string;
+        generated_image_storage_path?: string | null;
+        generated_image_url?: string | null;
+      };
+      if (row.status !== 'done') continue;
+      if (typeof row.generated_image_storage_path === 'string' && row.generated_image_storage_path.length > 0) {
+        cover_thumbnail_storage_path = row.generated_image_storage_path;
+        cover_thumbnail_url = null;
+        break;
+      }
+      if (typeof row.generated_image_url === 'string' && row.generated_image_url.length > 0) {
+        cover_thumbnail_storage_path = null;
+        cover_thumbnail_url = row.generated_image_url;
+        break;
+      }
+    }
+    const now = new Date().toISOString();
+    const { error: upErr } = await client
+      .from('projects')
+      .update({
+        cover_thumbnail_storage_path,
+        cover_thumbnail_url,
+        updated_at: now,
+      })
+      .eq('id', projectId);
+    if (upErr) throw new InternalServerErrorException(upErr.message);
+  }
+
   async generateVariants(
     projectId: string,
     userId: string,

@@ -1,11 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Download, ExternalLink, Pencil, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
-import { projectsApi } from '@/lib/api';
-import type { ProjectWithVariants } from '@/lib/types/project';
+import { useProjectWithVariants } from '@/lib/hooks';
 import { humanizeKey } from '@/lib/format';
 import { statusToneClass } from '@/lib/status-tone';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -28,54 +26,20 @@ function VariantCardSkeleton() {
 }
 
 export function VariantsGallery({ projectId }: { projectId: string }) {
-  const { accessToken, isLoading: authLoading } = useAuth();
-  const [data, setData] = useState<ProjectWithVariants | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-
-  const load = useCallback(async () => {
-    if (!accessToken) return;
-    setError(null);
-    const res = await projectsApi.getProject(accessToken, projectId);
-    setData(res);
-  }, [accessToken, projectId]);
-
-  useEffect(() => {
-    if (authLoading) return;
-    if (!accessToken) {
-      setLoading(false);
-      setError('You need to be signed in to view this project.');
-      return;
-    }
-    let cancelled = false;
-    setLoading(true);
-    load()
-      .catch((e: Error) => {
-        if (!cancelled) setError(e.message);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [accessToken, projectId, authLoading, load]);
+  const { user, accessToken, isLoading: authLoading } = useAuth();
+  const hasSession = Boolean(user?.id && accessToken);
+  const { data, error, isPending, isError, refetch, isFetching } = useProjectWithVariants(projectId);
 
   async function handleRefresh() {
-    if (!accessToken) return;
-    setRefreshing(true);
-    try {
-      await load();
+    const result = await refetch();
+    if (result.isError) {
+      toast.error(result.error instanceof Error ? result.error.message : 'Refresh failed');
+    } else {
       toast.success('Updated');
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Refresh failed');
-    } finally {
-      setRefreshing(false);
     }
   }
 
-  if (authLoading || loading) {
+  if (authLoading || (hasSession && isPending)) {
     return (
       <div className="space-y-6">
         <Skeleton className="h-9 w-40" />
@@ -92,7 +56,7 @@ export function VariantsGallery({ projectId }: { projectId: string }) {
     );
   }
 
-  if (error || !data) {
+  if (!authLoading && !hasSession) {
     return (
       <div className="space-y-4">
         <Link
@@ -103,13 +67,31 @@ export function VariantsGallery({ projectId }: { projectId: string }) {
           Projects
         </Link>
         <p className="text-sm text-destructive" role="alert">
-          {error ?? 'Project not found'}
+          You need to be signed in to view this project.
+        </p>
+      </div>
+    );
+  }
+
+  if (isError || !data) {
+    return (
+      <div className="space-y-4">
+        <Link
+          href="/projects"
+          className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }), 'inline-flex gap-2')}
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Projects
+        </Link>
+        <p className="text-sm text-destructive" role="alert">
+          {error instanceof Error ? error.message : 'Project not found'}
         </p>
       </div>
     );
   }
 
   const variants = data.thumbnail_variants ?? [];
+  const refreshing = isFetching && !isPending;
 
   return (
     <div className="space-y-6">
@@ -126,7 +108,7 @@ export function VariantsGallery({ projectId }: { projectId: string }) {
           variant="outline"
           size="sm"
           className="gap-2"
-          onClick={handleRefresh}
+          onClick={() => void handleRefresh()}
           disabled={refreshing}
         >
           <RefreshCw className={cn('h-4 w-4', refreshing && 'animate-spin')} />

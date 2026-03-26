@@ -3,33 +3,22 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
-import { projectsApi } from '@/lib/api';
+import { useCreateProjectAndGenerateMutation } from '@/lib/hooks';
 import type { ProjectSourceType } from '@/lib/types/project';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-
-type Tab = 'youtube' | 'video' | 'script' | 'text';
-
-const tabs: { id: Tab; label: string }[] = [
-  { id: 'youtube', label: 'YouTube URL' },
-  { id: 'video', label: 'Upload video' },
-  { id: 'script', label: 'Script' },
-  { id: 'text', label: 'Text' },
-];
-
-function tabFromSearchParams(searchParams: URLSearchParams): Tab {
-  const t = searchParams.get('tab');
-  if (t === 'video' || t === 'script' || t === 'text') return t;
-  return 'youtube';
-}
+import { tabs } from './constants';
+import type { Tab } from './types';
+import { tabFromSearchParams } from './utils';
 
 export function NewProjectForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { accessToken } = useAuth();
+  const createAndGenerate = useCreateProjectAndGenerateMutation();
 
   const [tab, setTab] = useState<Tab>(() => tabFromSearchParams(searchParams));
   const [title, setTitle] = useState('');
@@ -37,7 +26,6 @@ export function NewProjectForm() {
   const [script, setScript] = useState('');
   const [text, setText] = useState('');
   const [videoName, setVideoName] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     setTab(tabFromSearchParams(searchParams));
@@ -45,7 +33,7 @@ export function NewProjectForm() {
     if (y) setYoutubeUrl(y);
   }, [searchParams]);
 
-  async function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!accessToken) {
       toast.error('Not signed in');
@@ -93,36 +81,36 @@ export function NewProjectForm() {
         break;
     }
 
-    setSubmitting(true);
-    const toastId = toast.loading('Creating project…');
-    try {
-      const project = await projectsApi.createProject(accessToken, {
+    const toastId = toast.loading('Creating project and generating thumbnails…');
+    createAndGenerate.mutate(
+      {
         title: title.trim() || undefined,
         platform: 'youtube',
         source_type,
         source_data,
-      });
-      toast.loading('Generating thumbnails (may take a minute)…', { id: toastId });
-      const gen = await projectsApi.generateThumbnails(accessToken, project.id, { count: 3 });
-      const ok = gen.results.filter((r) => r.status === 'done').length;
-      const total = gen.results.length;
-      if (ok === total) {
-        toast.success(`${ok} thumbnail${ok === 1 ? '' : 's'} ready`, { id: toastId });
-      } else if (ok === 0) {
-        toast.error('Generation failed for all variants. Check GEMINI_API_KEY and Imagen access.', {
-          id: toastId,
-        });
-      } else {
-        toast.warning(`${ok} of ${total} thumbnails ready; some failed.`, { id: toastId });
-      }
-      router.push(`/projects/${project.id}/variants`);
-      router.refresh();
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Something went wrong';
-      toast.error(message, { id: toastId });
-    } finally {
-      setSubmitting(false);
-    }
+      },
+      {
+        onSuccess: ({ project, gen }) => {
+          const ok = gen.results.filter((r) => r.status === 'done').length;
+          const total = gen.results.length;
+          if (ok === total) {
+            toast.success(`${ok} thumbnail${ok === 1 ? '' : 's'} ready`, { id: toastId });
+          } else if (ok === 0) {
+            toast.error('Generation failed for all variants. Check GEMINI_API_KEY and Imagen access.', {
+              id: toastId,
+            });
+          } else {
+            toast.warning(`${ok} of ${total} thumbnails ready; some failed.`, { id: toastId });
+          }
+          router.push(`/projects/${project.id}/variants`);
+          router.refresh();
+        },
+        onError: (err) => {
+          const message = err instanceof Error ? err.message : 'Something went wrong';
+          toast.error(message, { id: toastId });
+        },
+      },
+    );
   }
 
   return (
@@ -243,8 +231,8 @@ export function NewProjectForm() {
               </div>
             )}
 
-            <Button type="submit" className="w-full sm:w-auto" disabled={submitting}>
-              {submitting ? 'Working…' : 'Create & generate'}
+            <Button type="submit" className="w-full sm:w-auto" disabled={createAndGenerate.isPending}>
+              {createAndGenerate.isPending ? 'Working…' : 'Create & generate'}
             </Button>
           </form>
         </CardContent>

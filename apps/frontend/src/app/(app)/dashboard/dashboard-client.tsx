@@ -1,12 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ImageIcon, Sparkles } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
-import { projectsApi } from '@/lib/api';
-import type { ProjectRow } from '@/lib/types/project';
+import { useProjectsList } from '@/lib/hooks';
 import { humanizeKey } from '@/lib/format';
 import { statusToneClass } from '@/lib/status-tone';
 import { BackendHealth } from '@/components/backend-health';
@@ -30,45 +29,24 @@ function ProjectCardSkeleton() {
 }
 
 export function DashboardClient() {
-  const { accessToken, isLoading: authLoading } = useAuth();
+  const { user, accessToken, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const [url, setUrl] = useState('');
-  const [projects, setProjects] = useState<ProjectRow[]>([]);
-  const [loadingList, setLoadingList] = useState(true);
-  const [listError, setListError] = useState<string | null>(null);
+  const { data: projects = [], isPending, isError, error } = useProjectsList();
 
-  useEffect(() => {
-    if (authLoading) return;
-    if (!accessToken) {
-      setLoadingList(false);
-      setListError('Session not available. Try refreshing the page.');
-      return;
-    }
-    let cancelled = false;
-    setLoadingList(true);
-    setListError(null);
-    projectsApi
-      .listProjects(accessToken)
-      .then((data) => {
-        if (!cancelled) setProjects(data);
-      })
-      .catch((e: Error) => {
-        if (!cancelled) setListError(e.message);
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingList(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [accessToken, authLoading]);
+  const hasSession = Boolean(user?.id && accessToken);
+  const showProjectSkeleton = authLoading || (hasSession && isPending);
+  const listError =
+    !authLoading && !hasSession
+      ? 'Session not available. Try refreshing the page.'
+      : isError
+        ? (error as Error).message
+        : null;
 
   function goCreate(extra?: Record<string, string>) {
     const q = new URLSearchParams(extra);
     router.push(`/projects/new${q.toString() ? `?${q}` : ''}`);
   }
-
-  const showProjectSkeleton = authLoading || loadingList;
 
   return (
     <div className="space-y-8">

@@ -13,6 +13,7 @@ export interface ProjectRow {
   source_data: Record<string, unknown>;
   status: ProjectStatus;
   cover_thumbnail_url: string | null;
+  cover_thumbnail_storage_path?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -21,6 +22,8 @@ export interface ThumbnailVariantRow {
   id: string;
   project_id: string;
   generated_image_url: string | null;
+  /** Present when the file lives in Storage; API still returns a signed `generated_image_url`. */
+  generated_image_storage_path?: string | null;
   status: VariantStatus;
   template_id: string | null;
   error_message: string | null;
@@ -34,6 +37,7 @@ export interface ProjectWithVariants extends ProjectRow {
 export interface GenerateThumbnailResultDto {
   variantId: string;
   imageUrl: string | null;
+  storagePath?: string | null;
   status: 'done' | 'failed';
   errorMessage?: string;
 }

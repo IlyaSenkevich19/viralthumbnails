@@ -5,6 +5,10 @@ import {
 } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { AiService } from '../ai/ai.service';
+import {
+  BUCKET_PROJECT_THUMBNAILS,
+  StorageService,
+} from '../storage/storage.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 
@@ -13,6 +17,7 @@ export class ProjectsService {
   constructor(
     private readonly supabase: SupabaseService,
     private readonly ai: AiService,
+    private readonly storage: StorageService,
   ) {}
 
   async create(userId: string, dto: CreateProjectDto) {
@@ -30,7 +35,7 @@ export class ProjectsService {
       .select()
       .single();
     if (error) throw new InternalServerErrorException(error.message);
-    return data;
+    return this.signProjectRow(data as Record<string, unknown>);
   }
 
   async listForUser(userId: string) {
@@ -41,7 +46,8 @@ export class ProjectsService {
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
     if (error) throw new InternalServerErrorException(error.message);
-    return data ?? [];
+    const rows = data ?? [];
+    return Promise.all(rows.map((r) => this.signProjectRow(r as Record<string, unknown>)));
   }
 
   async getByIdForUser(projectId: string, userId: string) {
@@ -65,7 +71,11 @@ export class ProjectsService {
       .eq('project_id', projectId)
       .order('created_at', { ascending: true });
     if (error) throw new InternalServerErrorException(error.message);
-    return { ...project, thumbnail_variants: variants ?? [] };
+    const signedVariants = await Promise.all(
+      (variants ?? []).map((v) => this.signVariantRow(v as Record<string, unknown>)),
+    );
+    const signedProject = await this.signProjectRow(project as Record<string, unknown>);
+    return { ...signedProject, thumbnail_variants: signedVariants };
   }
 
   async update(projectId: string, userId: string, dto: UpdateProjectDto) {
@@ -85,7 +95,7 @@ export class ProjectsService {
       .select()
       .single();
     if (error) throw new InternalServerErrorException(error.message);
-    return data;
+    return this.signProjectRow(data as Record<string, unknown>);
   }
 
   async listVariants(projectId: string, userId: string) {
@@ -97,7 +107,9 @@ export class ProjectsService {
       .eq('project_id', projectId)
       .order('created_at', { ascending: true });
     if (error) throw new InternalServerErrorException(error.message);
-    return data ?? [];
+    return Promise.all(
+      (data ?? []).map((v) => this.signVariantRow(v as Record<string, unknown>)),
+    );
   }
 
   async generateVariants(
@@ -146,13 +158,30 @@ export class ProjectsService {
       }
 
       const anyDone = results.some((r) => r.status === 'done');
-      const firstOk = results.find((r) => r.imageUrl)?.imageUrl;
+      const firstDone = results.find((r) => r.status === 'done');
+
+      let cover_thumbnail_storage_path: string | null =
+        (project as { cover_thumbnail_storage_path?: string | null })
+          .cover_thumbnail_storage_path ?? null;
+      let cover_thumbnail_url: string | null =
+        (project as { cover_thumbnail_url?: string | null }).cover_thumbnail_url ?? null;
+
+      if (firstDone) {
+        if (firstDone.storagePath) {
+          cover_thumbnail_storage_path = firstDone.storagePath;
+          cover_thumbnail_url = null;
+        } else if (firstDone.imageUrl) {
+          cover_thumbnail_url = firstDone.imageUrl;
+          cover_thumbnail_storage_path = null;
+        }
+      }
 
       await client
         .from('projects')
         .update({
           status: anyDone ? 'done' : 'failed',
-          cover_thumbnail_url: firstOk ?? project.cover_thumbnail_url,
+          cover_thumbnail_storage_path,
+          cover_thumbnail_url,
           updated_at: now(),
         })
         .eq('id', projectId);
@@ -166,5 +195,31 @@ export class ProjectsService {
         .eq('id', projectId);
       throw new InternalServerErrorException(msg);
     }
+  }
+
+  private async signProjectRow<T extends Record<string, unknown>>(row: T): Promise<T> {
+    const path = row.cover_thumbnail_storage_path;
+    if (typeof path === 'string' && path.length > 0) {
+      try {
+        const url = await this.storage.createSignedUrl(BUCKET_PROJECT_THUMBNAILS, path);
+        return { ...row, cover_thumbnail_url: url } as T;
+      } catch {
+        return row;
+      }
+    }
+    return row;
+  }
+
+  private async signVariantRow<T extends Record<string, unknown>>(row: T): Promise<T> {
+    const path = row.generated_image_storage_path;
+    if (typeof path === 'string' && path.length > 0) {
+      try {
+        const url = await this.storage.createSignedUrl(BUCKET_PROJECT_THUMBNAILS, path);
+        return { ...row, generated_image_url: url } as T;
+      } catch {
+        return row;
+      }
+    }
+    return row;
   }
 }

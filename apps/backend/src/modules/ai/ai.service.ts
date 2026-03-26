@@ -1,10 +1,16 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SupabaseService } from '../supabase/supabase.service';
+import {
+  BUCKET_PROJECT_THUMBNAILS,
+  StorageService,
+} from '../storage/storage.service';
 
 export interface GenerateThumbnailResult {
   variantId: string;
   imageUrl: string | null;
+  /** Set when file was stored in Supabase Storage (same as DB column). */
+  storagePath?: string | null;
   status: 'done' | 'failed';
   errorMessage?: string;
 }
@@ -16,6 +22,10 @@ type ImagenPrediction = {
   mime_type?: string;
 };
 
+type GeneratedImage =
+  | { kind: 'bytes'; buffer: Buffer; contentType: string }
+  | { kind: 'external'; url: string };
+
 @Injectable()
 export class AiService {
   private readonly logger = new Logger(AiService.name);
@@ -23,6 +33,7 @@ export class AiService {
   constructor(
     private readonly config: ConfigService,
     private readonly supabase: SupabaseService,
+    private readonly storage: StorageService,
   ) {}
 
   async generateThumbnailForProject(params: {
@@ -51,9 +62,9 @@ export class AiService {
     const prompt = this.buildPrompt(project, params.templateId);
     this.logger.log(`Generating variant ${params.variantId} via Gemini (Imagen)`);
 
-    let imageUrl: string | null = null;
+    let generated: GeneratedImage;
     try {
-      imageUrl = await this.generateWithGeminiImagen(prompt, params.variantId);
+      generated = await this.resolveGeneratedImage(prompt, params.variantId);
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Image generation failed';
       this.logger.warn(msg);
@@ -69,12 +80,62 @@ export class AiService {
       };
     }
 
-    await client
-      .from('thumbnail_variants')
-      .update({ generated_image_url: imageUrl, status: 'done', error_message: null })
-      .eq('id', params.variantId);
+    try {
+      if (generated.kind === 'bytes') {
+        const { path } = await this.storage.uploadProjectVariantImage({
+          userId: params.userId,
+          projectId: params.projectId,
+          variantId: params.variantId,
+          body: generated.buffer,
+          contentType: generated.contentType,
+        });
+        const signed = await this.storage.createSignedUrl(BUCKET_PROJECT_THUMBNAILS, path);
+        await client
+          .from('thumbnail_variants')
+          .update({
+            generated_image_storage_path: path,
+            generated_image_url: null,
+            status: 'done',
+            error_message: null,
+          })
+          .eq('id', params.variantId);
+        return {
+          variantId: params.variantId,
+          imageUrl: signed,
+          storagePath: path,
+          status: 'done',
+        };
+      }
 
-    return { variantId: params.variantId, imageUrl, status: 'done' };
+      await client
+        .from('thumbnail_variants')
+        .update({
+          generated_image_storage_path: null,
+          generated_image_url: generated.url,
+          status: 'done',
+          error_message: null,
+        })
+        .eq('id', params.variantId);
+      return {
+        variantId: params.variantId,
+        imageUrl: generated.url,
+        storagePath: null,
+        status: 'done',
+      };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Storage failed';
+      this.logger.warn(msg);
+      await client
+        .from('thumbnail_variants')
+        .update({ status: 'failed', error_message: msg })
+        .eq('id', params.variantId);
+      return {
+        variantId: params.variantId,
+        imageUrl: null,
+        status: 'failed',
+        errorMessage: msg,
+      };
+    }
   }
 
   private buildPrompt(project: Record<string, unknown>, templateId?: string): string {
@@ -93,10 +154,10 @@ export class AiService {
     return `YouTube thumbnail, bold readable title, high contrast, no small text, subject: "${title}". Source (${sourceType}): ${excerpt}.${tpl}`;
   }
 
-  private async generateWithGeminiImagen(prompt: string, variantId: string): Promise<string> {
+  private async resolveGeneratedImage(prompt: string, variantId: string): Promise<GeneratedImage> {
     const apiKey = this.config.get<string>('GEMINI_API_KEY');
     if (!apiKey?.trim()) {
-      return this.placeholderThumbnailUrl(variantId);
+      return { kind: 'external', url: this.placeholderThumbnailUrl(variantId) };
     }
 
     const model =
@@ -137,43 +198,53 @@ export class AiService {
       throw new Error('Gemini Imagen: invalid JSON response');
     }
 
-    const dataUrl = this.extractImagenImageDataUrl(json);
-    if (dataUrl) return dataUrl;
+    const decoded = this.extractImagenImageBytes(json);
+    if (decoded) {
+      return {
+        kind: 'bytes',
+        buffer: decoded.buffer,
+        contentType: decoded.contentType,
+      };
+    }
 
     this.logger.warn(`Unexpected Imagen response keys: ${this.jsonTopKeys(json)}`);
     throw new Error('Gemini Imagen: no image bytes in response');
   }
 
-  private extractImagenImageDataUrl(json: unknown): string | null {
+  private extractImagenImageBytes(json: unknown): { buffer: Buffer; contentType: string } | null {
     const root = json as Record<string, unknown>;
 
     const predictions = root.predictions as ImagenPrediction[] | undefined;
     if (Array.isArray(predictions) && predictions.length > 0) {
-      const img = this.predictionToDataUrl(predictions[0]);
-      if (img) return img;
+      const b = this.predictionToBytes(predictions[0]);
+      if (b) return b;
     }
 
     const generatedImages = root.generatedImages as unknown[] | undefined;
     if (Array.isArray(generatedImages) && generatedImages.length > 0) {
       const first = generatedImages[0] as Record<string, unknown>;
       const image = first.image as Record<string, unknown> | undefined;
-      const bytes =
+      const b64 =
         (image?.imageBytes as string | undefined) ||
         (image?.image_bytes as string | undefined);
-      if (typeof bytes === 'string' && bytes.length > 0) {
-        const mime = (image?.mimeType as string) || (image?.mime_type as string) || 'image/png';
-        return `data:${mime};base64,${bytes}`;
+      if (typeof b64 === 'string' && b64.length > 0) {
+        const mime =
+          (image?.mimeType as string) || (image?.mime_type as string) || 'image/png';
+        const buffer = Buffer.from(b64, 'base64');
+        if (buffer.length) return { buffer, contentType: mime };
       }
     }
 
     return null;
   }
 
-  private predictionToDataUrl(p: ImagenPrediction): string | null {
+  private predictionToBytes(p: ImagenPrediction): { buffer: Buffer; contentType: string } | null {
     const b64 = p.bytesBase64Encoded ?? p.bytes_base64_encoded;
     if (typeof b64 !== 'string' || !b64.length) return null;
     const mime = p.mimeType ?? p.mime_type ?? 'image/png';
-    return `data:${mime};base64,${b64}`;
+    const buffer = Buffer.from(b64, 'base64');
+    if (!buffer.length) return null;
+    return { buffer, contentType: mime };
   }
 
   private jsonTopKeys(json: unknown): string {
@@ -183,9 +254,6 @@ export class AiService {
     return typeof json;
   }
 
-  /**
-   * Fallback when GEMINI_API_KEY is not set (local dev / geo / billing).
-   */
   private placeholderThumbnailUrl(variantId: string): string {
     const short = variantId.replace(/-/g, '').slice(0, 12) || 'preview';
     const text = encodeURIComponent(`Preview ${short}`);

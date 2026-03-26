@@ -1,32 +1,16 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-
-type State = 'loading' | 'ok' | 'error';
+import { useBackendHealth } from '@/lib/hooks';
 
 export function BackendHealth() {
-  const [state, setState] = useState<State>('loading');
+  const { isPending, isSuccess } = useBackendHealth();
 
-  useEffect(() => {
-    let cancelled = false;
-    fetch('/api/health')
-      .then((res) => {
-        if (!cancelled) setState(res.ok ? 'ok' : 'error');
-      })
-      .catch(() => {
-        if (!cancelled) setState('error');
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  if (state === 'loading') {
+  if (isPending) {
     return <Badge className="border-border bg-secondary text-muted-foreground">API: ...</Badge>;
   }
-  if (state === 'ok') {
+  if (isSuccess) {
     return (
       <Badge
         className={cn(

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { siteName } from '@/config/site';
-import { authApi } from '@/lib/api';
+import { useSignInMutation, useSignInWithGoogleMutation } from '@/lib/hooks';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,41 +14,44 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
   const router = useRouter();
+  const signIn = useSignInMutation();
+  const googleSignIn = useSignInWithGoogleMutation();
 
-  async function handleSubmit(e: React.FormEvent) {
+  const loading = signIn.isPending;
+  const googleLoading = googleSignIn.isPending;
+
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
-    setLoading(true);
-    try {
-      await authApi.signIn(email, password);
-      toast.success('Welcome back!');
-      router.push('/dashboard');
-      router.refresh();
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : 'Failed to sign in. Please try again.';
-      setError(message);
-      toast.error(message);
-    } finally {
-      setLoading(false);
-    }
+    signIn.mutate(
+      { email, password },
+      {
+        onSuccess: () => {
+          toast.success('Welcome back!');
+          router.push('/dashboard');
+          router.refresh();
+        },
+        onError: (err) => {
+          const message =
+            err instanceof Error ? err.message : 'Failed to sign in. Please try again.';
+          setError(message);
+          toast.error(message);
+        },
+      },
+    );
   }
 
-  async function handleGoogle() {
+  function handleGoogle() {
     setError('');
-    setGoogleLoading(true);
-    try {
-      await authApi.signInWithGoogle();
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : 'Failed to sign in with Google.';
-      setError(message);
-      toast.error(message);
-      setGoogleLoading(false);
-    }
+    googleSignIn.mutate(undefined, {
+      onError: (err) => {
+        const message =
+          err instanceof Error ? err.message : 'Failed to sign in with Google.';
+        setError(message);
+        toast.error(message);
+      },
+    });
   }
 
   return (

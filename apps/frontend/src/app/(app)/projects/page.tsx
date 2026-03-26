@@ -1,11 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { FolderOpen, Plus } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
-import { projectsApi } from '@/lib/api';
-import type { ProjectRow } from '@/lib/types/project';
+import { useProjectsList } from '@/lib/hooks';
 import { humanizeKey } from '@/lib/format';
 import { statusToneClass } from '@/lib/status-tone';
 import { buttonVariants } from '@/components/ui/button';
@@ -15,38 +13,17 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 
 export default function ProjectsListPage() {
-  const { accessToken, isLoading: authLoading } = useAuth();
-  const [projects, setProjects] = useState<ProjectRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { user, accessToken, isLoading: authLoading } = useAuth();
+  const { data: projects = [], isPending, isError, error } = useProjectsList();
 
-  useEffect(() => {
-    if (authLoading) return;
-    if (!accessToken) {
-      setLoading(false);
-      setError('Session not available. Try refreshing the page.');
-      return;
-    }
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-    projectsApi
-      .listProjects(accessToken)
-      .then((data) => {
-        if (!cancelled) setProjects(data);
-      })
-      .catch((e: Error) => {
-        if (!cancelled) setError(e.message);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [accessToken, authLoading]);
-
-  const showSkeleton = authLoading || loading;
+  const hasSession = Boolean(user?.id && accessToken);
+  const showSkeleton = authLoading || (hasSession && isPending);
+  const listError =
+    !authLoading && !hasSession
+      ? 'Session not available. Try refreshing the page.'
+      : isError
+        ? (error as Error).message
+        : null;
 
   return (
     <div className="space-y-6">
@@ -64,9 +41,9 @@ export default function ProjectsListPage() {
         </Link>
       </div>
 
-      {error && (
+      {listError && (
         <p className="text-sm text-destructive" role="alert">
-          {error}
+          {listError}
         </p>
       )}
       {showSkeleton ? (

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { siteName } from '@/config/site';
-import { authApi } from '@/lib/api';
+import { useSignUpMutation } from '@/lib/hooks';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
@@ -13,26 +13,28 @@ export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
   const [registered, setRegistered] = useState(false);
   const router = useRouter();
+  const signUp = useSignUpMutation();
 
-  async function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
-    setLoading(true);
-    try {
-      await authApi.signUp(email, password);
-      setRegistered(true);
-      toast.success('Confirm your email to activate account.');
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : 'Failed to sign up. Please try again.';
-      setError(message);
-      toast.error(message);
-    } finally {
-      setLoading(false);
-    }
+    signUp.mutate(
+      { email, password },
+      {
+        onSuccess: () => {
+          setRegistered(true);
+          toast.success('Confirm your email to activate account.');
+        },
+        onError: (err) => {
+          const message =
+            err instanceof Error ? err.message : 'Failed to sign up. Please try again.';
+          setError(message);
+          toast.error(message);
+        },
+      },
+    );
   }
 
   return (
@@ -90,8 +92,8 @@ export default function RegisterPage() {
                     />
                   </div>
                   {error && <p className="text-sm text-destructive">{error}</p>}
-                  <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? 'Creating account...' : 'Get started →'}
+                  <Button type="submit" className="w-full" disabled={signUp.isPending}>
+                    {signUp.isPending ? 'Creating account...' : 'Get started →'}
                   </Button>
                 </form>
               </>

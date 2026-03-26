@@ -15,7 +15,7 @@ import {
   LogOut,
   MoreVertical,
 } from 'lucide-react';
-import { authApi } from '@/lib/api';
+import { useSignOutMutation } from '@/lib/hooks';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 
@@ -32,6 +32,7 @@ function SidebarUserBlock() {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const signOut = useSignOutMutation();
 
   useEffect(() => {
     if (!ref.current) return;
@@ -42,12 +43,18 @@ function SidebarUserBlock() {
     return () => document.removeEventListener('mousedown', onOutside);
   }, []);
 
-  async function handleSignOut() {
-    await authApi.signOut();
-    toast.success('Logged out');
-    router.push('/auth/login');
-    router.refresh();
-    setOpen(false);
+  function handleSignOut() {
+    signOut.mutate(undefined, {
+      onSuccess: () => {
+        toast.success('Logged out');
+        router.push('/auth/login');
+        router.refresh();
+        setOpen(false);
+      },
+      onError: () => {
+        toast.error('Could not sign out');
+      },
+    });
   }
 
   if (!user) return null;
@@ -75,8 +82,10 @@ function SidebarUserBlock() {
       {open && (
         <div className="absolute bottom-full left-0 right-0 z-50 mb-1 rounded-xl border border-border bg-card py-1 shadow-soft">
           <button
+            type="button"
             onClick={handleSignOut}
-            className="motion-base flex w-full items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:bg-secondary hover:text-foreground"
+            disabled={signOut.isPending}
+            className="motion-base flex w-full items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:bg-secondary hover:text-foreground disabled:opacity-50"
           >
             <LogOut className="h-4 w-4" />
             Sign out

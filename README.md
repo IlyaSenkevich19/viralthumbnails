@@ -10,7 +10,15 @@ apps/backend    — NestJS, global prefix /api, Swagger at /api/docs
 supabase/migrations — optional SQL (e.g. profiles table)
 ```
 
-The frontend rewrites `/api/*` to the backend (`next.config.mjs`). Set **`NEXT_PUBLIC_BACKEND_URL`** in root `.env` (e.g. production API origin, no trailing slash). Defaults to `http://localhost:3001`.
+The frontend rewrites `/api/*` to the backend (`next.config.mjs`). **`NEXT_PUBLIC_BACKEND_URL`** chooses that target (no trailing slash).
+
+## Local vs production (no branching in code)
+
+- **Local:** keep a root **`.env`** (gitignored) with `NEXT_PUBLIC_BACKEND_URL=http://localhost:3001`, `FRONTEND_URL=http://localhost:3000`, and Supabase keys. Run `yarn dev` — `scripts/sync-frontend-env.js` copies `NEXT_PUBLIC_*` into `apps/frontend/.env.local`.
+- **`apps/frontend/.env.development`** (committed) defaults the backend URL to localhost for `next dev` if a key is missing from `.env.local`.
+- **Production (Vercel / other hosts):** set the same variable **names** in the host’s dashboard. Do **not** rely on a committed `.env.production` for secrets. **`NEXT_PUBLIC_*` are inlined at `next build`**, so after changing them on Vercel you must **redeploy**.
+
+The backend uses **`FRONTEND_URL`** for CORS — use your real frontend origin in production.
 
 ## Quick start
 

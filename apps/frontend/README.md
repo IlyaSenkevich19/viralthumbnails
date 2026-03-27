@@ -45,6 +45,8 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 
 Use the **anon** (publishable) key in the browser only. The app expects this exact name (`NEXT_PUBLIC_SUPABASE_ANON_KEY`), not `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY`.
 
+**Vercel:** add both variables under **Project → Settings → Environment Variables**, enable them for **Production** (and **Preview** if you use preview deploys). Then trigger a **new deployment** — Next.js bakes `NEXT_PUBLIC_*` into the JS at **build** time; changing env without redeploy leaves the old bundle without keys.
+
 ### Recommended
 
 ```env
@@ -58,6 +60,8 @@ NEXT_PUBLIC_BACKEND_URL=http://localhost:3001
 ### Monorepo env sync
 
 From the **repo root**, `yarn dev` / `yarn build` runs `scripts/sync-frontend-env.js`, which copies selected `NEXT_PUBLIC_*` (and related) vars from root **`.env`** into **`apps/frontend/.env.local`**. After changing root env, rerun dev or sync so the frontend picks them up.
+
+**`apps/frontend/.env.development`** is loaded only for `next dev` and defaults `NEXT_PUBLIC_BACKEND_URL` to `http://localhost:3001`. Production builds on Vercel use **`NODE_ENV=production`**, so that file is not applied there — use Vercel env vars instead. See root **`README.md`** (“Local vs production”).
 
 ## Scripts
 

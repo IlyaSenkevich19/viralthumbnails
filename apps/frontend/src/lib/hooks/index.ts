@@ -7,6 +7,7 @@ export {
   useDeleteVariantMutation,
 } from './use-projects';
 export { NICHE_ALL, useTemplateNiches, useTemplatesList } from './use-templates';
+export { useAvatarsList, useCreateAvatarMutation, useDeleteAvatarMutation } from './use-avatars';
 export {
   useSignInMutation,
   useSignUpMutation,

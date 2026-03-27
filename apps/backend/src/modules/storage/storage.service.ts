@@ -4,6 +4,7 @@ import { SupabaseService } from '../supabase/supabase.service';
 
 export const BUCKET_PROJECT_THUMBNAILS = 'project-thumbnails';
 export const BUCKET_THUMBNAIL_TEMPLATES = 'thumbnail-templates';
+export const BUCKET_USER_AVATARS = 'user-avatars';
 
 @Injectable()
 export class StorageService {
@@ -56,6 +57,25 @@ export class StorageService {
     });
     if (error) {
       throw new Error(`thumbnail-templates upload: ${error.message}`);
+    }
+    return { path };
+  }
+
+  async uploadUserAvatarImage(params: {
+    userId: string;
+    avatarId: string;
+    body: Buffer;
+    contentType: string;
+  }): Promise<{ path: string }> {
+    const ext = extensionForMime(params.contentType);
+    const path = `${params.userId}/avatars/${params.avatarId}.${ext}`;
+    const client = this.supabase.getAdminClient();
+    const { error } = await client.storage.from(BUCKET_USER_AVATARS).upload(path, params.body, {
+      contentType: params.contentType,
+      upsert: true,
+    });
+    if (error) {
+      throw new Error(`user-avatars upload: ${error.message}`);
     }
     return { path };
   }

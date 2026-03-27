@@ -8,6 +8,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { HealthModule } from './modules/health/health.module';
 import { ProjectsModule } from './modules/projects/projects.module';
 import { TemplatesModule } from './modules/templates/templates.module';
+import { AvatarsModule } from './modules/avatars/avatars.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { TemplatesModule } from './modules/templates/templates.module';
     HealthModule,
     ProjectsModule,
     TemplatesModule,
+    AvatarsModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: HttpExceptionFilter },

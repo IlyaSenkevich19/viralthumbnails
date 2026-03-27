@@ -19,6 +19,11 @@ export const queryKeys = {
       [...queryKeys.templates.all, 'list', userId, niche] as const,
   },
 
+  avatars: {
+    all: ['avatars'] as const,
+    list: (userId: string) => [...queryKeys.avatars.all, 'list', userId] as const,
+  },
+
   billing: {
     credits: (userId: string) => ['billing', 'credits', userId] as const,
   },

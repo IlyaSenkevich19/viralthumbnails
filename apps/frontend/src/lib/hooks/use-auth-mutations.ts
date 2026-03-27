@@ -32,6 +32,7 @@ export function useSignOutMutation() {
     onSuccess: () => {
       queryClient.removeQueries({ queryKey: queryKeys.projects.all });
       queryClient.removeQueries({ queryKey: queryKeys.templates.all });
+      queryClient.removeQueries({ queryKey: queryKeys.avatars.all });
     },
   });
 }

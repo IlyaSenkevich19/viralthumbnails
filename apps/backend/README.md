@@ -24,6 +24,7 @@ API for **ViralThumbnails**: Supabase-backed projects, thumbnail variants, templ
 | **Health** | Liveness-style check |
 | **Projects** | CRUD projects, list/delete variants, trigger generation |
 | **Templates** | List/create templates; niches + Storage paths (see Swagger) |
+| **Avatars** | `GET/POST/DELETE /api/avatars` — user face images in `user-avatars` bucket |
 | **AI** | Imagen (or placeholder) + upload variant image to Storage |
 | **Storage** | Signed URLs, uploads to `project-thumbnails` / `thumbnail-templates` |
 | **Supabase** | Injectable wrapper around admin client |
@@ -51,6 +52,8 @@ FRONTEND_URL=http://localhost:3000
 ```
 
 `FRONTEND_URL` is passed to `enableCors` (production: set to your real frontend origin, e.g. Vercel URL).
+
+JSON body size limit is **15MB** in `main.ts` (base64 image uploads). If the frontend uses a **host proxy** (e.g. Next rewrites on Vercel), that platform may enforce a **smaller** max request size (~4.5MB on Vercel) — the frontend downscales avatar images before upload to stay under typical limits.
 
 ### Optional — AI (Gemini Imagen)
 

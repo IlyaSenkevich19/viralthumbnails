@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   FolderKanban,
   LayoutTemplate,
+  UserCircle,
   FlaskConical,
   Settings,
   LogOut,
@@ -26,6 +27,7 @@ const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/projects', label: 'Projects', icon: FolderKanban },
   { href: '/templates', label: 'Templates', icon: LayoutTemplate },
+  { href: '/avatars', label: 'My faces', icon: UserCircle },
   { href: '/ab-tests', label: 'A/B Tests', icon: FlaskConical },
   { href: '/settings', label: 'Settings', icon: Settings },
 ];

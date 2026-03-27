@@ -1,12 +1,35 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
+function isPublicPath(pathname: string) {
+  return (
+    pathname === '/' ||
+    pathname.startsWith('/auth/login') ||
+    pathname.startsWith('/auth/register')
+  );
+}
+
 export async function updateSession(request: NextRequest) {
   const response = NextResponse.next({ request });
 
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
+  if (!url || !anonKey) {
+    console.error(
+      '[middleware] Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY (set them in Vercel → Settings → Environment Variables).',
+    );
+    if (isPublicPath(request.nextUrl.pathname)) {
+      return response;
+    }
+    const login = request.nextUrl.clone();
+    login.pathname = '/auth/login';
+    login.searchParams.set('error', 'configuration');
+    return NextResponse.redirect(login);
+  }
+
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    url,
+    anonKey,
     {
       cookies: {
         getAll() {
@@ -25,15 +48,10 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const isPublicRoute =
-    request.nextUrl.pathname === '/' ||
-    request.nextUrl.pathname.startsWith('/auth/login') ||
-    request.nextUrl.pathname.startsWith('/auth/register');
-
-  if (!isPublicRoute && !user) {
-    const url = request.nextUrl.clone();
-    url.pathname = '/auth/login';
-    return NextResponse.redirect(url);
+  if (!isPublicPath(request.nextUrl.pathname) && !user) {
+    const loginUrl = request.nextUrl.clone();
+    loginUrl.pathname = '/auth/login';
+    return NextResponse.redirect(loginUrl);
   }
 
   return response;

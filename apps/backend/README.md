@@ -3,6 +3,7 @@
 API for **ViralThumbnails**: Supabase-backed projects, thumbnail variants, template catalog, and optional **Google Gemini / Imagen** generation.
 
 - **Global prefix:** `/api` (e.g. health is `GET /api/health`)
+- **Root:** `GET /` returns a small JSON map (`health`, `docs`) so deploys don’t show “Cannot GET /”
 - **OpenAPI:** [http://localhost:3001/api/docs](http://localhost:3001/api/docs) when running locally
 - **Env files:** reads `.env` in this folder or repo root `../../.env` (see `app.module.ts`)
 
@@ -91,6 +92,7 @@ yarn lint
 ## Quick API check
 
 ```bash
+curl -s http://localhost:3001/
 curl -s http://localhost:3001/api/health
 curl -s -H "Authorization: Bearer <supabase_access_token>" http://localhost:3001/api/auth/me
 ```

@@ -9,6 +9,7 @@ import { useNewProject } from '@/contexts/new-project-context';
 import { useProjectsList } from '@/lib/hooks';
 import { humanizeKey } from '@/lib/format';
 import { statusToneClass } from '@/lib/status-tone';
+import { isOptimisticProjectId } from '@/lib/types/project';
 import { BackendHealth } from '@/components/backend-health';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -157,13 +158,15 @@ export function DashboardClient() {
           </Card>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {projects.slice(0, 6).map((p) => (
-              <Link
-                key={p.id}
-                href={`/projects/${p.id}/variants`}
-                className="block rounded-xl outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <Card className="h-full overflow-hidden transition-colors hover:border-border-hover">
+            {projects.slice(0, 6).map((p) => {
+              const optimistic = isOptimisticProjectId(p.id);
+              const card = (
+                <Card
+                  className={cn(
+                    'h-full overflow-hidden transition-colors',
+                    !optimistic && 'hover:border-border-hover',
+                  )}
+                >
                   <div className="relative aspect-video bg-muted">
                     {p.cover_thumbnail_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -196,8 +199,21 @@ export function DashboardClient() {
                     </p>
                   </CardHeader>
                 </Card>
-              </Link>
-            ))}
+              );
+              return optimistic ? (
+                <div key={p.id} className="rounded-xl outline-none">
+                  {card}
+                </div>
+              ) : (
+                <Link
+                  key={p.id}
+                  href={`/projects/${p.id}/variants`}
+                  className="block rounded-xl outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  {card}
+                </Link>
+              );
+            })}
           </div>
         )}
       </section>

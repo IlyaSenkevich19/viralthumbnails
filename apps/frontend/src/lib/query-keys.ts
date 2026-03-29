@@ -25,6 +25,7 @@ export const queryKeys = {
   },
 
   billing: {
-    credits: (userId: string) => ['billing', 'credits', userId] as const,
+    all: ['billing'] as const,
+    credits: (userId: string) => [...queryKeys.billing.all, 'credits', userId] as const,
   },
 } as const;

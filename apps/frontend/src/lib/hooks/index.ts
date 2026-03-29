@@ -1,5 +1,6 @@
 export { useBackendHealth } from './use-backend-health';
 export {
+  createProjectAndGenerateMutationKey,
   useProjectsList,
   useProjectWithVariants,
   useCreateProjectAndGenerateMutation,

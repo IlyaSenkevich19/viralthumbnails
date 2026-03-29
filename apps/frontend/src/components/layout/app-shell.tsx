@@ -1,12 +1,15 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { useIsMutating } from '@tanstack/react-query';
+import { createProjectAndGenerateMutationKey } from '@/lib/hooks';
 import { Sidebar } from './sidebar';
 import { HeaderShell } from './header-shell';
 
 const STORAGE_KEY = 'vt-sidebar-collapsed';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
+  const creatingProject = useIsMutating({ mutationKey: createProjectAndGenerateMutationKey }) > 0;
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [hydrated, setHydrated] = useState(false);
@@ -56,6 +59,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           />
           <main className="min-h-0 flex-1 overflow-auto">
             <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+              {creatingProject ? (
+                <div
+                  className="mb-4 rounded-lg border border-primary/25 bg-primary/5 px-4 py-2.5 text-sm text-foreground"
+                  role="status"
+                  aria-live="polite"
+                >
+                  Creating project and generating thumbnails…
+                </div>
+              ) : null}
               {children}
             </div>
           </main>

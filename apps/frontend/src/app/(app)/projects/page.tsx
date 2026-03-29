@@ -7,6 +7,7 @@ import { useNewProject } from '@/contexts/new-project-context';
 import { useProjectsList, useDeleteProjectMutation } from '@/lib/hooks';
 import { humanizeKey } from '@/lib/format';
 import { statusToneClass } from '@/lib/status-tone';
+import { isOptimisticProjectId } from '@/lib/types/project';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -125,7 +126,9 @@ export default function ProjectsListPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border bg-background">
-              {projects.map((p) => (
+              {projects.map((p) => {
+                const optimistic = isOptimisticProjectId(p.id);
+                return (
                 <tr key={p.id} className="motion-base hover:bg-secondary/50">
                   <td className="px-4 py-2">
                     <div className="h-12 w-20 overflow-hidden rounded-md bg-muted">
@@ -153,14 +156,19 @@ export default function ProjectsListPage() {
                     </Badge>
                   </td>
                   <td className="px-4 py-2">
-                    <ProjectRowMenu
-                      projectId={p.id}
-                      projectTitle={p.title}
-                      onDeleteClick={() => setProjectToDelete({ id: p.id, title: p.title })}
-                    />
+                    {optimistic ? (
+                      <span className="text-xs text-muted-foreground">Creating…</span>
+                    ) : (
+                      <ProjectRowMenu
+                        projectId={p.id}
+                        projectTitle={p.title}
+                        onDeleteClick={() => setProjectToDelete({ id: p.id, title: p.title })}
+                      />
+                    )}
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>

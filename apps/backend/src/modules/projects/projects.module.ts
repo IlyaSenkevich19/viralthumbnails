@@ -5,10 +5,11 @@ import { ProjectsService } from './projects.service';
 import { AuthModule } from '../auth/auth.module';
 import { SupabaseModule } from '../supabase/supabase.module';
 import { AiModule } from '../ai/ai.module';
+import { BillingModule } from '../billing/billing.module';
 import { StorageModule } from '../storage/storage.module';
 
 @Module({
-  imports: [AuthModule, SupabaseModule, StorageModule, AiModule],
+  imports: [AuthModule, SupabaseModule, StorageModule, AiModule, BillingModule],
   controllers: [ThumbnailVariantsController, ProjectsController],
   providers: [ProjectsService],
   exports: [ProjectsService],

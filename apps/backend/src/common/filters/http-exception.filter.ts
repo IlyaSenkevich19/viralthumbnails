@@ -7,6 +7,16 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { defaultErrorCodeForStatus } from '../http/error-codes';
+import { normalizeExceptionMessage } from '../http/normalize-exception-message';
+
+export type ApiErrorJsonBody = {
+  statusCode: number;
+  timestamp: string;
+  path: string;
+  message: string;
+  code: string;
+};
 
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
@@ -26,26 +36,44 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
     if (exception instanceof HttpException) {
       const responseBody = exception.getResponse();
-      const logLine = `${req.method} ${req.url} - ${status}: ${JSON.stringify(responseBody)}`;
+      let message: string;
+      let code: string;
+
+      if (typeof responseBody === 'string') {
+        message = normalizeExceptionMessage(responseBody, responseBody || 'Error');
+        code = defaultErrorCodeForStatus(status);
+      } else if (
+        responseBody !== null &&
+        typeof responseBody === 'object' &&
+        !Array.isArray(responseBody)
+      ) {
+        const o = responseBody as Record<string, unknown>;
+        const explicitCode = typeof o.code === 'string' ? o.code : undefined;
+        message = normalizeExceptionMessage(
+          o.message,
+          typeof o.error === 'string' ? o.error : HttpStatus[status] || 'Error',
+        );
+        code = explicitCode ?? defaultErrorCodeForStatus(status);
+      } else {
+        message = normalizeExceptionMessage(responseBody, 'Error');
+        code = defaultErrorCodeForStatus(status);
+      }
+
+      const logLine = `${req.method} ${req.url} - ${status}: ${message}`;
       if (status >= 500) {
         this.logger.error(logLine);
       } else {
         this.logger.warn(logLine);
       }
-      const payload =
-        typeof responseBody === 'string'
-          ? { message: responseBody }
-          : responseBody !== null &&
-              typeof responseBody === 'object' &&
-              !Array.isArray(responseBody)
-            ? (responseBody as Record<string, unknown>)
-            : { message: String(responseBody) };
-      res.status(status).json({
+
+      const body: ApiErrorJsonBody = {
         statusCode: status,
         timestamp: new Date().toISOString(),
         path: req.url,
-        ...payload,
-      });
+        message,
+        code,
+      };
+      res.status(status).json(body);
       return;
     }
 
@@ -56,11 +84,13 @@ export class HttpExceptionFilter implements ExceptionFilter {
       exception instanceof Error ? exception.stack : undefined,
     );
 
-    res.status(status).json({
+    const body: ApiErrorJsonBody = {
       statusCode: status,
       timestamp: new Date().toISOString(),
       path: req.url,
       message: isProd ? 'Internal server error' : internalMsg,
-    });
+      code: 'INTERNAL_ERROR',
+    };
+    res.status(status).json(body);
   }
 }

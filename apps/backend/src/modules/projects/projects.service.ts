@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { AiService } from '../ai/ai.service';
+import { BillingService } from '../billing/billing.service';
 import {
   BUCKET_PROJECT_THUMBNAILS,
   StorageService,
@@ -18,6 +19,7 @@ export class ProjectsService {
     private readonly supabase: SupabaseService,
     private readonly ai: AiService,
     private readonly storage: StorageService,
+    private readonly billing: BillingService,
   ) {}
 
   async create(userId: string, dto: CreateProjectDto) {
@@ -213,6 +215,8 @@ export class ProjectsService {
     count: number,
   ) {
     const project = await this.getByIdForUser(projectId, userId);
+    await this.billing.reserveGenerationCredits(userId, count);
+
     const client = this.supabase.getAdminClient();
     const now = () => new Date().toISOString();
 
@@ -280,8 +284,16 @@ export class ProjectsService {
         })
         .eq('id', projectId);
 
+      const doneCount = results.filter((r) => r.status === 'done').length;
+      try {
+        await this.billing.refundGenerationCredits(userId, count - doneCount);
+      } catch {
+        /* refund is best-effort; logged inside BillingService */
+      }
+
       return { variant_ids: createdIds, results };
     } catch (e) {
+      await this.billing.refundGenerationCredits(userId, count);
       const msg = e instanceof Error ? e.message : 'Generation failed';
       if (createdIds.length > 0) {
         await client

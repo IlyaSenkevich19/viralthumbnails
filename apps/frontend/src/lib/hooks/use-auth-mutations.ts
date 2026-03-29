@@ -33,6 +33,7 @@ export function useSignOutMutation() {
       queryClient.removeQueries({ queryKey: queryKeys.projects.all });
       queryClient.removeQueries({ queryKey: queryKeys.templates.all });
       queryClient.removeQueries({ queryKey: queryKeys.avatars.all });
+      queryClient.removeQueries({ queryKey: queryKeys.billing.all });
     },
   });
 }

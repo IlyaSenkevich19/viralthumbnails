@@ -9,6 +9,7 @@ import { HealthModule } from './modules/health/health.module';
 import { ProjectsModule } from './modules/projects/projects.module';
 import { TemplatesModule } from './modules/templates/templates.module';
 import { AvatarsModule } from './modules/avatars/avatars.module';
+import { BillingModule } from './modules/billing/billing.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { AvatarsModule } from './modules/avatars/avatars.module';
     ProjectsModule,
     TemplatesModule,
     AvatarsModule,
+    BillingModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: HttpExceptionFilter },

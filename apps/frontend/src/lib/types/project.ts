@@ -4,6 +4,10 @@ export type ProjectStatus = 'draft' | 'pending' | 'generating' | 'done' | 'faile
 
 export type VariantStatus = 'pending' | 'generating' | 'done' | 'failed';
 
+export function isOptimisticProjectId(id: string): boolean {
+  return id.startsWith('optimistic:');
+}
+
 export interface ProjectRow {
   id: string;
   user_id: string;

@@ -7,6 +7,8 @@ import { queryKeys } from '@/lib/query-keys';
 import type { ProjectRow, ProjectSourceType, ProjectWithVariants } from '@/lib/types/project';
 import { toast } from 'sonner';
 
+export const createProjectAndGenerateMutationKey = ['projects', 'create-and-generate'] as const;
+
 export function useProjectsList() {
   const { user, accessToken, isLoading: authLoading } = useAuth();
   const userId = user?.id;
@@ -38,20 +40,58 @@ type CreateBody = {
 
 export function useCreateProjectAndGenerateMutation() {
   const queryClient = useQueryClient();
-  const { accessToken } = useAuth();
+  const { accessToken, user } = useAuth();
+  const userId = user?.id;
 
   return useMutation({
+    mutationKey: createProjectAndGenerateMutationKey,
     mutationFn: async (body: CreateBody) => {
       if (!accessToken) throw new Error('Not signed in');
+      if (!userId) throw new Error('Not signed in');
       const project = await projectsApi.createProject(accessToken, body);
       const gen = await projectsApi.generateThumbnails(accessToken, project.id, { count: 3 });
       return { project, gen };
     },
+    onMutate: async (body) => {
+      if (!userId) return {};
+      const listKey = queryKeys.projects.list(userId);
+      await queryClient.cancelQueries({ queryKey: queryKeys.projects.lists() });
+      const previous = queryClient.getQueryData<ProjectRow[]>(listKey);
+      const optimisticId = `optimistic:${crypto.randomUUID()}`;
+      const now = new Date().toISOString();
+      const optimistic: ProjectRow = {
+        id: optimisticId,
+        user_id: userId,
+        title: body.title?.trim() || 'New project',
+        platform: body.platform ?? 'youtube',
+        source_type: body.source_type,
+        source_data: body.source_data,
+        status: 'generating',
+        cover_thumbnail_url: null,
+        created_at: now,
+        updated_at: now,
+      };
+      const next = previous?.length ? [optimistic, ...previous] : [optimistic];
+      queryClient.setQueryData(listKey, next);
+      return { previous, listKey, optimisticId };
+    },
+    onError: (err, _body, context) => {
+      if (context?.listKey) {
+        if (context.previous === undefined) {
+          queryClient.removeQueries({ queryKey: context.listKey });
+        } else {
+          queryClient.setQueryData(context.listKey, context.previous);
+        }
+      }
+      toast.error(err instanceof Error ? err.message : 'Could not create project');
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
     },
-    onError: (err) => {
-      toast.error(err instanceof Error ? err.message : 'Could not create project');
+    onSettled: () => {
+      if (userId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.billing.credits(userId) });
+      }
     },
   });
 }

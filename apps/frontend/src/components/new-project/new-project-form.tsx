@@ -110,7 +110,6 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
           toast.warning(`${ok} of ${total} thumbnails ready; some failed.`);
         }
         router.push(`/projects/${project.id}/variants`);
-        router.refresh();
       },
       onSettled: () => {
         submitLock.current = false;

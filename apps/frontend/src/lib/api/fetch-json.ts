@@ -1,3 +1,5 @@
+import { ApiError } from './api-error';
+
 /** Calls the Nest API through Next.js `/api/*` rewrite. */
 export async function fetchJson<T>(
   path: string,
@@ -15,24 +17,28 @@ export async function fetchJson<T>(
   const res = await fetch(`/api${url}`, { ...init, headers });
   if (!res.ok) {
     let message = res.statusText;
+    let code: string | undefined;
     try {
       const body = (await res.json()) as {
-        message?: string | string[] | Array<{ constraints?: Record<string, string> }>;
+        statusCode?: number;
+        message?: string | string[];
+        code?: string;
         error?: string;
       };
-      if (typeof body.message === 'string') {
+      if (typeof body.message === 'string' && body.message.length > 0) {
         message = body.message;
       } else if (Array.isArray(body.message)) {
         const parts = body.message.map((m) =>
           typeof m === 'string' ? m : JSON.stringify(m),
         );
-        message = parts.join(', ');
+        message = parts.join(', ') || message;
       }
-      if (!message && body.error) message = body.error;
+      if ((!message || message === res.statusText) && body.error) message = body.error;
+      if (typeof body.code === 'string' && body.code.length > 0) code = body.code;
     } catch {
       /* ignore */
     }
-    throw new Error(message || `Request failed: ${res.status}`);
+    throw new ApiError(message || `Request failed: ${res.status}`, res.status, code);
   }
   if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;

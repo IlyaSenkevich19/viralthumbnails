@@ -1,28 +1,41 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { updateSession } from '@/lib/supabase/middleware';
 
+function copyCookies(from: NextResponse, to: NextResponse) {
+  from.cookies.getAll().forEach((cookie) => {
+    to.cookies.set(cookie.name, cookie.value);
+  });
+}
+
 export async function middleware(request: NextRequest) {
   try {
-    const sessionResponse = await updateSession(request);
+    const { response: sessionResponse, user } = await updateSession(request);
+    const path = request.nextUrl.pathname;
 
-    if (request.nextUrl.pathname !== '/projects/new') {
+    if (path === '/') {
+      if (user) {
+        const url = request.nextUrl.clone();
+        url.pathname = '/dashboard';
+        const redirect = NextResponse.redirect(url);
+        copyCookies(sessionResponse, redirect);
+        return redirect;
+      }
       return sessionResponse;
     }
 
-    if (sessionResponse.status >= 300) {
-      return sessionResponse;
+    if (path === '/projects/new') {
+      if (sessionResponse.status >= 300) {
+        return sessionResponse;
+      }
+      const url = request.nextUrl.clone();
+      url.pathname = '/dashboard';
+      url.searchParams.set('openNewProject', '1');
+      const redirect = NextResponse.redirect(url);
+      copyCookies(sessionResponse, redirect);
+      return redirect;
     }
 
-    const url = request.nextUrl.clone();
-    url.pathname = '/dashboard';
-    url.searchParams.set('openNewProject', '1');
-
-    const redirect = NextResponse.redirect(url);
-    sessionResponse.cookies.getAll().forEach((cookie) => {
-      redirect.cookies.set(cookie.name, cookie.value);
-    });
-
-    return redirect;
+    return sessionResponse;
   } catch (err) {
     console.error('[middleware]', err);
     return NextResponse.next({ request });

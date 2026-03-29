@@ -1,15 +1,15 @@
 import { createServerClient } from '@supabase/ssr';
+import type { User } from '@supabase/supabase-js';
 import { NextResponse, type NextRequest } from 'next/server';
 
 function isPublicPath(pathname: string) {
-  return (
-    pathname === '/' ||
-    pathname.startsWith('/auth/login') ||
-    pathname.startsWith('/auth/register')
-  );
+  return pathname === '/' || pathname.startsWith('/auth/register');
 }
 
-export async function updateSession(request: NextRequest) {
+export async function updateSession(request: NextRequest): Promise<{
+  response: NextResponse;
+  user: User | null;
+}> {
   const response = NextResponse.next({ request });
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
@@ -19,12 +19,12 @@ export async function updateSession(request: NextRequest) {
       '[middleware] Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY (set them in Vercel → Settings → Environment Variables).',
     );
     if (isPublicPath(request.nextUrl.pathname)) {
-      return response;
+      return { response, user: null };
     }
     const login = request.nextUrl.clone();
-    login.pathname = '/auth/login';
+    login.pathname = '/';
     login.searchParams.set('error', 'configuration');
-    return NextResponse.redirect(login);
+    return { response: NextResponse.redirect(login), user: null };
   }
 
   const supabase = createServerClient(
@@ -50,9 +50,9 @@ export async function updateSession(request: NextRequest) {
 
   if (!isPublicPath(request.nextUrl.pathname) && !user) {
     const loginUrl = request.nextUrl.clone();
-    loginUrl.pathname = '/auth/login';
-    return NextResponse.redirect(loginUrl);
+    loginUrl.pathname = '/';
+    return { response: NextResponse.redirect(loginUrl), user: null };
   }
 
-  return response;
+  return { response, user };
 }

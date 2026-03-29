@@ -88,7 +88,7 @@ function SidebarUserBlock({ collapsed, inDrawer }: { collapsed: boolean; inDrawe
     signOut.mutate(undefined, {
       onSuccess: () => {
         toast.success('Logged out');
-        router.push('/auth/login');
+        router.push('/');
         router.refresh();
         setOpen(false);
       },

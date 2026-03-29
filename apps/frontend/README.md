@@ -17,7 +17,7 @@
 
 | Area | Paths |
 |------|--------|
-| Public | `/` (landing), `/auth/login`, `/auth/register` |
+| Public | `/` (sign in), `/auth/register` |
 | App shell (sidebar) | `/dashboard`, `/projects`, `/projects/[id]`, `/projects/[id]/variants`, `/templates`, `/credits`, `/settings`, `/ab-tests` |
 
 Protected routes rely on **middleware** + Supabase session (`src/middleware.ts`, `src/lib/supabase/middleware.ts`).  
@@ -97,7 +97,7 @@ yarn lint
 
 1. Login/register: Supabase client in `src/lib/supabase/client.ts`.
 2. `AuthProvider` exposes session + token for API calls and Query `enabled` flags.
-3. Middleware refreshes session and gates protected routes (redirect to `/auth/login` when needed).
+3. Middleware refreshes session and gates protected routes (redirect to `/` when unauthenticated).
 
 ## Deployment (e.g. Vercel)
 

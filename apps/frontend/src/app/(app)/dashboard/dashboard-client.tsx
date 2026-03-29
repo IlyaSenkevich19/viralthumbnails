@@ -18,7 +18,6 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 
-/** Opens new-project modal when user lands from /projects/new (middleware adds ?openNewProject=1). */
 function DashboardOpenNewProjectFromUrl() {
   const searchParams = useSearchParams();
   const router = useRouter();

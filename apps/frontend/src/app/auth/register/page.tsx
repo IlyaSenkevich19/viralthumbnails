@@ -47,7 +47,7 @@ export default function RegisterPage() {
           </div>
           <div className="text-sm text-muted-foreground">
             Already have an account?{' '}
-            <Link href="/auth/login" className="font-medium text-foreground hover:underline">
+            <Link href="/" className="font-medium text-foreground hover:underline">
               Sign in
             </Link>
           </div>
@@ -110,7 +110,7 @@ export default function RegisterPage() {
                   type="button"
                   variant="outline"
                   className="w-full"
-                  onClick={() => router.push('/auth/login')}
+                  onClick={() => router.push('/')}
                 >
                   Go to sign in
                 </Button>

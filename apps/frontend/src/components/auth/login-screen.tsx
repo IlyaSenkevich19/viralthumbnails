@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
-export default function LoginPage() {
+export function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -76,7 +76,7 @@ export default function LoginPage() {
               <h1 className="text-3xl font-semibold tracking-tight text-foreground">
                 Sign in to <span className="text-primary">your account</span>
               </h1>
-              <p className="text-sm text-muted-foreground mt-2">
+              <p className="mt-2 text-sm text-muted-foreground">
                 Use the email and password you registered with.
               </p>
             </div>
@@ -146,7 +146,7 @@ export default function LoginPage() {
             <br />
             on a clean stack.
           </h2>
-          <p className="text-sm text-muted-foreground leading-relaxed">
+          <p className="text-sm leading-relaxed text-muted-foreground">
             Next.js, Supabase Auth, and NestJS in one monorepo — add your product logic on top.
           </p>
         </div>

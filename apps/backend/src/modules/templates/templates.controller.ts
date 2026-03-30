@@ -21,7 +21,10 @@ export class TemplatesController {
 
   @Get()
   list(@CurrentUser() userId: string, @Query() query: ListTemplatesQueryDto) {
-    return this.templates.listForUser(userId, query.niche);
+    return this.templates.listForUser(userId, query.niche, {
+      page: query.page ?? 1,
+      limit: query.limit ?? 24,
+    });
   }
 
   @Post()

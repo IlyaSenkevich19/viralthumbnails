@@ -15,8 +15,8 @@ export const queryKeys = {
   templates: {
     all: ['templates'] as const,
     niches: () => [...queryKeys.templates.all, 'niches'] as const,
-    list: (userId: string, niche: string) =>
-      [...queryKeys.templates.all, 'list', userId, niche] as const,
+    list: (userId: string, niche: string, page: number, limit: number) =>
+      [...queryKeys.templates.all, 'list', userId, niche, page, limit] as const,
   },
 
   avatars: {

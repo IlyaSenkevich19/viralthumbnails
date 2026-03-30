@@ -14,6 +14,9 @@ import {
 import { useAuth } from '@/contexts/auth-context';
 import {
   NICHE_ALL,
+  TEMPLATES_DEFAULT_PAGE_SIZE,
+  TEMPLATE_PAGE_SIZE_OPTIONS,
+  usePrefetchAdjacentTemplates,
   useAvatarsList,
   useDeleteVariantMutation,
   useGenerateThumbnailsMutation,
@@ -29,6 +32,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { ConfirmationModal } from '@/components/ui/confirmation-modal';
+import { TemplatesGridSkeleton } from '@/components/templates/templates-grid-skeleton';
+import { TemplatesPagination } from '@/components/templates/templates-pagination';
 
 const GENERATE_COUNT = 1;
 
@@ -56,7 +61,39 @@ export function ProjectVariantsWorkspace({
   const { data: niches = [] } = useTemplateNiches();
 
   const [selectedNiche, setSelectedNiche] = useState<string | typeof NICHE_ALL>(NICHE_ALL);
-  const { data: templates = [], isPending: templatesLoading } = useTemplatesList(selectedNiche);
+  const [templatePage, setTemplatePage] = useState(1);
+  const [templateLimit, setTemplateLimit] = useState(TEMPLATES_DEFAULT_PAGE_SIZE);
+
+  useEffect(() => {
+    setTemplatePage(1);
+  }, [selectedNiche]);
+
+  const handleTemplatePageSize = useCallback((n: number) => {
+    setTemplateLimit(n);
+    setTemplatePage(1);
+  }, []);
+
+  const {
+    data: templatesData,
+    isPending: templatesPending,
+    isFetching: templatesFetching,
+    isPlaceholderData: templatesPlaceholder,
+  } = useTemplatesList(selectedNiche, templatePage, templateLimit);
+  const templatesLoading = templatesPending && !templatesData;
+  const templates = templatesData?.items ?? [];
+  const templatesTotal = templatesData?.total ?? 0;
+  const templatesLimit = templatesData?.limit ?? templateLimit;
+  const templatesPaginationBusy = Boolean(templatesFetching && templatesPlaceholder);
+
+  usePrefetchAdjacentTemplates(selectedNiche, templatePage, templateLimit, templatesData?.total);
+
+  useEffect(() => {
+    if (!templatesData || templatesPending) return;
+    const totalPages = Math.max(1, Math.ceil(templatesData.total / templatesData.limit));
+    if (templatePage > totalPages) {
+      setTemplatePage(totalPages);
+    }
+  }, [templatesData, templatesPending, templatePage]);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const { data: avatars = [] } = useAvatarsList();
   const [selectedAvatarId, setSelectedAvatarId] = useState<string>('');
@@ -181,9 +218,14 @@ export function ProjectVariantsWorkspace({
             ) : null}
 
             {templatesLoading ? (
-              <p className="text-sm text-muted-foreground">Loading templates…</p>
+              <TemplatesGridSkeleton variant="picker" />
             ) : (
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+              <div
+                className={cn(
+                  'grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4',
+                  templatesPaginationBusy && 'pointer-events-none opacity-55 transition-opacity',
+                )}
+              >
                 <button
                   type="button"
                   onClick={() =>
@@ -226,6 +268,18 @@ export function ProjectVariantsWorkspace({
                 })}
               </div>
             )}
+            {!templatesLoading && templatesTotal > 0 ? (
+              <TemplatesPagination
+                page={templatePage}
+                total={templatesTotal}
+                limit={templatesLimit}
+                onPageChange={setTemplatePage}
+                pageSizeOptions={TEMPLATE_PAGE_SIZE_OPTIONS}
+                onPageSizeChange={handleTemplatePageSize}
+                isNavBusy={templatesPaginationBusy}
+                className="pt-1"
+              />
+            ) : null}
           </div>
 
           <div className="space-y-4 rounded-xl border border-border bg-card/50 p-4">

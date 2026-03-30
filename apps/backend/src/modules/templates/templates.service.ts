@@ -14,15 +14,29 @@ import { CreateTemplateDto } from './dto/create-template.dto';
 import { TEMPLATE_NICHE_CODE_LIST } from './constants/template-niches';
 import { inferNicheFromTemplatePath, resolveTemplateNiche } from './lib/infer-niche-from-path';
 
+type StorageTemplatePath = { path: string; mimeType: string; updatedAt: string };
+
 /** Files in Storage without a `thumbnail_templates` row still appear in the API (e.g. manual Dashboard uploads). */
 @Injectable()
 export class TemplatesService {
+  private readonly storagePathsCache = new Map<string, { expiresAt: number; paths: StorageTemplatePath[] }>();
+  private static readonly STORAGE_PATHS_TTL_MS = 60_000;
+
   constructor(
     private readonly supabase: SupabaseService,
     private readonly storage: StorageService,
   ) {}
 
-  async listForUser(userId: string, nicheFilter?: string) {
+  async listForUser(
+    userId: string,
+    nicheFilter?: string,
+    pagination?: { page: number; limit: number },
+  ): Promise<{
+    items: Record<string, unknown>[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
     const client = this.supabase.getAdminClient();
     const { data, error } = await client
       .from('thumbnail_templates')
@@ -33,7 +47,7 @@ export class TemplatesService {
     const rows = data ?? [];
     const dbPaths = new Set(rows.map((r) => r.storage_path as string));
 
-    const fromStorage = await this.listTemplateImagePaths(userId);
+    const fromStorage = await this.listTemplateImagePathsCached(userId);
     const orphanPaths = fromStorage.filter((f) => !dbPaths.has(f.path));
     const synthetic = orphanPaths.map((f) => this.rowFromStorageObject(f, userId));
 
@@ -48,16 +62,21 @@ export class TemplatesService {
       combined = combined.filter((row) => (row.niche as string | null | undefined) === nicheFilter);
     }
 
-    return Promise.all(combined.map((row) => this.attachPreviewUrl(row)));
+    const total = combined.length;
+    const page = Math.max(1, pagination?.page ?? 1);
+    const limit = Math.min(100, Math.max(1, pagination?.limit ?? 24));
+    const start = (page - 1) * limit;
+    const pageRows = combined.slice(start, start + limit);
+    const items = await Promise.all(pageRows.map((row) => this.attachPreviewUrl(row)));
+
+    return { items, total, page, limit };
   }
 
   /**
    * Lists images under `system/`, root niche folders (`cooking/`, `vlog/`, …), `{userId}/`,
    * and loose files at bucket root.
    */
-  private async listTemplateImagePaths(
-    userId: string,
-  ): Promise<{ path: string; mimeType: string; updatedAt: string }[]> {
+  private async collectTemplateImagePathsFromStorage(userId: string): Promise<StorageTemplatePath[]> {
     const client = this.supabase.getAdminClient();
     const bucket = client.storage.from(BUCKET_THUMBNAIL_TEMPLATES);
     const byPath = new Map<string, { path: string; mimeType: string; updatedAt: string }>();
@@ -168,7 +187,17 @@ export class TemplatesService {
       .select()
       .single();
     if (error) throw new InternalServerErrorException(error.message);
+    this.storagePathsCache.delete(userId);
     return this.attachPreviewUrl(data);
+  }
+
+  private async listTemplateImagePathsCached(userId: string): Promise<StorageTemplatePath[]> {
+    const now = Date.now();
+    const hit = this.storagePathsCache.get(userId);
+    if (hit && hit.expiresAt > now) return hit.paths;
+    const paths = await this.collectTemplateImagePathsFromStorage(userId);
+    this.storagePathsCache.set(userId, { expiresAt: now + TemplatesService.STORAGE_PATHS_TTL_MS, paths });
+    return paths;
   }
 
   private async attachPreviewUrl(row: Record<string, unknown>) {

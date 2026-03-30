@@ -8,7 +8,14 @@ export {
   useDeleteProjectMutation,
   useDeleteVariantMutation,
 } from './use-projects';
-export { NICHE_ALL, useTemplateNiches, useTemplatesList } from './use-templates';
+export {
+  NICHE_ALL,
+  TEMPLATES_DEFAULT_PAGE_SIZE,
+  TEMPLATE_PAGE_SIZE_OPTIONS,
+  usePrefetchAdjacentTemplates,
+  useTemplateNiches,
+  useTemplatesList,
+} from './use-templates';
 export { useAvatarsList, useCreateAvatarMutation, useDeleteAvatarMutation } from './use-avatars';
 export {
   useSignInMutation,

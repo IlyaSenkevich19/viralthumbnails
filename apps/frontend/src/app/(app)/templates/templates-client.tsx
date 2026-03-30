@@ -2,14 +2,28 @@
 
 import { useCallback, useEffect, useMemo } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { NICHE_ALL, useTemplateNiches, useTemplatesList } from '@/lib/hooks';
+import {
+  NICHE_ALL,
+  TEMPLATES_DEFAULT_PAGE_SIZE,
+  TEMPLATE_PAGE_SIZE_OPTIONS,
+  usePrefetchAdjacentTemplates,
+  useTemplateNiches,
+  useTemplatesList,
+} from '@/lib/hooks';
+import {
+  parseTemplatePageSizeParam,
+} from '@/lib/api/templates';
 import { useAuth } from '@/contexts/auth-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { TemplatesGridSkeleton } from '@/components/templates/templates-grid-skeleton';
+import { TemplatesPagination } from '@/components/templates/templates-pagination';
 import { cn } from '@/lib/utils';
 
 const NICHE_QUERY = 'niche';
+const PAGE_QUERY = 'page';
+const LIMIT_QUERY = 'limit';
 
 export function TemplatesClient() {
   const router = useRouter();
@@ -33,6 +47,15 @@ export function TemplatesClient() {
     return nicheCodes.has(rawNiche) ? rawNiche : NICHE_ALL;
   }, [rawNiche, nichesReady, nicheCodes]);
 
+  const rawPage = searchParams.get(PAGE_QUERY);
+  const page = useMemo(() => {
+    const p = parseInt(rawPage ?? '1', 10);
+    return Number.isFinite(p) && p >= 1 ? p : 1;
+  }, [rawPage]);
+
+  const rawLimit = searchParams.get(LIMIT_QUERY);
+  const pageSize = useMemo(() => parseTemplatePageSizeParam(rawLimit), [rawLimit]);
+
   const setNiche = useCallback(
     (next: string | typeof NICHE_ALL) => {
       const params = new URLSearchParams(searchParams.toString());
@@ -40,6 +63,36 @@ export function TemplatesClient() {
         params.delete(NICHE_QUERY);
       } else {
         params.set(NICHE_QUERY, next);
+      }
+      params.delete(PAGE_QUERY);
+      const q = params.toString();
+      router.replace(q ? `${pathname}?${q}` : pathname, { scroll: false });
+    },
+    [pathname, router, searchParams],
+  );
+
+  const setLimit = useCallback(
+    (next: number) => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete(PAGE_QUERY);
+      if (next === TEMPLATES_DEFAULT_PAGE_SIZE) {
+        params.delete(LIMIT_QUERY);
+      } else {
+        params.set(LIMIT_QUERY, String(next));
+      }
+      const q = params.toString();
+      router.replace(q ? `${pathname}?${q}` : pathname, { scroll: false });
+    },
+    [pathname, router, searchParams],
+  );
+
+  const setPage = useCallback(
+    (next: number) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (next <= 1) {
+        params.delete(PAGE_QUERY);
+      } else {
+        params.set(PAGE_QUERY, String(next));
       }
       const q = params.toString();
       router.replace(q ? `${pathname}?${q}` : pathname, { scroll: false });
@@ -52,14 +105,47 @@ export function TemplatesClient() {
     if (!niches.some((n) => n.code === rawNiche)) {
       const params = new URLSearchParams(searchParams.toString());
       params.delete(NICHE_QUERY);
+      params.delete(PAGE_QUERY);
       const q = params.toString();
       router.replace(q ? `${pathname}?${q}` : pathname, { scroll: false });
     }
   }, [niches, pathname, rawNiche, router, searchParams]);
 
-  const { data: items = [], isPending, isError, error } = useTemplatesList(selectedNiche);
+  useEffect(() => {
+    if (rawLimit == null || rawLimit === '') return;
+    const n = parseInt(rawLimit, 10);
+    if (!(TEMPLATE_PAGE_SIZE_OPTIONS as readonly number[]).includes(n)) {
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete(LIMIT_QUERY);
+      const q = params.toString();
+      router.replace(q ? `${pathname}?${q}` : pathname, { scroll: false });
+    }
+  }, [pathname, rawLimit, router, searchParams]);
 
-  const loading = authLoading || (hasSession && isPending);
+  const {
+    data,
+    isPending,
+    isFetching,
+    isPlaceholderData,
+    isError,
+    error,
+  } = useTemplatesList(selectedNiche, page, pageSize);
+  const items = data?.items ?? [];
+  const total = data?.total ?? 0;
+  const limit = data?.limit ?? pageSize;
+
+  usePrefetchAdjacentTemplates(selectedNiche, page, pageSize, data?.total);
+
+  useEffect(() => {
+    if (!data || isPending) return;
+    const totalPages = Math.max(1, Math.ceil(data.total / data.limit));
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [data, isPending, page, setPage]);
+
+  const loading = authLoading || (hasSession && isPending && !data);
+  const paginationBusy = Boolean(isFetching && isPlaceholderData);
   const listError =
     !authLoading && !hasSession
       ? 'Not signed in'
@@ -78,7 +164,9 @@ export function TemplatesClient() {
           <code className="rounded bg-secondary px-1 text-xs">system/&lt;niche&gt;/…</code> or set{' '}
           <code className="rounded bg-secondary px-1 text-xs">niche</code> on the DB row. API uploads with{' '}
           <code className="rounded bg-secondary px-1 text-xs">niche</code> use{' '}
-          <code className="rounded bg-secondary px-1 text-xs">{`{user_id}/{niche}/{slug}.png`}</code>.
+          <code className="rounded bg-secondary px-1 text-xs">{`{user_id}/{niche}/{slug}.png`}</code>. Lists are paginated so
+          previews load in batches; use <strong className="text-foreground">Per page</strong> and page controls below to tune
+          traffic.
         </p>
       </div>
 
@@ -117,14 +205,22 @@ export function TemplatesClient() {
         </p>
       )}
       {loading ? (
-        <p className="text-sm text-muted-foreground">Loading templates…</p>
-      ) : hasSession && items.length === 0 ? (
+        hasSession ? (
+          <TemplatesGridSkeleton variant="page" count={Math.min(pageSize, 12)} />
+        ) : (
+          <p className="text-sm text-muted-foreground">Loading…</p>
+        )
+      ) : hasSession && items.length === 0 && total === 0 ? (
         <Card>
           <CardContent className="py-8 text-sm text-muted-foreground">
             {selectedNiche !== NICHE_ALL ? (
               <>
                 No templates in <strong className="text-foreground">{nicheLabel(selectedNiche)}</strong>. Try
-                another niche or <button type="button" className="text-primary underline" onClick={() => setNiche(NICHE_ALL)}>show all</button>.
+                another niche or{' '}
+                <button type="button" className="text-primary underline" onClick={() => setNiche(NICHE_ALL)}>
+                  show all
+                </button>
+                .
               </>
             ) : (
               <>
@@ -135,38 +231,60 @@ export function TemplatesClient() {
             )}
           </CardContent>
         </Card>
-      ) : hasSession && items.length > 0 ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {items.map((t) => (
-            <Card key={t.id} className="overflow-hidden">
-              <div className="relative aspect-video bg-muted">
-                {t.preview_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={t.preview_url} alt="" className="h-full w-full object-cover" />
-                ) : (
-                  <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
-                    No preview
+      ) : hasSession ? (
+        <div className="space-y-4">
+          {items.length > 0 ? (
+            <div
+              className={cn(
+                'grid gap-4 sm:grid-cols-2 lg:grid-cols-3',
+                paginationBusy && 'pointer-events-none opacity-55 transition-opacity',
+              )}
+            >
+              {items.map((t) => (
+                <Card key={t.id} className="overflow-hidden">
+                  <div className="relative aspect-video bg-muted">
+                    {t.preview_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={t.preview_url} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
+                        No preview
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-              <CardHeader className="pb-2 pt-3">
-                <div className="flex items-start justify-between gap-2">
-                  <CardTitle className="text-sm font-semibold">{t.name}</CardTitle>
-                  <div className="flex shrink-0 flex-wrap justify-end gap-1">
-                    {t.niche ? (
-                      <Badge variant="glass" className="text-[10px]">
-                        {nicheLabel(t.niche)}
-                      </Badge>
-                    ) : null}
-                    <Badge variant="default" className="text-[10px]">
-                      {t.user_id ? 'Yours' : 'System'}
-                    </Badge>
-                  </div>
-                </div>
-                <p className="text-xs text-muted-foreground">slug: {t.slug}</p>
-              </CardHeader>
-            </Card>
-          ))}
+                  <CardHeader className="pb-2 pt-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <CardTitle className="text-sm font-semibold">{t.name}</CardTitle>
+                      <div className="flex shrink-0 flex-wrap justify-end gap-1">
+                        {t.niche ? (
+                          <Badge variant="glass" className="text-[10px]">
+                            {nicheLabel(t.niche)}
+                          </Badge>
+                        ) : null}
+                        <Badge variant="default" className="text-[10px]">
+                          {t.user_id ? 'Yours' : 'System'}
+                        </Badge>
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">slug: {t.slug}</p>
+                  </CardHeader>
+                </Card>
+              ))}
+            </div>
+          ) : total > 0 ? (
+            <p className="text-sm text-muted-foreground">No templates on this page.</p>
+          ) : null}
+          {total > 0 ? (
+            <TemplatesPagination
+              page={page}
+              total={total}
+              limit={limit}
+              onPageChange={setPage}
+              pageSizeOptions={TEMPLATE_PAGE_SIZE_OPTIONS}
+              onPageSizeChange={setLimit}
+              isNavBusy={paginationBusy}
+            />
+          ) : null}
         </div>
       ) : null}
     </div>

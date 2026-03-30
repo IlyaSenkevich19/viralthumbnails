@@ -1,5 +1,17 @@
 import { fetchJson } from './fetch-json';
 
+export const TEMPLATES_DEFAULT_PAGE_SIZE = 24;
+
+/** Allowed page sizes (must stay within backend max 100). */
+export const TEMPLATE_PAGE_SIZE_OPTIONS = [12, 24, 48, 100] as const;
+export type TemplatePageSizeOption = (typeof TEMPLATE_PAGE_SIZE_OPTIONS)[number];
+
+export function parseTemplatePageSizeParam(raw: string | null): number {
+  if (raw == null || raw === '') return TEMPLATES_DEFAULT_PAGE_SIZE;
+  const n = parseInt(raw, 10);
+  return (TEMPLATE_PAGE_SIZE_OPTIONS as readonly number[]).includes(n) ? n : TEMPLATES_DEFAULT_PAGE_SIZE;
+}
+
 export interface TemplateNicheOption {
   code: string;
   label: string;
@@ -18,10 +30,11 @@ export interface ThumbnailTemplateRow {
   preview_url?: string | null;
 }
 
-function templatesListPath(niche?: string | null): string {
-  if (!niche) return '/templates';
-  const q = new URLSearchParams({ niche });
-  return `/templates?${q.toString()}`;
+export interface PaginatedTemplatesResponse {
+  items: ThumbnailTemplateRow[];
+  total: number;
+  page: number;
+  limit: number;
 }
 
 export async function listTemplateNiches(token: string | null): Promise<TemplateNicheOption[]> {
@@ -30,9 +43,16 @@ export async function listTemplateNiches(token: string | null): Promise<Template
 
 export async function listTemplates(
   token: string | null,
-  options?: { niche?: string | null },
-): Promise<ThumbnailTemplateRow[]> {
-  return fetchJson<ThumbnailTemplateRow[]>(templatesListPath(options?.niche ?? undefined), token);
+  options?: { niche?: string | null; page?: number; limit?: number },
+): Promise<PaginatedTemplatesResponse> {
+  const params = new URLSearchParams();
+  if (options?.niche) params.set('niche', options.niche);
+  if (options?.page != null && options.page > 1) params.set('page', String(options.page));
+  if (options?.limit != null && options.limit !== TEMPLATES_DEFAULT_PAGE_SIZE) {
+    params.set('limit', String(options.limit));
+  }
+  const q = params.toString();
+  return fetchJson<PaginatedTemplatesResponse>(q ? `/templates?${q}` : '/templates', token);
 }
 
 export async function createTemplate(

@@ -4,6 +4,7 @@ export {
   useProjectsList,
   useProjectWithVariants,
   useCreateProjectAndGenerateMutation,
+  useGenerateThumbnailsMutation,
   useDeleteProjectMutation,
   useDeleteVariantMutation,
 } from './use-projects';

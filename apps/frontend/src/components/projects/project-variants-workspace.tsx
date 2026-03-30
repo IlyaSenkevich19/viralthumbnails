@@ -1,0 +1,449 @@
+'use client';
+
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import {
+  ArrowLeft,
+  Copy,
+  Download,
+  Pencil,
+  RefreshCw,
+  Sparkles,
+  Wand2,
+} from 'lucide-react';
+import { useAuth } from '@/contexts/auth-context';
+import {
+  NICHE_ALL,
+  useAvatarsList,
+  useDeleteVariantMutation,
+  useGenerateThumbnailsMutation,
+  useTemplateNiches,
+  useTemplatesList,
+} from '@/lib/hooks';
+import { humanizeKey } from '@/lib/format';
+import { statusToneClass } from '@/lib/status-tone';
+import type { ProjectWithVariants, ThumbnailVariantRow } from '@/lib/types/project';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
+import { ConfirmationModal } from '@/components/ui/confirmation-modal';
+
+const GENERATE_COUNT = 1;
+
+type ProjectVariantsWorkspaceProps = {
+  project: ProjectWithVariants;
+  projectId: string;
+  onRefresh: () => Promise<unknown>;
+  refreshing: boolean;
+};
+
+export function ProjectVariantsWorkspace({
+  project,
+  projectId,
+  onRefresh,
+  refreshing,
+}: ProjectVariantsWorkspaceProps) {
+  const { accessToken } = useAuth();
+  const variants = useMemo(
+    () => project.thumbnail_variants ?? [],
+    [project.thumbnail_variants],
+  );
+  const generate = useGenerateThumbnailsMutation(projectId);
+  const deleteVariant = useDeleteVariantMutation(projectId);
+
+  const { data: niches = [] } = useTemplateNiches();
+
+  const [selectedNiche, setSelectedNiche] = useState<string | typeof NICHE_ALL>(NICHE_ALL);
+  const { data: templates = [], isPending: templatesLoading } = useTemplatesList(selectedNiche);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const { data: avatars = [] } = useAvatarsList();
+  const [selectedAvatarId, setSelectedAvatarId] = useState<string>('');
+  const [prioritizeFace, setPrioritizeFace] = useState(false);
+  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
+  const [variantToDelete, setVariantToDelete] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (variants.length === 0) {
+      setSelectedVariantId(null);
+      return;
+    }
+    setSelectedVariantId((prev) => {
+      if (prev && variants.some((v) => v.id === prev)) return prev;
+      const withImg = variants.find((v) => v.generated_image_url && v.status === 'done');
+      return (withImg ?? variants[0]).id;
+    });
+  }, [variants]);
+
+  const selectedVariant = useMemo(
+    () => variants.find((v) => v.id === selectedVariantId) ?? null,
+    [variants, selectedVariantId],
+  );
+
+  const handleGenerate = useCallback(() => {
+    if (!accessToken) {
+      toast.error('Not signed in');
+      return;
+    }
+    if (prioritizeFace) {
+      toast.message('Face reference will apply once the pipeline supports avatars in prompts.');
+    }
+    generate.mutate({
+      count: GENERATE_COUNT,
+      template_id: selectedTemplateId ?? undefined,
+    });
+  }, [accessToken, generate, prioritizeFace, selectedTemplateId]);
+
+  const previewUrl = selectedVariant?.generated_image_url ?? null;
+
+  return (
+    <>
+      <ConfirmationModal
+        open={variantToDelete !== null}
+        onOpenChange={(open) => {
+          if (!open) setVariantToDelete(null);
+        }}
+        title="Remove this image?"
+        description="This generated thumbnail will be permanently deleted. This cannot be undone."
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        variant="destructive"
+        onConfirm={() => {
+          if (!variantToDelete) return;
+          const id = variantToDelete;
+          setVariantToDelete(null);
+          deleteVariant.mutate(id);
+        }}
+      />
+
+      <div className="flex min-h-0 flex-col gap-8 lg:flex-row lg:items-start lg:gap-10">
+        {/* Left: settings */}
+        <aside className="w-full shrink-0 space-y-6 lg:sticky lg:top-6 lg:max-h-[calc(100vh-4rem)] lg:w-[min(100%,44rem)] lg:overflow-y-auto lg:pr-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <Link
+              href="/projects"
+              className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }), 'inline-flex gap-2')}
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Projects
+            </Link>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={() => void onRefresh()}
+              disabled={refreshing}
+            >
+              <RefreshCw className={cn('h-4 w-4', refreshing && 'animate-spin')} />
+              Refresh
+            </Button>
+          </div>
+
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground lg:text-xl">
+              {project.title}
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              <span className="capitalize">{project.platform}</span>
+              <span aria-hidden> · </span>
+              {humanizeKey(project.source_type)}
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <h2 className="text-lg font-semibold tracking-tight text-foreground">Choose a template</h2>
+            {niches.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={selectedNiche === NICHE_ALL ? 'default' : 'outline'}
+                  className="rounded-full"
+                  onClick={() => setSelectedNiche(NICHE_ALL)}
+                >
+                  All
+                </Button>
+                {niches.map((n) => (
+                  <Button
+                    key={n.code}
+                    type="button"
+                    size="sm"
+                    variant={selectedNiche === n.code ? 'default' : 'outline'}
+                    className="rounded-full"
+                    onClick={() => setSelectedNiche(n.code)}
+                  >
+                    {n.label}
+                  </Button>
+                ))}
+              </div>
+            ) : null}
+
+            {templatesLoading ? (
+              <p className="text-sm text-muted-foreground">Loading templates…</p>
+            ) : (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                <button
+                  type="button"
+                  onClick={() =>
+                    toast.info('Add a reference template under Templates, then pick it from the grid.')
+                  }
+                  className="flex aspect-video flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border bg-muted/30 text-center text-xs text-muted-foreground transition-colors hover:border-primary/40 hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <Copy className="h-6 w-6 opacity-60" aria-hidden />
+                  <span>Replicate style</span>
+                </button>
+                {templates.map((t) => {
+                  const active = selectedTemplateId === t.id;
+                  return (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => setSelectedTemplateId(active ? null : t.id)}
+                      className={cn(
+                        'overflow-hidden rounded-xl border-2 bg-card text-left transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                        active ? 'border-primary shadow-md shadow-primary/15' : 'border-transparent ring-1 ring-border',
+                      )}
+                    >
+                      <div className="relative aspect-video bg-muted">
+                        {t.preview_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={t.preview_url}
+                            alt=""
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-full items-center justify-center text-[10px] text-muted-foreground">
+                            No preview
+                          </div>
+                        )}
+                      </div>
+                      <p className="truncate px-2 py-1.5 text-xs font-medium text-foreground">{t.name}</p>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-4 rounded-xl border border-border bg-card/50 p-4">
+            <div className="space-y-1.5">
+              <label htmlFor="variant-character" className="text-sm font-medium text-foreground">
+                Character (optional)
+              </label>
+              <select
+                id="variant-character"
+                value={selectedAvatarId}
+                onChange={(e) => setSelectedAvatarId(e.target.value)}
+                className="flex h-10 w-full rounded-lg border border-input bg-background px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <option value="">None</option>
+                {avatars.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-sm text-foreground">Prioritize looking like me</span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={prioritizeFace}
+                onClick={() => setPrioritizeFace((v) => !v)}
+                className={cn(
+                  'relative h-7 w-12 shrink-0 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                  prioritizeFace ? 'bg-primary' : 'bg-muted',
+                )}
+              >
+                <span
+                  className={cn(
+                    'absolute top-0.5 block h-6 w-6 rounded-full bg-white shadow transition-transform',
+                    prioritizeFace ? 'translate-x-5' : 'translate-x-0.5',
+                  )}
+                />
+              </button>
+            </div>
+
+            <Button
+              type="button"
+              className="relative h-12 w-full gap-2 text-base font-semibold"
+              onClick={handleGenerate}
+              disabled={generate.isPending || !accessToken}
+            >
+              <Sparkles className="h-4 w-4" aria-hidden />
+              {generate.isPending ? 'Generating…' : 'Generate thumbnails'}
+              <span className="ml-auto text-xs font-normal opacity-90">
+                {GENERATE_COUNT} credit{GENERATE_COUNT === 1 ? '' : 's'}
+              </span>
+            </Button>
+            {selectedAvatarId ? (
+              <p className="text-xs text-muted-foreground">
+                Avatar selection is stored for the next step; generation still uses project source only until the API
+                accepts a face reference.
+              </p>
+            ) : null}
+          </div>
+        </aside>
+
+        {/* Right: results */}
+        <section className="min-w-0 flex-1 space-y-4">
+          <div>
+            <h2 className="text-xl font-semibold tracking-tight text-foreground">
+              Generated thumbnails ({variants.length})
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {variants.length > 0
+                ? 'Select a thumbnail below to preview. Open in a new tab or download when ready.'
+                : 'Run generation from the left. New variants will show up here.'}
+            </p>
+          </div>
+
+          {variants.length === 0 ? (
+            <Card>
+              <CardContent className="flex min-h-[200px] flex-col items-center justify-center gap-2 py-12 text-center text-sm text-muted-foreground">
+                <p>No variants yet.</p>
+                <p className="max-w-sm">
+                  Choose a template (optional), then tap <strong className="text-foreground">Generate thumbnails</strong>.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+              <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+                <div className="relative aspect-video max-h-[min(70vh,520px)] w-full bg-muted">
+                  {previewUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={previewUrl}
+                      alt={`Selected thumbnail for ${project.title}`}
+                      className="h-full w-full object-contain"
+                    />
+                  ) : selectedVariant ? (
+                    <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center text-sm text-muted-foreground">
+                      {selectedVariant.status === 'failed' ? (
+                        <span>{selectedVariant.error_message ?? 'Generation failed'}</span>
+                      ) : (
+                        <span>No image yet ({selectedVariant.status})</span>
+                      )}
+                    </div>
+                  ) : null}
+                </div>
+                <div className="flex flex-wrap gap-2 border-t border-border p-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    onClick={() => toast.info('Editing will open in a future update.')}
+                  >
+                    <Pencil className="h-4 w-4" aria-hidden />
+                    Modify
+                  </Button>
+                  {previewUrl ? (
+                    <a
+                      href={previewUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className={cn(
+                        buttonVariants({ variant: 'outline', size: 'sm' }),
+                        'inline-flex gap-2',
+                      )}
+                    >
+                      <Download className="h-4 w-4" aria-hidden />
+                      Download
+                    </a>
+                  ) : null}
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="gap-2"
+                    onClick={() => toast.info('Watermark removal will be available in a future update.')}
+                  >
+                    <Wand2 className="h-4 w-4" aria-hidden />
+                    Remove watermark
+                  </Button>
+                  {selectedVariant ? (
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      className="ml-auto"
+                      onClick={() => setVariantToDelete(selectedVariant.id)}
+                    >
+                      Delete
+                    </Button>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">All variants</p>
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                  {variants.map((v) => (
+                    <VariantStripThumb
+                      key={v.id}
+                      variant={v}
+                      projectTitle={project.title}
+                      selected={v.id === selectedVariantId}
+                      onSelect={() => setSelectedVariantId(v.id)}
+                    />
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+        </section>
+      </div>
+    </>
+  );
+}
+
+function VariantStripThumb({
+  variant,
+  projectTitle,
+  selected,
+  onSelect,
+}: {
+  variant: ThumbnailVariantRow;
+  projectTitle: string;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  const url = variant.generated_image_url;
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={cn(
+        'relative w-28 shrink-0 overflow-hidden rounded-lg border-2 bg-muted transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        selected ? 'border-primary ring-2 ring-primary/20' : 'border-transparent ring-1 ring-border',
+      )}
+    >
+      <div className="aspect-video w-full">
+        {url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={url} alt="" className="h-full w-full object-cover" />
+        ) : (
+          <div className="flex h-full items-center justify-center p-1 text-center text-[10px] text-muted-foreground">
+            {variant.status}
+          </div>
+        )}
+      </div>
+      <Badge
+        variant="default"
+        className={cn(
+          'absolute bottom-1 right-1 px-1.5 py-0 text-[10px] capitalize',
+          statusToneClass(variant.status),
+        )}
+      >
+        {variant.status}
+      </Badge>
+      <span className="sr-only">Select variant for {projectTitle}</span>
+    </button>
+  );
+}

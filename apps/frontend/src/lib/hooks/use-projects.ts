@@ -131,6 +131,39 @@ export function useDeleteProjectMutation() {
   });
 }
 
+export function useGenerateThumbnailsMutation(projectId: string) {
+  const queryClient = useQueryClient();
+  const { accessToken, user } = useAuth();
+  const userId = user?.id;
+
+  return useMutation({
+    mutationFn: async (opts: { template_id?: string; count?: number }) => {
+      if (!accessToken) throw new Error('Not signed in');
+      return projectsApi.generateThumbnails(accessToken, projectId, opts);
+    },
+    onSuccess: (res) => {
+      const ok = res.results.filter((r) => r.status === 'done').length;
+      const total = res.results.length;
+      if (ok === 0) {
+        toast.error('Generation failed for all variants. Check API keys and model access.');
+      } else if (ok < total) {
+        toast.warning(`${ok} of ${total} thumbnails ready; some failed.`);
+      } else {
+        toast.success('Thumbnails generated');
+      }
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : 'Generation failed');
+    },
+    onSettled: () => {
+      if (userId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.billing.credits(userId) });
+      }
+    },
+  });
+}
+
 export function useDeleteVariantMutation(projectId: string) {
   const queryClient = useQueryClient();
   const { accessToken, user } = useAuth();

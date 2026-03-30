@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { DEFAULT_TRIAL_GENERATION_CREDITS } from '@/config/credits';
 import { useGenerationCredits } from '@/lib/hooks/use-generation-credits';
 import { cn } from '@/lib/utils';
+import { CollapsedSidebarTooltip } from '@/components/layout/collapsed-sidebar-tooltip';
 
 const creditsLinkFocus =
   'outline-none transition-opacity hover:opacity-95 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--sidebar)]';
@@ -31,20 +32,22 @@ export function SidebarCreditsBlock({
 
   if (showSkeleton) {
     return (
-      <Link
-        href="/credits"
-        aria-label="Credits — view plans and top up"
-        className={cn(
-          creditsLinkFocus,
-          compact ? 'flex w-full justify-center rounded-xl' : 'block w-full rounded-2xl',
-          isCreditsPage && 'ring-2 ring-primary/40 ring-offset-2 ring-offset-[var(--sidebar)]',
-        )}
-      >
-        <Skeleton
-          className={cn(compact ? 'size-10 shrink-0 rounded-xl' : 'h-[4.75rem] w-full rounded-2xl')}
-          aria-hidden
-        />
-      </Link>
+      <CollapsedSidebarTooltip enabled={compact} label="Credits">
+        <Link
+          href="/credits"
+          aria-label="Credits — view plans and top up"
+          className={cn(
+            creditsLinkFocus,
+            compact ? 'flex w-full justify-center rounded-xl' : 'block w-full rounded-2xl',
+            isCreditsPage && 'ring-2 ring-primary/40 ring-offset-2 ring-offset-[var(--sidebar)]',
+          )}
+        >
+          <Skeleton
+            className={cn(compact ? 'size-10 shrink-0 rounded-xl' : 'h-[4.75rem] w-full rounded-2xl')}
+            aria-hidden
+          />
+        </Link>
+      </CollapsedSidebarTooltip>
     );
   }
 
@@ -61,25 +64,26 @@ export function SidebarCreditsBlock({
   if (compact) {
     return (
       <div className="flex w-full justify-center">
-        <Link
-          href="/credits"
-          title={title}
-          aria-label="Credits — view plans and top up"
-          className={cn(
-            creditsLinkFocus,
-            'flex size-10 shrink-0 flex-col items-center justify-center gap-0 rounded-xl bg-gradient-to-br from-primary/40 via-primary/22 to-primary/10 text-center shadow-md shadow-primary/25',
-            isCreditsPage && 'ring-2 ring-primary/50 ring-offset-2 ring-offset-[var(--sidebar)]',
-            exhausted &&
-              'from-amber-500/35 via-amber-500/18 to-amber-600/10 shadow-amber-500/20',
-          )}
-        >
-          <Sparkles
-            className={cn('h-2.5 w-2.5 shrink-0 text-primary', exhausted && 'text-amber-300')}
-            aria-hidden
-          />
-          <span className="text-[11px] font-bold tabular-nums leading-none text-white">{balance}</span>
-          <span className="sr-only">{title}</span>
-        </Link>
+        <CollapsedSidebarTooltip label={`Credits · ${balance}`} enabled={true}>
+          <Link
+            href="/credits"
+            aria-label="Credits — view plans and top up"
+            className={cn(
+              creditsLinkFocus,
+              'flex size-10 shrink-0 flex-col items-center justify-center gap-0 rounded-xl bg-gradient-to-br from-primary/40 via-primary/22 to-primary/10 text-center shadow-md shadow-primary/25',
+              isCreditsPage && 'ring-2 ring-primary/50 ring-offset-2 ring-offset-[var(--sidebar)]',
+              exhausted &&
+                'from-amber-500/35 via-amber-500/18 to-amber-600/10 shadow-amber-500/20',
+            )}
+          >
+            <Sparkles
+              className={cn('h-2.5 w-2.5 shrink-0 text-primary', exhausted && 'text-amber-300')}
+              aria-hidden
+            />
+            <span className="text-[11px] font-bold tabular-nums leading-none text-white">{balance}</span>
+            <span className="sr-only">{title}</span>
+          </Link>
+        </CollapsedSidebarTooltip>
       </div>
     );
   }

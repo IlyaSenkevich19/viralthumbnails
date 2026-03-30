@@ -22,6 +22,7 @@ import { useSignOutMutation } from '@/lib/hooks';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { SidebarCreditsBlock } from '@/components/layout/sidebar-credits';
+import { CollapsedSidebarTooltip } from '@/components/layout/collapsed-sidebar-tooltip';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -200,64 +201,68 @@ export function Sidebar({
       )}
     >
       {!inDrawer && onToggleCollapsed && (
-        <button
-          type="button"
-          onClick={onToggleCollapsed}
-          title={compact ? 'Expand sidebar' : 'Collapse sidebar'}
-          aria-label={compact ? 'Expand sidebar' : 'Collapse sidebar'}
-          className={cn(
-            'absolute left-full top-[2.85rem] z-[60] -translate-x-1/2',
-            'group flex h-7 w-7 shrink-0 items-center justify-center rounded-full',
-            'border border-border bg-sidebar/95 text-muted-foreground',
-            'shadow-[0_4px_24px_-6px_rgba(0,0,0,0.55),0_2px_8px_-2px_rgba(0,0,0,0.35)]',
-            'backdrop-blur-md',
-            'motion-base',
-            'hover:border-border-hover hover:bg-card hover:text-foreground',
-            'hover:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.6),0_4px_12px_-4px_rgba(0,0,0,0.4)]',
-            'active:scale-[0.94]',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--sidebar)]',
-          )}
-        >
-          <span
-            className="pointer-events-none absolute inset-0 rounded-full opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-            style={{
-              background:
-                'radial-gradient(120% 120% at 30% 20%, rgba(255,59,59,0.14), transparent 55%)',
-            }}
-            aria-hidden
-          />
-          {compact ? (
-            <ChevronRight
-              className="relative h-3.5 w-3.5 transition-transform duration-300 ease-[var(--ease-standard)] group-hover:translate-x-px"
-              strokeWidth={2.25}
-              aria-hidden
-            />
-          ) : (
-            <ChevronLeft
-              className="relative h-3.5 w-3.5 transition-transform duration-300 ease-[var(--ease-standard)] group-hover:-translate-x-px"
-              strokeWidth={2.25}
-              aria-hidden
-            />
-          )}
-        </button>
+        <div className="absolute left-full top-[2.85rem] z-[60] -translate-x-1/2">
+          <CollapsedSidebarTooltip enabled={compact} label="Expand sidebar">
+            <button
+              type="button"
+              onClick={onToggleCollapsed}
+              title={compact ? undefined : 'Collapse sidebar'}
+              aria-label={compact ? 'Expand sidebar' : 'Collapse sidebar'}
+              className={cn(
+                'group flex h-7 w-7 shrink-0 items-center justify-center rounded-full',
+                'border border-border bg-sidebar/95 text-muted-foreground',
+                'shadow-[0_4px_24px_-6px_rgba(0,0,0,0.55),0_2px_8px_-2px_rgba(0,0,0,0.35)]',
+                'backdrop-blur-md',
+                'motion-base',
+                'hover:border-border-hover hover:bg-card hover:text-foreground',
+                'hover:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.6),0_4px_12px_-4px_rgba(0,0,0,0.4)]',
+                'active:scale-[0.94]',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--sidebar)]',
+              )}
+            >
+              <span
+                className="pointer-events-none absolute inset-0 rounded-full opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                style={{
+                  background:
+                    'radial-gradient(120% 120% at 30% 20%, rgba(255,59,59,0.14), transparent 55%)',
+                }}
+                aria-hidden
+              />
+              {compact ? (
+                <ChevronRight
+                  className="relative h-3.5 w-3.5 transition-transform duration-300 ease-[var(--ease-standard)] group-hover:translate-x-px"
+                  strokeWidth={2.25}
+                  aria-hidden
+                />
+              ) : (
+                <ChevronLeft
+                  className="relative h-3.5 w-3.5 transition-transform duration-300 ease-[var(--ease-standard)] group-hover:-translate-x-px"
+                  strokeWidth={2.25}
+                  aria-hidden
+                />
+              )}
+            </button>
+          </CollapsedSidebarTooltip>
+        </div>
       )}
 
       <div className={cn('overflow-x-hidden p-4 pb-3', compact && 'px-2')}>
-        <Link
-          href="/dashboard"
-          className={cn('flex items-center gap-2', compact && 'justify-center')}
-          title={compact ? siteName : undefined}
-        >
-          <div className="h-9 w-9 shrink-0 rounded-xl bg-primary shadow-md shadow-primary/25" />
-          {!compact && (
-            <SidebarSlidingLabel show maxWidthClass="max-w-[11rem]" className="text-left">
-              <span className="block truncate text-base font-semibold tracking-tight text-foreground">
-                {siteName}
-              </span>
-            </SidebarSlidingLabel>
-          )}
-          {compact && <span className="sr-only">{siteName}</span>}
-        </Link>
+        <CollapsedSidebarTooltip enabled={compact} label={siteName} className={cn(compact && 'flex w-full justify-center')}>
+          <Link
+            href="/dashboard"
+            className={cn('flex items-center gap-2', compact && 'justify-center')}
+          >
+            <div className="h-9 w-9 shrink-0 rounded-xl bg-primary shadow-md shadow-primary/25" />
+            {!compact && (
+              <SidebarSlidingLabel show maxWidthClass="max-w-[11rem]" className="text-left">
+                <span className="block truncate text-base font-semibold tracking-tight text-foreground">
+                  {siteName}
+                </span>
+              </SidebarSlidingLabel>
+            )}
+            {compact && <span className="sr-only">{siteName}</span>}
+          </Link>
+        </CollapsedSidebarTooltip>
       </div>
 
       <div className="flex-1 overflow-y-auto overflow-x-hidden px-3 pb-4 pt-1">
@@ -267,32 +272,32 @@ export function Sidebar({
               effectivePath === href ||
               (href !== '/dashboard' && effectivePath.startsWith(`${href}/`));
             return (
-              <Link
-                key={href}
-                href={href}
-                title={compact ? label : undefined}
-                onClick={() => {
-                  setPendingHref(href);
-                  if (inDrawer) onClose?.();
-                }}
-                className={cn(
-                  'motion-base flex items-center text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                  compact
-                    ? 'size-10 shrink-0 justify-center rounded-xl p-0'
-                    : 'gap-3 rounded-xl px-3 py-2.5',
-                  active
-                    ? 'bg-secondary text-foreground'
-                    : 'text-muted-foreground hover:bg-card hover:text-foreground',
-                )}
-              >
-                <Icon className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-                {!compact && (
-                  <SidebarSlidingLabel show maxWidthClass="max-w-[12rem]" className="min-w-0 flex-1 text-left">
-                    {label}
-                  </SidebarSlidingLabel>
-                )}
-                {compact && <span className="sr-only">{label}</span>}
-              </Link>
+              <CollapsedSidebarTooltip key={href} enabled={compact} label={label}>
+                <Link
+                  href={href}
+                  onClick={() => {
+                    setPendingHref(href);
+                    if (inDrawer) onClose?.();
+                  }}
+                  className={cn(
+                    'motion-base flex items-center text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                    compact
+                      ? 'size-10 shrink-0 justify-center rounded-xl p-0'
+                      : 'gap-3 rounded-xl px-3 py-2.5',
+                    active
+                      ? 'bg-secondary text-foreground'
+                      : 'text-muted-foreground hover:bg-card hover:text-foreground',
+                  )}
+                >
+                  <Icon className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+                  {!compact && (
+                    <SidebarSlidingLabel show maxWidthClass="max-w-[12rem]" className="min-w-0 flex-1 text-left">
+                      {label}
+                    </SidebarSlidingLabel>
+                  )}
+                  {compact && <span className="sr-only">{label}</span>}
+                </Link>
+              </CollapsedSidebarTooltip>
             );
           })}
         </nav>

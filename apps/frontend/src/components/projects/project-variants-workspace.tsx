@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
   ArrowLeft,
@@ -33,6 +33,14 @@ import { cn } from '@/lib/utils';
 import { AppRoutes } from '@/config/routes';
 import { toast } from 'sonner';
 import { ConfirmationModal } from '@/components/ui/confirmation-modal';
+import {
+  SELECT_EMPTY_VALUE,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { TemplatesGridSkeleton } from '@/components/templates/templates-grid-skeleton';
 import { TemplatesPagination } from '@/components/templates/templates-pagination';
 
@@ -43,6 +51,9 @@ type ProjectVariantsWorkspaceProps = {
   projectId: string;
   onRefresh: () => Promise<unknown>;
   refreshing: boolean;
+  /** Applied once on mount when arriving from dashboard / deep link */
+  initialTemplateId?: string | null;
+  initialAvatarId?: string | null;
 };
 
 export function ProjectVariantsWorkspace({
@@ -50,6 +61,8 @@ export function ProjectVariantsWorkspace({
   projectId,
   onRefresh,
   refreshing,
+  initialTemplateId = null,
+  initialAvatarId = null,
 }: ProjectVariantsWorkspaceProps) {
   const { accessToken } = useAuth();
   const variants = useMemo(
@@ -98,9 +111,18 @@ export function ProjectVariantsWorkspace({
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const { data: avatars = [] } = useAvatarsList();
   const [selectedAvatarId, setSelectedAvatarId] = useState<string>('');
+  const appliedUrlSelection = useRef(false);
   const [prioritizeFace, setPrioritizeFace] = useState(false);
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
   const [variantToDelete, setVariantToDelete] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (appliedUrlSelection.current) return;
+    if (!initialTemplateId && !initialAvatarId) return;
+    appliedUrlSelection.current = true;
+    if (initialTemplateId) setSelectedTemplateId(initialTemplateId);
+    if (initialAvatarId) setSelectedAvatarId(initialAvatarId);
+  }, [initialTemplateId, initialAvatarId]);
 
   useEffect(() => {
     if (variants.length === 0) {
@@ -288,19 +310,24 @@ export function ProjectVariantsWorkspace({
               <label htmlFor="variant-character" className="text-sm font-medium text-foreground">
                 Character (optional)
               </label>
-              <select
-                id="variant-character"
-                value={selectedAvatarId}
-                onChange={(e) => setSelectedAvatarId(e.target.value)}
-                className="flex h-10 w-full rounded-lg border border-input bg-background px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              <Select
+                value={selectedAvatarId || SELECT_EMPTY_VALUE}
+                onValueChange={(v) =>
+                  setSelectedAvatarId(v === SELECT_EMPTY_VALUE ? '' : v)
+                }
               >
-                <option value="">None</option>
-                {avatars.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger id="variant-character" className="h-10">
+                  <SelectValue placeholder="None" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={SELECT_EMPTY_VALUE}>None</SelectItem>
+                  {avatars.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="flex items-center justify-between gap-3">

@@ -1,7 +1,9 @@
 'use client';
 
+import { Suspense } from 'react';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { useProjectWithVariants } from '@/lib/hooks';
 import { buttonVariants } from '@/components/ui/button';
@@ -34,7 +36,10 @@ function WorkspaceSkeleton() {
   );
 }
 
-export function VariantsGallery({ projectId }: { projectId: string }) {
+function VariantsGalleryInner({ projectId }: { projectId: string }) {
+  const searchParams = useSearchParams();
+  const initialTemplateId = searchParams.get('template_id');
+  const initialAvatarId = searchParams.get('avatar_id');
   const { user, accessToken, isLoading: authLoading } = useAuth();
   const hasSession = Boolean(user?.id && accessToken);
   const { data, error, isPending, isError, refetch, isFetching } = useProjectWithVariants(projectId);
@@ -94,6 +99,16 @@ export function VariantsGallery({ projectId }: { projectId: string }) {
       projectId={projectId}
       onRefresh={handleRefresh}
       refreshing={refreshing}
+      initialTemplateId={initialTemplateId}
+      initialAvatarId={initialAvatarId}
     />
+  );
+}
+
+export function VariantsGallery({ projectId }: { projectId: string }) {
+  return (
+    <Suspense fallback={<WorkspaceSkeleton />}>
+      <VariantsGalleryInner projectId={projectId} />
+    </Suspense>
   );
 }

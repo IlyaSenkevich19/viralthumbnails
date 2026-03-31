@@ -32,12 +32,13 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
   const [title, setTitle] = useState('');
   const [youtubeUrl, setYoutubeUrl] = useState(() => sp.get('youtube_url') ?? '');
   const [script, setScript] = useState('');
-  const [text, setText] = useState('');
+  const [text, setText] = useState(() => sp.get('prefill_text') ?? '');
   const [videoName, setVideoName] = useState<string | null>(null);
 
   useEffect(() => {
     setTab(tabFromSearchParams(sp));
     setYoutubeUrl(sp.get('youtube_url') ?? '');
+    setText(sp.get('prefill_text') ?? '');
   }, [sp]);
 
   function handleSubmit(e: React.FormEvent) {
@@ -110,7 +111,15 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
         } else if (ok < total) {
           toast.warning(`${ok} of ${total} thumbnails ready; some failed.`);
         }
-        router.push(projectVariantsPath(project.id));
+        const next = new URLSearchParams();
+        const tid = sp.get('template_id');
+        const aid = sp.get('avatar_id');
+        if (tid) next.set('template_id', tid);
+        if (aid) next.set('avatar_id', aid);
+        const qs = next.toString();
+        router.push(
+          projectVariantsPath(project.id) + (qs ? `?${qs}` : ''),
+        );
       },
       onSettled: () => {
         submitLock.current = false;

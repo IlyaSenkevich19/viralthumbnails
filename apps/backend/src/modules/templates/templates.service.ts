@@ -10,9 +10,10 @@ import {
   BUCKET_THUMBNAIL_TEMPLATES,
   StorageService,
 } from '../storage/storage.service';
+import { decodeBase64Image } from '@/common/images/decode-base64-image';
 import { CreateTemplateDto } from './dto/create-template.dto';
 import { TEMPLATE_NICHE_CODE_LIST } from './constants/template-niches';
-import { inferNicheFromTemplatePath, resolveTemplateNiche } from './lib/infer-niche-from-path';
+import { inferNicheFromTemplatePath } from './lib/infer-niche-from-path';
 
 type StorageTemplatePath = { path: string; mimeType: string; updatedAt: string };
 
@@ -200,18 +201,14 @@ export class TemplatesService {
     return paths;
   }
 
-  private async attachPreviewUrl(row: Record<string, unknown>) {
-    const path = row.storage_path as string;
-    if (!path) return row;
-    try {
-      const preview_url = await this.storage.createSignedUrl(
-        BUCKET_THUMBNAIL_TEMPLATES,
-        path,
-      );
-      return { ...row, preview_url };
-    } catch {
-      return { ...row, preview_url: null };
-    }
+  private attachPreviewUrl(row: Record<string, unknown>) {
+    return this.storage.attachSignedObjectUrl(
+      row,
+      BUCKET_THUMBNAIL_TEMPLATES,
+      'storage_path',
+      'preview_url',
+      { nullUrlOnSignError: true },
+    );
   }
 }
 
@@ -255,24 +252,4 @@ function guessMimeFromFilename(name: string): string {
   if (lower.endsWith('.webp')) return 'image/webp';
   if (lower.endsWith('.gif')) return 'image/gif';
   return 'application/octet-stream';
-}
-
-function decodeBase64Image(
-  input: string,
-  mimeHint?: string,
-): { buffer: Buffer; mimeType: string } {
-  let raw = input.trim();
-  let mimeType = mimeHint?.trim() || 'image/png';
-  const dataUrl = /^data:([^;]+);base64,(.+)$/is.exec(raw);
-  if (dataUrl) {
-    mimeType = dataUrl[1].trim();
-    raw = dataUrl[2].replace(/\s/g, '');
-  } else {
-    raw = raw.replace(/\s/g, '');
-  }
-  const buffer = Buffer.from(raw, 'base64');
-  if (!buffer.length) {
-    throw new BadRequestException('Invalid base64 image');
-  }
-  return { buffer, mimeType };
 }

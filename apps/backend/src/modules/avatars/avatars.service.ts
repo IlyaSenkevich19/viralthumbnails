@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { BUCKET_USER_AVATARS, StorageService } from '../storage/storage.service';
+import { decodeBase64Image } from '@/common/images/decode-base64-image';
 import { CreateAvatarDto } from './dto/create-avatar.dto';
 
 const ALLOWED_AVATAR_MIMES = new Set(['image/png', 'image/jpeg', 'image/jpg', 'image/webp']);
@@ -31,7 +32,7 @@ export class AvatarsService {
   }
 
   async create(userId: string, dto: CreateAvatarDto) {
-    const { buffer, mimeType } = this.decodeBase64Image(dto.imageBase64, dto.mimeType);
+    const { buffer, mimeType } = decodeBase64Image(dto.imageBase64, dto.mimeType);
     const normalizedMime = mimeType.toLowerCase().split(';')[0].trim();
     if (!ALLOWED_AVATAR_MIMES.has(normalizedMime)) {
       throw new BadRequestException('Only PNG, JPEG, or WebP images are allowed');
@@ -87,34 +88,13 @@ export class AvatarsService {
     if (delErr) throw new InternalServerErrorException(delErr.message);
   }
 
-  private async attachPreviewUrl(row: Record<string, unknown>) {
-    const path = row.storage_path as string;
-    if (!path) return row;
-    try {
-      const preview_url = await this.storage.createSignedUrl(BUCKET_USER_AVATARS, path);
-      return { ...row, preview_url };
-    } catch {
-      return { ...row, preview_url: null };
-    }
-  }
-
-  private decodeBase64Image(
-    input: string,
-    mimeHint?: string,
-  ): { buffer: Buffer; mimeType: string } {
-    let raw = input.trim();
-    let mimeType = mimeHint?.trim() || 'image/png';
-    const dataUrl = /^data:([^;]+);base64,(.+)$/is.exec(raw);
-    if (dataUrl) {
-      mimeType = dataUrl[1].trim();
-      raw = dataUrl[2].replace(/\s/g, '');
-    } else {
-      raw = raw.replace(/\s/g, '');
-    }
-    const buffer = Buffer.from(raw, 'base64');
-    if (!buffer.length) {
-      throw new BadRequestException('Invalid base64 image');
-    }
-    return { buffer, mimeType };
+  private attachPreviewUrl(row: Record<string, unknown>) {
+    return this.storage.attachSignedObjectUrl(
+      row,
+      BUCKET_USER_AVATARS,
+      'storage_path',
+      'preview_url',
+      { nullUrlOnSignError: true },
+    );
   }
 }

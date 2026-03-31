@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SupabaseService } from '../supabase/supabase.service';
 
@@ -8,6 +8,8 @@ export const BUCKET_USER_AVATARS = 'user-avatars';
 
 @Injectable()
 export class StorageService {
+  private readonly logger = new Logger(StorageService.name);
+
   constructor(
     private readonly supabase: SupabaseService,
     private readonly config: ConfigService,
@@ -91,13 +93,35 @@ export class StorageService {
     return data.signedUrl;
   }
 
+  async attachSignedObjectUrl<T extends Record<string, unknown>>(
+    row: T,
+    bucket: string,
+    storagePathField: string,
+    signedUrlField: string,
+    opts?: { nullUrlOnSignError?: boolean },
+  ): Promise<T> {
+    const path = row[storagePathField];
+    if (typeof path !== 'string' || path.length === 0) {
+      return row;
+    }
+    try {
+      const url = await this.createSignedUrl(bucket, path);
+      return { ...row, [signedUrlField]: url } as T;
+    } catch {
+      if (opts?.nullUrlOnSignError) {
+        return { ...row, [signedUrlField]: null } as T;
+      }
+      return row;
+    }
+  }
+
   async removeObjectsIfPresent(bucket: string, paths: string[]): Promise<void> {
     const unique = [...new Set(paths.filter((p) => typeof p === 'string' && p.length > 0))];
     if (unique.length === 0) return;
     const client = this.supabase.getAdminClient();
     const { error } = await client.storage.from(bucket).remove(unique);
     if (error) {
-      console.warn(`[storage] removeObjectsIfPresent: ${error.message}`);
+      this.logger.warn(`removeObjectsIfPresent: ${error.message}`);
     }
   }
 }

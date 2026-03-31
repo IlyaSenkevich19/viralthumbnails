@@ -1,25 +1,22 @@
 import { Injectable } from '@nestjs/common';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { ConfigService } from '@nestjs/config';
+import { SupabaseService } from '../supabase/supabase.service';
 
 @Injectable()
 export class AuthService {
-  private supabaseAdmin: SupabaseClient | null = null;
-
-  constructor() {
-    const url = process.env.SUPABASE_URL;
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (url && serviceKey) {
-      this.supabaseAdmin = createClient(url, serviceKey, {
-        auth: { autoRefreshToken: false, persistSession: false },
-      });
-    }
-  }
+  constructor(
+    private readonly config: ConfigService,
+    private readonly supabase: SupabaseService,
+  ) {}
 
   async getUser(userId: string) {
-    if (!this.supabaseAdmin) {
+    const url = this.config.get<string>('SUPABASE_URL')?.trim();
+    const key = this.config.get<string>('SUPABASE_SERVICE_ROLE_KEY')?.trim();
+    if (!url || !key) {
       return { id: userId };
     }
-    const { data, error } = await this.supabaseAdmin.auth.admin.getUserById(userId);
+    const client = this.supabase.getAdminClient();
+    const { data, error } = await client.auth.admin.getUserById(userId);
     if (error) throw error;
     return data.user;
   }

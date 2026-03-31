@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { ConfirmationModal } from '@/components/ui/confirmation-modal';
+import { projectVariantsPath } from '@/config/routes';
 import { ProjectRowMenu } from '@/components/projects/project-row-menu';
 
 export default function ProjectsListPage() {
@@ -39,7 +40,7 @@ export default function ProjectsListPage() {
 
   function openProject(p: { id: string }) {
     if (isOptimisticProjectId(p.id)) return;
-    router.push(`/projects/${p.id}/variants`);
+    router.push(projectVariantsPath(p.id));
   }
 
   return (

@@ -1,3 +1,4 @@
+import { ApiRoutes } from '@/config/api-routes';
 import { fetchJson } from './fetch-json';
 
 export interface UserAvatarRow {
@@ -12,19 +13,19 @@ export interface UserAvatarRow {
 }
 
 export async function listAvatars(token: string | null): Promise<UserAvatarRow[]> {
-  return fetchJson<UserAvatarRow[]>('/avatars', token);
+  return fetchJson<UserAvatarRow[]>(ApiRoutes.avatars.root, token);
 }
 
 export async function createAvatar(
   token: string | null,
   body: { name?: string; imageBase64: string; mimeType?: string },
 ): Promise<UserAvatarRow> {
-  return fetchJson<UserAvatarRow>('/avatars', token, {
+  return fetchJson<UserAvatarRow>(ApiRoutes.avatars.root, token, {
     method: 'POST',
     body: JSON.stringify(body),
   });
 }
 
 export async function deleteAvatar(token: string | null, id: string): Promise<void> {
-  return fetchJson<void>(`/avatars/${id}`, token, { method: 'DELETE' });
+  return fetchJson<void>(ApiRoutes.avatars.one(id), token, { method: 'DELETE' });
 }

@@ -1,3 +1,4 @@
+import { AppRoutes } from '@/config/routes';
 import { createClient } from '@/lib/supabase/client';
 
 export async function signIn(email: string, password: string) {
@@ -28,7 +29,7 @@ export async function signInWithGoogle() {
     options: {
       redirectTo:
         typeof window !== 'undefined'
-          ? `${window.location.origin}/dashboard`
+          ? `${window.location.origin}${AppRoutes.dashboard}`
           : undefined,
     },
   });
@@ -41,7 +42,9 @@ export async function signInWithGoogle() {
 export async function resetPasswordForEmail(email: string) {
   const supabase = createClient();
   const redirectTo =
-    typeof window !== 'undefined' ? `${window.location.origin}/auth/update-password` : undefined;
+    typeof window !== 'undefined'
+      ? `${window.location.origin}${AppRoutes.auth.updatePassword}`
+      : undefined;
   const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
     redirectTo,
   });

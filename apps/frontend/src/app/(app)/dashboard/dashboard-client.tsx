@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { AppRoutes, AppSearchParams, projectVariantsPath } from '@/config/routes';
 
 function DashboardOpenNewProjectFromUrl() {
   const searchParams = useSearchParams();
@@ -23,13 +24,13 @@ function DashboardOpenNewProjectFromUrl() {
   const { openNewProject } = useNewProject();
 
   useEffect(() => {
-    if (searchParams.get('openNewProject') !== '1') return;
+    if (searchParams.get(AppSearchParams.openNewProject) !== '1') return;
     const q: Record<string, string> = {};
     searchParams.forEach((v, k) => {
-      if (k !== 'openNewProject') q[k] = v;
+      if (k !== AppSearchParams.openNewProject) q[k] = v;
     });
     openNewProject(q);
-    router.replace('/dashboard');
+    router.replace(AppRoutes.dashboard);
   }, [searchParams, openNewProject, router]);
 
   return null;
@@ -151,7 +152,7 @@ export function DashboardClient() {
           <h2 id="my-projects-heading" className="text-lg font-semibold tracking-tight text-foreground">
             My projects
           </h2>
-          <Link href="/projects" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
+          <Link href={AppRoutes.projects} className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
             View all
           </Link>
         </div>
@@ -236,7 +237,7 @@ export function DashboardClient() {
               ) : (
                 <Link
                   key={p.id}
-                  href={`/projects/${p.id}/variants`}
+                  href={projectVariantsPath(p.id)}
                   className="block rounded-xl outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   {card}

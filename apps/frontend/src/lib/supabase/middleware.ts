@@ -1,10 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import type { User } from '@supabase/supabase-js';
 import { NextResponse, type NextRequest } from 'next/server';
-
-function isPublicPath(pathname: string) {
-  return pathname === '/' || pathname.startsWith('/auth/register');
-}
+import { AppRoutes, isSessionPublicPath } from '@/config/routes';
 
 export async function updateSession(request: NextRequest): Promise<{
   response: NextResponse;
@@ -18,11 +15,11 @@ export async function updateSession(request: NextRequest): Promise<{
     console.error(
       '[middleware] Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY (set them in Vercel → Settings → Environment Variables).',
     );
-    if (isPublicPath(request.nextUrl.pathname)) {
+    if (isSessionPublicPath(request.nextUrl.pathname)) {
       return { response, user: null };
     }
     const login = request.nextUrl.clone();
-    login.pathname = '/';
+    login.pathname = AppRoutes.home;
     login.searchParams.set('error', 'configuration');
     return { response: NextResponse.redirect(login), user: null };
   }
@@ -48,9 +45,9 @@ export async function updateSession(request: NextRequest): Promise<{
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!isPublicPath(request.nextUrl.pathname) && !user) {
+  if (!isSessionPublicPath(request.nextUrl.pathname) && !user) {
     const loginUrl = request.nextUrl.clone();
-    loginUrl.pathname = '/';
+    loginUrl.pathname = AppRoutes.home;
     return { response: NextResponse.redirect(loginUrl), user: null };
   }
 

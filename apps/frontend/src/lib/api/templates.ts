@@ -1,3 +1,4 @@
+import { ApiRoutes, templatesListPath } from '@/config/api-routes';
 import { fetchJson } from './fetch-json';
 
 export const TEMPLATES_DEFAULT_PAGE_SIZE = 24;
@@ -38,7 +39,7 @@ export interface PaginatedTemplatesResponse {
 }
 
 export async function listTemplateNiches(token: string | null): Promise<TemplateNicheOption[]> {
-  return fetchJson<TemplateNicheOption[]>('/templates/niches', token);
+  return fetchJson<TemplateNicheOption[]>(ApiRoutes.templates.niches, token);
 }
 
 export async function listTemplates(
@@ -52,7 +53,7 @@ export async function listTemplates(
     params.set('limit', String(options.limit));
   }
   const q = params.toString();
-  return fetchJson<PaginatedTemplatesResponse>(q ? `/templates?${q}` : '/templates', token);
+  return fetchJson<PaginatedTemplatesResponse>(templatesListPath(q), token);
 }
 
 export async function createTemplate(
@@ -65,7 +66,7 @@ export async function createTemplate(
     niche?: string;
   },
 ): Promise<ThumbnailTemplateRow> {
-  return fetchJson<ThumbnailTemplateRow>('/templates', token, {
+  return fetchJson<ThumbnailTemplateRow>(ApiRoutes.templates.root, token, {
     method: 'POST',
     body: JSON.stringify(body),
   });

@@ -8,6 +8,7 @@ import { useUpdatePasswordMutation } from '@/lib/hooks';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
+import { AppRoutes } from '@/config/routes';
 
 export default function UpdatePasswordPage() {
   const [password, setPassword] = useState('');
@@ -30,7 +31,7 @@ export default function UpdatePasswordPage() {
     update.mutate(password, {
       onSuccess: () => {
         toast.success('Password updated. You can sign in.');
-        router.push('/');
+        router.push(AppRoutes.home);
         router.refresh();
       },
       onError: (err) => {
@@ -42,7 +43,7 @@ export default function UpdatePasswordPage() {
   return (
     <div className="flex min-h-screen flex-col bg-background px-6 py-10 sm:px-10">
       <header className="mx-auto mb-8 flex w-full max-w-md items-center justify-between">
-        <Link href="/" className="flex items-center gap-2 text-foreground">
+        <Link href={AppRoutes.home} className="flex items-center gap-2 text-foreground">
           <div className="h-8 w-8 rounded-xl bg-primary shadow-md shadow-primary/25" />
           <span className="font-semibold tracking-tight">{siteName}</span>
         </Link>

@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server';
+import { AppRoutes, AppSearchParams } from '@/config/routes';
 import { updateSession } from '@/lib/supabase/middleware';
 
 function copyCookies(from: NextResponse, to: NextResponse) {
@@ -12,10 +13,10 @@ export async function middleware(request: NextRequest) {
     const { response: sessionResponse, user } = await updateSession(request);
     const path = request.nextUrl.pathname;
 
-    if (path === '/') {
+    if (path === AppRoutes.home) {
       if (user) {
         const url = request.nextUrl.clone();
-        url.pathname = '/dashboard';
+        url.pathname = AppRoutes.dashboard;
         const redirect = NextResponse.redirect(url);
         copyCookies(sessionResponse, redirect);
         return redirect;
@@ -23,13 +24,13 @@ export async function middleware(request: NextRequest) {
       return sessionResponse;
     }
 
-    if (path === '/projects/new') {
+    if (path === AppRoutes.projectsNew) {
       if (sessionResponse.status >= 300) {
         return sessionResponse;
       }
       const url = request.nextUrl.clone();
-      url.pathname = '/dashboard';
-      url.searchParams.set('openNewProject', '1');
+      url.pathname = AppRoutes.dashboard;
+      url.searchParams.set(AppSearchParams.openNewProject, '1');
       const redirect = NextResponse.redirect(url);
       copyCookies(sessionResponse, redirect);
       return redirect;

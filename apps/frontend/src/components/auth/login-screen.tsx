@@ -9,6 +9,7 @@ import { useSignInMutation, useSignInWithGoogleMutation } from '@/lib/hooks';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { AppRoutes } from '@/config/routes';
 
 export function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -29,7 +30,7 @@ export function LoginScreen() {
       {
         onSuccess: () => {
           toast.success('Welcome back!');
-          router.push('/dashboard');
+          router.push(AppRoutes.dashboard);
           router.refresh();
         },
         onError: (err) => {
@@ -62,7 +63,7 @@ export function LoginScreen() {
           </div>
           <div className="text-sm text-muted-foreground">
             No account?{' '}
-            <Link href="/auth/register" className="font-medium text-foreground hover:underline">
+            <Link href={AppRoutes.auth.register} className="font-medium text-foreground hover:underline">
               Sign up
             </Link>
           </div>
@@ -99,7 +100,7 @@ export function LoginScreen() {
                     Password
                   </label>
                   <Link
-                    href="/auth/forgot-password"
+                    href={AppRoutes.auth.forgotPassword}
                     className="text-xs font-medium text-primary hover:underline"
                   >
                     Forgot password?

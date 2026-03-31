@@ -6,6 +6,7 @@ import { siteName } from '@/config/site';
 import { useResetPasswordMutation } from '@/lib/hooks';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { AppRoutes } from '@/config/routes';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -27,11 +28,11 @@ export default function ForgotPasswordPage() {
   return (
     <div className="flex min-h-screen flex-col bg-background px-6 py-10 sm:px-10">
       <header className="mx-auto mb-8 flex w-full max-w-md items-center justify-between">
-        <Link href="/" className="flex items-center gap-2 text-foreground">
+        <Link href={AppRoutes.home} className="flex items-center gap-2 text-foreground">
           <div className="h-8 w-8 rounded-xl bg-primary shadow-md shadow-primary/25" />
           <span className="font-semibold tracking-tight">{siteName}</span>
         </Link>
-        <Link href="/" className="text-sm text-muted-foreground hover:text-foreground">
+        <Link href={AppRoutes.home} className="text-sm text-muted-foreground hover:text-foreground">
           Sign in
         </Link>
       </header>

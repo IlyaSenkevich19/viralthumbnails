@@ -24,14 +24,15 @@ import { useRouter } from 'next/navigation';
 import { SidebarCreditsBlock } from '@/components/layout/sidebar-credits';
 import { CollapsedSidebarTooltip } from '@/components/layout/collapsed-sidebar-tooltip';
 import { Badge } from '@/components/ui/badge';
+import { AppRoutes } from '@/config/routes';
 
 const navItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/projects', label: 'Projects', icon: FolderKanban },
-  { href: '/templates', label: 'Templates', icon: LayoutTemplate },
-  { href: '/avatars', label: 'My faces', icon: UserCircle },
-  { href: '/ab-tests', label: 'A/B Tests', icon: FlaskConical, soon: true },
-  { href: '/settings', label: 'Settings', icon: Settings, soon: true },
+  { href: AppRoutes.dashboard, label: 'Dashboard', icon: LayoutDashboard },
+  { href: AppRoutes.projects, label: 'Projects', icon: FolderKanban },
+  { href: AppRoutes.templates, label: 'Templates', icon: LayoutTemplate },
+  { href: AppRoutes.avatars, label: 'My faces', icon: UserCircle },
+  { href: AppRoutes.abTests, label: 'A/B Tests', icon: FlaskConical, soon: true },
+  { href: AppRoutes.settings, label: 'Settings', icon: Settings, soon: true },
 ];
 
 function SidebarSlidingLabel({
@@ -90,7 +91,7 @@ function SidebarUserBlock({ collapsed, inDrawer }: { collapsed: boolean; inDrawe
     signOut.mutate(undefined, {
       onSuccess: () => {
         toast.success('Logged out');
-        router.push('/');
+        router.push(AppRoutes.home);
         router.refresh();
         setOpen(false);
       },
@@ -250,9 +251,9 @@ export function Sidebar({
       <div className={cn('overflow-x-hidden p-4 pb-3', compact && 'px-2')}>
         <CollapsedSidebarTooltip enabled={compact} label={siteName} className={cn(compact && 'flex w-full justify-center')}>
           <Link
-            href="/dashboard"
+            href={AppRoutes.dashboard}
             onClick={() => {
-              if (inDrawer && pathname === '/dashboard') onClose?.();
+              if (inDrawer && pathname === AppRoutes.dashboard) onClose?.();
             }}
             className={cn('flex items-center gap-2', compact && 'justify-center')}
           >
@@ -274,7 +275,7 @@ export function Sidebar({
           {navItems.map(({ href, label, icon: Icon, soon }) => {
             const active =
               effectivePath === href ||
-              (href !== '/dashboard' && effectivePath.startsWith(`${href}/`));
+              (href !== AppRoutes.dashboard && effectivePath.startsWith(`${href}/`));
             const tooltipLabel = soon ? `${label} (soon)` : label;
             return (
               <CollapsedSidebarTooltip key={href} enabled={compact} label={tooltipLabel}>

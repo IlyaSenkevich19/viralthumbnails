@@ -11,6 +11,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiControllerPaths } from '../../common/constants/api-controller-paths';
 import { SupabaseGuard } from '../auth/guards/supabase.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { AvatarsService } from './avatars.service';
@@ -18,7 +19,7 @@ import { CreateAvatarDto } from './dto/create-avatar.dto';
 
 @ApiTags('avatars')
 @ApiBearerAuth()
-@Controller('avatars')
+@Controller(ApiControllerPaths.avatars)
 @UseGuards(SupabaseGuard)
 export class AvatarsController {
   constructor(private readonly avatars: AvatarsService) {}

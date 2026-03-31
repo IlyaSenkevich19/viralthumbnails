@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { Check } from 'lucide-react';
+import { AppRoutes } from '@/config/routes';
 import { pricingPlans } from '@/config/pricing-plans';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -90,7 +91,7 @@ export default function CreditsPricingPage() {
 
       <p className="text-center text-xs text-muted-foreground">
         Questions about pricing? Contact us through your usual support channel.{' '}
-        <Link href="/dashboard" className="text-primary underline-offset-4 hover:underline">
+        <Link href={AppRoutes.dashboard} className="text-primary underline-offset-4 hover:underline">
           Back to dashboard
         </Link>
       </p>

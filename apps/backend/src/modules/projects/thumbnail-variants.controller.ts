@@ -11,6 +11,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiControllerPaths } from '../../common/constants/api-controller-paths';
 import { SupabaseGuard } from '../auth/guards/supabase.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { ProjectsService } from './projects.service';
@@ -18,7 +19,7 @@ import { GenerateThumbnailsDto } from './dto/generate-thumbnails.dto';
 
 @ApiTags('thumbnail-variants')
 @ApiBearerAuth()
-@Controller('projects')
+@Controller(ApiControllerPaths.projects)
 @UseGuards(SupabaseGuard)
 export class ThumbnailVariantsController {
   constructor(private readonly projects: ProjectsService) {}

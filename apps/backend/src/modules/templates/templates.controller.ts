@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiControllerPaths } from '../../common/constants/api-controller-paths';
 import { SupabaseGuard } from '../auth/guards/supabase.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { TemplatesService } from './templates.service';
@@ -9,7 +10,7 @@ import { TEMPLATE_NICHES } from './constants/template-niches';
 
 @ApiTags('templates')
 @ApiBearerAuth()
-@Controller('templates')
+@Controller(ApiControllerPaths.templates)
 @UseGuards(SupabaseGuard)
 export class TemplatesController {
   constructor(private readonly templates: TemplatesService) {}

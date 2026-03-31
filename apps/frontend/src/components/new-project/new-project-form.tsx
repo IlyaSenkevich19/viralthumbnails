@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { projectVariantsPath } from '@/config/routes';
 import { toast } from 'sonner';
 import { tabs } from './constants';
 import type { Tab } from './types';
@@ -109,7 +110,7 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
         } else if (ok < total) {
           toast.warning(`${ok} of ${total} thumbnails ready; some failed.`);
         }
-        router.push(`/projects/${project.id}/variants`);
+        router.push(projectVariantsPath(project.id));
       },
       onSettled: () => {
         submitLock.current = false;

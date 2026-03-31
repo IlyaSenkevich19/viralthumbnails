@@ -4,17 +4,18 @@ import type {
   ProjectSourceType,
   ProjectWithVariants,
 } from '@/lib/types/project';
+import { ApiRoutes } from '@/config/api-routes';
 import { fetchJson } from './fetch-json';
 
 export async function listProjects(token: string | null): Promise<ProjectRow[]> {
-  return fetchJson<ProjectRow[]>('/projects', token);
+  return fetchJson<ProjectRow[]>(ApiRoutes.projects.root, token);
 }
 
 export async function getProject(
   token: string | null,
   id: string,
 ): Promise<ProjectWithVariants> {
-  return fetchJson<ProjectWithVariants>(`/projects/${id}`, token);
+  return fetchJson<ProjectWithVariants>(ApiRoutes.projects.one(id), token);
 }
 
 export async function createProject(
@@ -26,7 +27,7 @@ export async function createProject(
     source_data: Record<string, unknown>;
   },
 ): Promise<ProjectRow> {
-  return fetchJson<ProjectRow>('/projects', token, {
+  return fetchJson<ProjectRow>(ApiRoutes.projects.root, token, {
     method: 'POST',
     body: JSON.stringify(body),
   });
@@ -37,14 +38,14 @@ export async function generateThumbnails(
   projectId: string,
   options?: { template_id?: string; count?: number },
 ): Promise<GenerateThumbnailsResponse> {
-  return fetchJson<GenerateThumbnailsResponse>(`/projects/${projectId}/generate`, token, {
+  return fetchJson<GenerateThumbnailsResponse>(ApiRoutes.projects.generate(projectId), token, {
     method: 'POST',
     body: JSON.stringify(options ?? {}),
   });
 }
 
 export async function deleteProject(token: string | null, projectId: string): Promise<void> {
-  await fetchJson(`/projects/${projectId}`, token, { method: 'DELETE' });
+  await fetchJson(ApiRoutes.projects.delete(projectId), token, { method: 'DELETE' });
 }
 
 export async function deleteVariant(
@@ -52,5 +53,5 @@ export async function deleteVariant(
   projectId: string,
   variantId: string,
 ): Promise<void> {
-  await fetchJson(`/projects/${projectId}/variants/${variantId}`, token, { method: 'DELETE' });
+  await fetchJson(ApiRoutes.projects.variant(projectId, variantId), token, { method: 'DELETE' });
 }

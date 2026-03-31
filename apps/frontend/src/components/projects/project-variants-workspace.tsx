@@ -30,6 +30,7 @@ import { Button, buttonVariants } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { AppRoutes } from '@/config/routes';
 import { toast } from 'sonner';
 import { ConfirmationModal } from '@/components/ui/confirmation-modal';
 import { TemplatesGridSkeleton } from '@/components/templates/templates-grid-skeleton';
@@ -159,7 +160,7 @@ export function ProjectVariantsWorkspace({
         <aside className="w-full shrink-0 space-y-6 lg:sticky lg:top-6 lg:max-h-[calc(100vh-4rem)] lg:w-[min(100%,44rem)] lg:overflow-y-auto lg:pr-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <Link
-              href="/projects"
+              href={AppRoutes.projects}
               className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }), 'inline-flex gap-2')}
             >
               <ArrowLeft className="h-4 w-4" />

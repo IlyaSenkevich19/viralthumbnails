@@ -7,6 +7,7 @@ import { useProjectWithVariants } from '@/lib/hooks';
 import { buttonVariants } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { AppRoutes } from '@/config/routes';
 import { toast } from 'sonner';
 import { ProjectVariantsWorkspace } from '@/components/projects/project-variants-workspace';
 
@@ -55,7 +56,7 @@ export function VariantsGallery({ projectId }: { projectId: string }) {
     return (
       <div className="space-y-4">
         <Link
-          href="/projects"
+          href={AppRoutes.projects}
           className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }), 'inline-flex gap-2')}
         >
           <ArrowLeft className="h-4 w-4" />
@@ -72,7 +73,7 @@ export function VariantsGallery({ projectId }: { projectId: string }) {
     return (
       <div className="space-y-4">
         <Link
-          href="/projects"
+          href={AppRoutes.projects}
           className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }), 'inline-flex gap-2')}
         >
           <ArrowLeft className="h-4 w-4" />

@@ -9,6 +9,7 @@ import { DEFAULT_TRIAL_GENERATION_CREDITS } from '@/config/credits';
 import { useGenerationCredits } from '@/lib/hooks/use-generation-credits';
 import { cn } from '@/lib/utils';
 import { CollapsedSidebarTooltip } from '@/components/layout/collapsed-sidebar-tooltip';
+import { AppRoutes } from '@/config/routes';
 
 const creditsLinkFocus =
   'outline-none transition-opacity hover:opacity-95 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--sidebar)]';
@@ -20,11 +21,11 @@ export function SidebarCreditsBlock({
 }: {
   collapsed: boolean;
   inDrawer: boolean;
-  /** Close mobile drawer when user is already on /credits and taps credits again. */
+  /** Close mobile drawer when user is already on credits and taps credits again. */
   onDrawerNavigate?: () => void;
 }) {
   const pathname = usePathname();
-  const isCreditsPage = pathname === '/credits';
+  const isCreditsPage = pathname === AppRoutes.credits;
   const compact = collapsed && !inDrawer;
   const { user, isLoading: authLoading } = useAuth();
   const { data, isError, isFetching, isPending } = useGenerationCredits();
@@ -37,9 +38,9 @@ export function SidebarCreditsBlock({
     return (
       <CollapsedSidebarTooltip enabled={compact} label="Credits">
         <Link
-          href="/credits"
+          href={AppRoutes.credits}
           onClick={() => {
-            if (inDrawer && pathname === '/credits') onDrawerNavigate?.();
+            if (inDrawer && pathname === AppRoutes.credits) onDrawerNavigate?.();
           }}
           aria-label="Credits — view plans and top up"
           className={cn(
@@ -72,9 +73,9 @@ export function SidebarCreditsBlock({
       <div className="flex w-full justify-center">
         <CollapsedSidebarTooltip label={`Credits · ${balance}`} enabled={true}>
           <Link
-            href="/credits"
+            href={AppRoutes.credits}
             onClick={() => {
-              if (inDrawer && pathname === '/credits') onDrawerNavigate?.();
+              if (inDrawer && pathname === AppRoutes.credits) onDrawerNavigate?.();
             }}
             aria-label="Credits — view plans and top up"
             className={cn(
@@ -99,9 +100,9 @@ export function SidebarCreditsBlock({
 
   return (
     <Link
-      href="/credits"
+      href={AppRoutes.credits}
       onClick={() => {
-        if (inDrawer && pathname === '/credits') onDrawerNavigate?.();
+        if (inDrawer && pathname === AppRoutes.credits) onDrawerNavigate?.();
       }}
       aria-label="Credits — view plans and top up"
       className={cn(

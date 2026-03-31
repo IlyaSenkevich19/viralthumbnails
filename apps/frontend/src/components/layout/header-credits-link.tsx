@@ -5,6 +5,7 @@ import { Sparkles } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import { useGenerationCredits } from '@/lib/hooks';
 import { cn } from '@/lib/utils';
+import { AppRoutes } from '@/config/routes';
 
 export function HeaderCreditsLink({ className }: { className?: string }) {
   const { user, accessToken, isLoading: authLoading } = useAuth();
@@ -18,7 +19,7 @@ export function HeaderCreditsLink({ className }: { className?: string }) {
 
   return (
     <Link
-      href="/credits"
+      href={AppRoutes.credits}
       className={cn(
         'motion-base inline-flex h-9 max-w-[9rem] items-center gap-1.5 overflow-hidden rounded-lg border border-border bg-secondary/80 px-2.5 text-xs font-semibold tabular-nums text-foreground',
         'hover:border-border-hover hover:bg-secondary',

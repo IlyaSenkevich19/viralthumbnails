@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { ArrowRight, MoreVertical, Trash2 } from 'lucide-react';
+import { projectVariantsPath } from '@/config/routes';
 import { Button } from '@/components/ui/button';
 
 const MENU_MIN_WIDTH = 160;
@@ -71,7 +72,7 @@ export function ProjectRowMenu({ projectId, projectTitle, onDeleteClick }: Proje
         className="rounded-xl border border-border bg-card py-1 shadow-[0_16px_48px_-12px_rgba(0,0,0,0.55)]"
       >
         <Link
-          href={`/projects/${projectId}/variants`}
+          href={projectVariantsPath(projectId)}
           role="menuitem"
           className="motion-base flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-secondary"
           onClick={(e) => {

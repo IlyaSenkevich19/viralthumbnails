@@ -1,18 +1,25 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { useIsMutating } from '@tanstack/react-query';
 import { createProjectAndGenerateMutationKey } from '@/lib/hooks';
 import { Sidebar } from './sidebar';
 import { HeaderShell } from './header-shell';
+import { cn } from '@/lib/utils';
 
 const STORAGE_KEY = 'vt-sidebar-collapsed';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
   const creatingProject = useIsMutating({ mutationKey: createProjectAndGenerateMutationKey }) > 0;
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    setMobileSidebarOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
     try {
@@ -24,14 +31,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (typeof document === 'undefined') return;
+    if (!mobileSidebarOpen) return;
     const prev = document.body.style.overflow;
-    if (mobileSidebarOpen) document.body.style.overflow = 'hidden';
-    else document.body.style.overflow = prev;
+    document.body.style.overflow = 'hidden';
     return () => {
       document.body.style.overflow = prev;
     };
   }, [mobileSidebarOpen]);
+
+  const openMobileSidebar = useCallback(() => setMobileSidebarOpen(true), []);
+  const closeMobileSidebar = useCallback(() => setMobileSidebarOpen(false), []);
 
   const toggleSidebarCollapsed = useCallback(() => {
     setSidebarCollapsed((c) => {
@@ -53,10 +62,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           onToggleCollapsed={toggleSidebarCollapsed}
         />
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <HeaderShell
-            className="lg:hidden"
-            onMobileMenuClick={() => setMobileSidebarOpen(true)}
-          />
+          <HeaderShell className="lg:hidden" onMobileMenuClick={openMobileSidebar} />
           <main className="min-h-0 flex-1 overflow-auto">
             <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
               {creatingProject ? (
@@ -74,30 +80,30 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </div>
 
-      {/* Mobile drawer: keep mounted for enter/exit transitions */}
+      {/* Mobile drawer: when closed, wrapper must not capture hits (z-40 sits above header z-30). */}
       <div
-        className="fixed inset-0 z-40 lg:hidden"
+        className={cn(
+          'fixed inset-0 z-40 lg:hidden',
+          mobileSidebarOpen ? 'pointer-events-auto' : 'pointer-events-none',
+        )}
         aria-hidden={!mobileSidebarOpen}
       >
         <button
           type="button"
           tabIndex={mobileSidebarOpen ? 0 : -1}
           aria-label={mobileSidebarOpen ? 'Close menu' : undefined}
-          className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 ease-[var(--ease-standard)]"
+          className="absolute inset-0 z-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 ease-[var(--ease-standard)]"
           style={{ opacity: mobileSidebarOpen ? 1 : 0, pointerEvents: mobileSidebarOpen ? 'auto' : 'none' }}
-          onClick={() => setMobileSidebarOpen(false)}
+          onClick={closeMobileSidebar}
         />
         <div
-          className="absolute inset-y-0 left-0 w-80 max-w-full border-r border-border bg-sidebar shadow-premium transition-transform duration-300 ease-[var(--ease-standard)]"
+          className="absolute inset-y-0 left-0 z-10 w-80 max-w-full border-r border-border bg-sidebar shadow-premium transition-transform duration-300 ease-[var(--ease-standard)]"
           style={{
             transform: mobileSidebarOpen ? 'translateX(0)' : 'translateX(-100%)',
             pointerEvents: mobileSidebarOpen ? 'auto' : 'none',
           }}
         >
-          <Sidebar
-            inDrawer
-            onClose={() => setMobileSidebarOpen(false)}
-          />
+          <Sidebar inDrawer onClose={closeMobileSidebar} />
         </div>
       </div>
     </div>

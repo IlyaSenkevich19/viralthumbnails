@@ -37,3 +37,15 @@ export function useSignOutMutation() {
     },
   });
 }
+
+export function useResetPasswordMutation() {
+  return useMutation({
+    mutationFn: (email: string) => authApi.resetPasswordForEmail(email),
+  });
+}
+
+export function useUpdatePasswordMutation() {
+  return useMutation({
+    mutationFn: (newPassword: string) => authApi.updatePassword(newPassword),
+  });
+}

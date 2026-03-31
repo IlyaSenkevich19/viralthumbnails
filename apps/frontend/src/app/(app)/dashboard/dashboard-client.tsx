@@ -7,10 +7,9 @@ import { ImageIcon, Sparkles } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import { useNewProject } from '@/contexts/new-project-context';
 import { useProjectsList } from '@/lib/hooks';
-import { humanizeKey } from '@/lib/format';
-import { statusToneClass } from '@/lib/status-tone';
+import { formatRelativeTime, humanizeKey, isLikelyYoutubeUrl } from '@/lib/format';
+import { projectStatusLabel, statusToneClass } from '@/lib/status-tone';
 import { isOptimisticProjectId } from '@/lib/types/project';
-import { BackendHealth } from '@/components/backend-health';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -41,7 +40,7 @@ function ProjectCardSkeleton() {
     <Card className="overflow-hidden">
       <Skeleton className="aspect-video w-full rounded-none" />
       <CardHeader className="space-y-2 pb-2 pt-3">
-        <Skeleton className="h-4 w-4/5" />
+        <Skeleton className="h-4 w-[80%] max-w-full" />
         <Skeleton className="h-3 w-1/3" />
       </CardHeader>
     </Card>
@@ -52,6 +51,7 @@ export function DashboardClient() {
   const { user, accessToken, isLoading: authLoading } = useAuth();
   const { openNewProject } = useNewProject();
   const [url, setUrl] = useState('');
+  const [urlError, setUrlError] = useState('');
   const { data: projects = [], isPending, isError, error } = useProjectsList();
 
   const hasSession = Boolean(user?.id && accessToken);
@@ -64,7 +64,22 @@ export function DashboardClient() {
         : null;
 
   function goCreate(extra?: Record<string, string>) {
+    setUrlError('');
     openNewProject(extra ?? {});
+  }
+
+  function handleCreateFromYoutubeField() {
+    const trimmed = url.trim();
+    if (!trimmed) {
+      goCreate();
+      return;
+    }
+    if (!isLikelyYoutubeUrl(trimmed)) {
+      setUrlError('Paste a full YouTube link (youtube.com or youtu.be).');
+      return;
+    }
+    setUrlError('');
+    goCreate({ youtube_url: trimmed });
   }
 
   return (
@@ -79,7 +94,6 @@ export function DashboardClient() {
             Create thumbnails from a YouTube link, upload, script, or text — then review variants.
           </p>
         </div>
-        <BackendHealth />
       </div>
 
       <Card>
@@ -99,18 +113,22 @@ export function DashboardClient() {
                 id="dash-youtube-url"
                 placeholder="https://www.youtube.com/watch?v=…"
                 value={url}
-                onChange={(e) => setUrl(e.target.value)}
+                onChange={(e) => {
+                  setUrl(e.target.value);
+                  if (urlError) setUrlError('');
+                }}
                 inputMode="url"
                 autoComplete="url"
+                aria-invalid={Boolean(urlError)}
+                aria-describedby={urlError ? 'dash-youtube-url-error' : undefined}
               />
+              {urlError ? (
+                <p id="dash-youtube-url-error" className="text-sm text-destructive" role="alert">
+                  {urlError}
+                </p>
+              ) : null}
             </div>
-            <Button
-              type="button"
-              className="shrink-0"
-              onClick={() =>
-                goCreate(url.trim() ? { youtube_url: url.trim() } : undefined)
-              }
-            >
+            <Button type="button" className="shrink-0" onClick={handleCreateFromYoutubeField}>
               Create new thumbnail
             </Button>
           </div>
@@ -166,12 +184,17 @@ export function DashboardClient() {
                     !optimistic && 'hover:border-border-hover',
                   )}
                 >
-                  <div className="relative aspect-video bg-muted">
+                  <div
+                    className={cn(
+                      'relative aspect-video bg-muted',
+                      p.status === 'generating' && 'motion-safe:animate-pulse',
+                    )}
+                  >
                     {p.cover_thumbnail_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={p.cover_thumbnail_url}
-                        alt=""
+                        alt={`Thumbnail preview for ${p.title}`}
                         className="h-full w-full object-cover"
                       />
                     ) : (
@@ -187,14 +210,21 @@ export function DashboardClient() {
                       </CardTitle>
                       <Badge
                         variant="default"
-                        className={cn('shrink-0 capitalize', statusToneClass(p.status))}
+                        className={cn('shrink-0', statusToneClass(p.status))}
+                        aria-label={`Status: ${projectStatusLabel(p.status)}`}
                       >
-                        {p.status}
+                        {projectStatusLabel(p.status)}
                       </Badge>
                     </div>
                     <p className="text-left text-xs text-muted-foreground capitalize">{p.platform}</p>
                     <p className="text-left text-[11px] text-muted-foreground/80">
                       {humanizeKey(p.source_type)}
+                      {p.updated_at ? (
+                        <>
+                          {' '}
+                          · <span className="tabular-nums">{formatRelativeTime(p.updated_at)}</span>
+                        </>
+                      ) : null}
                     </p>
                   </CardHeader>
                 </Card>

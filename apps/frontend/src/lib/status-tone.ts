@@ -1,5 +1,23 @@
 import type { ProjectStatus, VariantStatus } from '@/lib/types/project';
 
+/** User-visible status copy (badges, aria). */
+export function projectStatusLabel(status: ProjectStatus | VariantStatus): string {
+  switch (status) {
+    case 'done':
+      return 'Done';
+    case 'generating':
+      return 'Generating…';
+    case 'pending':
+      return 'Pending';
+    case 'failed':
+      return 'Failed';
+    case 'draft':
+      return 'Draft';
+    default:
+      return status;
+  }
+}
+
 export function statusToneClass(status: ProjectStatus | VariantStatus): string {
   switch (status) {
     case 'done':

@@ -22,5 +22,7 @@ export {
   useSignUpMutation,
   useSignInWithGoogleMutation,
   useSignOutMutation,
+  useResetPasswordMutation,
+  useUpdatePasswordMutation,
 } from './use-auth-mutations';
 export { useGenerationCredits } from './use-generation-credits';

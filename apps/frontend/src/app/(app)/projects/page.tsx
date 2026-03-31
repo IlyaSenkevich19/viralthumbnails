@@ -1,12 +1,13 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { FolderOpen, Plus } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import { useNewProject } from '@/contexts/new-project-context';
 import { useProjectsList, useDeleteProjectMutation } from '@/lib/hooks';
-import { humanizeKey } from '@/lib/format';
-import { statusToneClass } from '@/lib/status-tone';
+import { formatRelativeTime, humanizeKey } from '@/lib/format';
+import { projectStatusLabel, statusToneClass } from '@/lib/status-tone';
 import { isOptimisticProjectId } from '@/lib/types/project';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -17,6 +18,7 @@ import { ConfirmationModal } from '@/components/ui/confirmation-modal';
 import { ProjectRowMenu } from '@/components/projects/project-row-menu';
 
 export default function ProjectsListPage() {
+  const router = useRouter();
   const { user, accessToken, isLoading: authLoading } = useAuth();
   const { openNewProject } = useNewProject();
   const { data: projects = [], isPending, isError, error } = useProjectsList();
@@ -34,6 +36,11 @@ export default function ProjectsListPage() {
       : isError
         ? (error as Error).message
         : null;
+
+  function openProject(p: { id: string }) {
+    if (isOptimisticProjectId(p.id)) return;
+    router.push(`/projects/${p.id}/variants`);
+  }
 
   return (
     <div className="space-y-6">
@@ -64,7 +71,7 @@ export default function ProjectsListPage() {
           <h1 className="text-3xl font-semibold tracking-tight text-foreground">Projects</h1>
           <p className="text-sm text-muted-foreground">All thumbnail projects for your account.</p>
         </div>
-        <Button type="button" className="inline-flex gap-2" onClick={() => openNewProject()}>
+        <Button type="button" className="inline-flex h-10 gap-2" onClick={() => openNewProject()}>
           <Plus className="h-4 w-4" aria-hidden />
           New project
         </Button>
@@ -101,77 +108,162 @@ export default function ProjectsListPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-border shadow-sm">
-          <table className="w-full min-w-[min(100%,640px)] text-left text-sm">
-            <thead className="border-b border-border bg-card text-muted-foreground">
-              <tr>
-                <th scope="col" className="px-4 py-3 font-medium">
-                  Preview
-                </th>
-                <th scope="col" className="px-4 py-3 font-medium">
-                  Title
-                </th>
-                <th scope="col" className="px-4 py-3 font-medium">
-                  Platform
-                </th>
-                <th scope="col" className="px-4 py-3 font-medium">
-                  Source
-                </th>
-                <th scope="col" className="px-4 py-3 font-medium">
-                  Status
-                </th>
-                <th scope="col" className="px-4 py-3 font-medium">
-                  <span className="sr-only">Actions</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border bg-background">
-              {projects.map((p) => {
-                const optimistic = isOptimisticProjectId(p.id);
-                return (
-                <tr key={p.id} className="motion-base hover:bg-secondary/50">
-                  <td className="px-4 py-2">
-                    <div className="h-12 w-20 overflow-hidden rounded-md bg-muted">
+        <>
+          <div className="hidden overflow-x-auto rounded-xl border border-border shadow-sm md:block">
+            <table className="w-full min-w-[min(100%,720px)] text-left text-sm">
+              <thead className="border-b border-border bg-card text-muted-foreground">
+                <tr>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    Preview
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    Title
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    Platform
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    Source
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    Status
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    Updated
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    <span className="sr-only">Actions</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border bg-background">
+                {projects.map((p) => {
+                  const optimistic = isOptimisticProjectId(p.id);
+                  return (
+                    <tr
+                      key={p.id}
+                      tabIndex={optimistic ? -1 : 0}
+                      className={cn(
+                        'motion-base hover:bg-secondary/50',
+                        !optimistic && 'cursor-pointer focus-visible:bg-secondary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring',
+                      )}
+                      onClick={() => openProject(p)}
+                      onKeyDown={(e) => {
+                        if (optimistic) return;
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          openProject(p);
+                        }
+                      }}
+                    >
+                      <td className="px-4 py-2">
+                        <div className="h-12 w-20 overflow-hidden rounded-md bg-muted">
+                          {p.cover_thumbnail_url ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={p.cover_thumbnail_url}
+                              alt={`Preview: ${p.title}`}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : null}
+                        </div>
+                      </td>
+                      <th scope="row" className="px-4 py-2 text-left font-medium text-foreground">
+                        {p.title}
+                      </th>
+                      <td className="px-4 py-2 capitalize text-muted-foreground">{p.platform}</td>
+                      <td className="px-4 py-2 text-muted-foreground">{humanizeKey(p.source_type)}</td>
+                      <td className="px-4 py-2">
+                        <Badge variant="default" className={cn(statusToneClass(p.status))}>
+                          {projectStatusLabel(p.status)}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-2 tabular-nums text-muted-foreground">
+                        {formatRelativeTime(p.updated_at)}
+                      </td>
+                      <td className="px-4 py-2" onClick={(e) => e.stopPropagation()}>
+                        {optimistic ? (
+                          <span className="text-xs text-muted-foreground">Creating…</span>
+                        ) : (
+                          <ProjectRowMenu
+                            projectId={p.id}
+                            projectTitle={p.title}
+                            onDeleteClick={() => setProjectToDelete({ id: p.id, title: p.title })}
+                          />
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="space-y-3 md:hidden">
+            {projects.map((p) => {
+              const optimistic = isOptimisticProjectId(p.id);
+              return (
+                <Card
+                  key={p.id}
+                  role={optimistic ? undefined : 'button'}
+                  tabIndex={optimistic ? -1 : 0}
+                  className={cn(
+                    'overflow-hidden',
+                    !optimistic &&
+                      'cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                  )}
+                  onClick={() => openProject(p)}
+                  onKeyDown={(e) => {
+                    if (optimistic) return;
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      openProject(p);
+                    }
+                  }}
+                >
+                  <CardContent className="flex gap-3 p-4">
+                    <div className="h-16 w-28 shrink-0 overflow-hidden rounded-lg bg-muted">
                       {p.cover_thumbnail_url ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
                           src={p.cover_thumbnail_url}
-                          alt=""
+                          alt={`Preview: ${p.title}`}
                           className="h-full w-full object-cover"
                         />
                       ) : null}
                     </div>
-                  </td>
-                  <th scope="row" className="px-4 py-2 font-medium text-foreground">
-                    {p.title}
-                  </th>
-                  <td className="px-4 py-2 capitalize text-muted-foreground">{p.platform}</td>
-                  <td className="px-4 py-2 text-muted-foreground">{humanizeKey(p.source_type)}</td>
-                  <td className="px-4 py-2">
-                    <Badge
-                      variant="default"
-                      className={cn('capitalize', statusToneClass(p.status))}
-                    >
-                      {p.status}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-2">
-                    {optimistic ? (
-                      <span className="text-xs text-muted-foreground">Creating…</span>
-                    ) : (
-                      <ProjectRowMenu
-                        projectId={p.id}
-                        projectTitle={p.title}
-                        onDeleteClick={() => setProjectToDelete({ id: p.id, title: p.title })}
-                      />
-                    )}
-                  </td>
-                </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="line-clamp-2 font-medium text-foreground">{p.title}</p>
+                        <div onClick={(e) => e.stopPropagation()} className="shrink-0">
+                          {optimistic ? (
+                            <span className="text-xs text-muted-foreground">Creating…</span>
+                          ) : (
+                            <ProjectRowMenu
+                              projectId={p.id}
+                              projectTitle={p.title}
+                              onDeleteClick={() => setProjectToDelete({ id: p.id, title: p.title })}
+                            />
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                        <span className="capitalize">{p.platform}</span>
+                        <span aria-hidden>·</span>
+                        <span>{humanizeKey(p.source_type)}</span>
+                        <span aria-hidden>·</span>
+                        <span className="tabular-nums">{formatRelativeTime(p.updated_at)}</span>
+                      </div>
+                      <Badge variant="default" className={cn('w-fit', statusToneClass(p.status))}>
+                        {projectStatusLabel(p.status)}
+                      </Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </>
       )}
     </div>
   );

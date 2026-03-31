@@ -23,14 +23,15 @@ import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { SidebarCreditsBlock } from '@/components/layout/sidebar-credits';
 import { CollapsedSidebarTooltip } from '@/components/layout/collapsed-sidebar-tooltip';
+import { Badge } from '@/components/ui/badge';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/projects', label: 'Projects', icon: FolderKanban },
   { href: '/templates', label: 'Templates', icon: LayoutTemplate },
   { href: '/avatars', label: 'My faces', icon: UserCircle },
-  { href: '/ab-tests', label: 'A/B Tests', icon: FlaskConical },
-  { href: '/settings', label: 'Settings', icon: Settings },
+  { href: '/ab-tests', label: 'A/B Tests', icon: FlaskConical, soon: true },
+  { href: '/settings', label: 'Settings', icon: Settings, soon: true },
 ];
 
 function SidebarSlidingLabel({
@@ -250,6 +251,9 @@ export function Sidebar({
         <CollapsedSidebarTooltip enabled={compact} label={siteName} className={cn(compact && 'flex w-full justify-center')}>
           <Link
             href="/dashboard"
+            onClick={() => {
+              if (inDrawer && pathname === '/dashboard') onClose?.();
+            }}
             className={cn('flex items-center gap-2', compact && 'justify-center')}
           >
             <div className="h-9 w-9 shrink-0 rounded-xl bg-primary shadow-md shadow-primary/25" />
@@ -267,17 +271,18 @@ export function Sidebar({
 
       <div className="flex-1 overflow-y-auto overflow-x-hidden px-3 pb-4 pt-1">
         <nav className={cn('flex flex-col', compact ? 'items-center gap-1' : 'space-y-0.5')}>
-          {navItems.map(({ href, label, icon: Icon }) => {
+          {navItems.map(({ href, label, icon: Icon, soon }) => {
             const active =
               effectivePath === href ||
               (href !== '/dashboard' && effectivePath.startsWith(`${href}/`));
+            const tooltipLabel = soon ? `${label} (soon)` : label;
             return (
-              <CollapsedSidebarTooltip key={href} enabled={compact} label={label}>
+              <CollapsedSidebarTooltip key={href} enabled={compact} label={tooltipLabel}>
                 <Link
                   href={href}
                   onClick={() => {
                     setPendingHref(href);
-                    if (inDrawer) onClose?.();
+                    if (inDrawer && pathname === href) onClose?.();
                   }}
                   className={cn(
                     'motion-base flex items-center text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring',
@@ -292,10 +297,20 @@ export function Sidebar({
                   <Icon className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
                   {!compact && (
                     <SidebarSlidingLabel show maxWidthClass="max-w-[12rem]" className="min-w-0 flex-1 text-left">
-                      {label}
+                      <span className="flex min-w-0 items-center gap-2">
+                        <span className="min-w-0 truncate">{label}</span>
+                        {soon ? (
+                          <Badge
+                            variant="default"
+                            className="shrink-0 px-1.5 py-0 text-[10px] font-medium uppercase tracking-wide"
+                          >
+                            Soon
+                          </Badge>
+                        ) : null}
+                      </span>
                     </SidebarSlidingLabel>
                   )}
-                  {compact && <span className="sr-only">{label}</span>}
+                  {compact && <span className="sr-only">{tooltipLabel}</span>}
                 </Link>
               </CollapsedSidebarTooltip>
             );
@@ -309,7 +324,11 @@ export function Sidebar({
           compact ? 'flex flex-col items-center gap-2 px-2 pb-3' : 'space-y-3 p-3',
         )}
       >
-        <SidebarCreditsBlock collapsed={collapsed} inDrawer={!!inDrawer} />
+        <SidebarCreditsBlock
+          collapsed={collapsed}
+          inDrawer={!!inDrawer}
+          onDrawerNavigate={inDrawer ? onClose : undefined}
+        />
         <SidebarUserBlock collapsed={collapsed} inDrawer={!!inDrawer} />
       </div>
     </aside>

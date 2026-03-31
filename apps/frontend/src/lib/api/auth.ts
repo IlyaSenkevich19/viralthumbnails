@@ -38,3 +38,19 @@ export async function signInWithGoogle() {
   }
 }
 
+export async function resetPasswordForEmail(email: string) {
+  const supabase = createClient();
+  const redirectTo =
+    typeof window !== 'undefined' ? `${window.location.origin}/auth/update-password` : undefined;
+  const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+    redirectTo,
+  });
+  if (error) throw error;
+}
+
+export async function updatePassword(newPassword: string) {
+  const supabase = createClient();
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) throw error;
+}
+

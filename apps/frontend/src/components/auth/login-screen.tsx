@@ -36,7 +36,6 @@ export function LoginScreen() {
           const message =
             err instanceof Error ? err.message : 'Failed to sign in. Please try again.';
           setError(message);
-          toast.error(message);
         },
       },
     );
@@ -49,7 +48,6 @@ export function LoginScreen() {
         const message =
           err instanceof Error ? err.message : 'Failed to sign in with Google.';
         setError(message);
-        toast.error(message);
       },
     });
   }
@@ -83,8 +81,11 @@ export function LoginScreen() {
 
             <form onSubmit={handleSubmit} className="surface space-y-4 p-6">
               <div className="space-y-1">
-                <label className="text-sm font-medium text-foreground">Your email</label>
+                <label htmlFor="login-email" className="text-sm font-medium text-foreground">
+                  Your email
+                </label>
                 <Input
+                  id="login-email"
                   type="email"
                   placeholder="you@example.com"
                   value={email}
@@ -93,8 +94,19 @@ export function LoginScreen() {
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-sm font-medium text-foreground">Password</label>
+                <div className="flex items-center justify-between gap-2">
+                  <label htmlFor="login-password" className="text-sm font-medium text-foreground">
+                    Password
+                  </label>
+                  <Link
+                    href="/auth/forgot-password"
+                    className="text-xs font-medium text-primary hover:underline"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
                 <Input
+                  id="login-password"
                   type="password"
                   placeholder="••••••••"
                   value={password}

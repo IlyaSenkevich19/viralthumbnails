@@ -31,7 +31,6 @@ export default function RegisterPage() {
           const message =
             err instanceof Error ? err.message : 'Failed to sign up. Please try again.';
           setError(message);
-          toast.error(message);
         },
       },
     );
@@ -71,8 +70,11 @@ export default function RegisterPage() {
                   className="surface space-y-4 p-6"
                 >
                   <div className="space-y-1">
-                    <label className="text-sm font-medium text-foreground">Your email</label>
+                    <label htmlFor="register-email" className="text-sm font-medium text-foreground">
+                      Your email
+                    </label>
                     <Input
+                      id="register-email"
                       type="email"
                       placeholder="you@example.com"
                       value={email}
@@ -81,8 +83,11 @@ export default function RegisterPage() {
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-sm font-medium text-foreground">Password</label>
+                    <label htmlFor="register-password" className="text-sm font-medium text-foreground">
+                      Password
+                    </label>
                     <Input
+                      id="register-password"
                       type="password"
                       placeholder="At least 6 characters"
                       value={password}

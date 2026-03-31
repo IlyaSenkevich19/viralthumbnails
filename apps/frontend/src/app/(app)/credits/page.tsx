@@ -5,7 +5,6 @@ import { Check } from 'lucide-react';
 import { pricingPlans } from '@/config/pricing-plans';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { toast } from 'sonner';
 
 export default function CreditsPricingPage() {
   return (
@@ -15,8 +14,17 @@ export default function CreditsPricingPage() {
           Simple, creator-friendly pricing
         </h1>
         <p className="mx-auto mt-3 max-w-xl text-sm text-muted-foreground sm:text-base">
-          Start free, upgrade when you&apos;re ready. Cancel anytime.
+          Plans and limits below are previews. Secure checkout (e.g. Stripe) will unlock upgrades and
+          top-ups once billing is connected.
         </p>
+      </div>
+
+      <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-center text-sm text-foreground">
+        <strong className="font-semibold">Checkout not enabled yet.</strong>{' '}
+        <span className="text-muted-foreground">
+          You can keep using trial credits from your account. We&apos;ll turn on payments here when
+          ready.
+        </span>
       </div>
 
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 lg:items-stretch">
@@ -71,11 +79,8 @@ export default function CreditsPricingPage() {
                     ? 'secondary'
                     : 'default'
               }
-              onClick={() =>
-                toast.message('Checkout coming soon', {
-                  description: `Plan: ${plan.name}. Stripe or your billing provider can be wired here.`,
-                })
-              }
+              disabled
+              title="Payments are not connected yet"
             >
               {plan.cta}
             </Button>
@@ -84,7 +89,7 @@ export default function CreditsPricingPage() {
       </div>
 
       <p className="text-center text-xs text-muted-foreground">
-        Prices and limits are examples — connect your payment provider to go live.{' '}
+        Questions about pricing? Contact us through your usual support channel.{' '}
         <Link href="/dashboard" className="text-primary underline-offset-4 hover:underline">
           Back to dashboard
         </Link>

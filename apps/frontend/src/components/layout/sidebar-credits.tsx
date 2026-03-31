@@ -16,9 +16,12 @@ const creditsLinkFocus =
 export function SidebarCreditsBlock({
   collapsed,
   inDrawer,
+  onDrawerNavigate,
 }: {
   collapsed: boolean;
   inDrawer: boolean;
+  /** Close mobile drawer when user is already on /credits and taps credits again. */
+  onDrawerNavigate?: () => void;
 }) {
   const pathname = usePathname();
   const isCreditsPage = pathname === '/credits';
@@ -35,6 +38,9 @@ export function SidebarCreditsBlock({
       <CollapsedSidebarTooltip enabled={compact} label="Credits">
         <Link
           href="/credits"
+          onClick={() => {
+            if (inDrawer && pathname === '/credits') onDrawerNavigate?.();
+          }}
           aria-label="Credits — view plans and top up"
           className={cn(
             creditsLinkFocus,
@@ -67,6 +73,9 @@ export function SidebarCreditsBlock({
         <CollapsedSidebarTooltip label={`Credits · ${balance}`} enabled={true}>
           <Link
             href="/credits"
+            onClick={() => {
+              if (inDrawer && pathname === '/credits') onDrawerNavigate?.();
+            }}
             aria-label="Credits — view plans and top up"
             className={cn(
               creditsLinkFocus,
@@ -91,6 +100,9 @@ export function SidebarCreditsBlock({
   return (
     <Link
       href="/credits"
+      onClick={() => {
+        if (inDrawer && pathname === '/credits') onDrawerNavigate?.();
+      }}
       aria-label="Credits — view plans and top up"
       className={cn(
         creditsLinkFocus,

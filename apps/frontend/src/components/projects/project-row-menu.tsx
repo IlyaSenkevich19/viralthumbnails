@@ -74,7 +74,10 @@ export function ProjectRowMenu({ projectId, projectTitle, onDeleteClick }: Proje
           href={`/projects/${projectId}/variants`}
           role="menuitem"
           className="motion-base flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-secondary"
-          onClick={() => setOpen(false)}
+          onClick={(e) => {
+            e.stopPropagation();
+            setOpen(false);
+          }}
         >
           <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
           Open
@@ -83,7 +86,8 @@ export function ProjectRowMenu({ projectId, projectTitle, onDeleteClick }: Proje
           type="button"
           role="menuitem"
           className="motion-base flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-destructive hover:bg-destructive/10"
-          onClick={() => {
+          onClick={(e) => {
+            e.stopPropagation();
             setOpen(false);
             onDeleteClick();
           }}
@@ -105,7 +109,10 @@ export function ProjectRowMenu({ projectId, projectTitle, onDeleteClick }: Proje
         aria-expanded={open}
         aria-haspopup="menu"
         aria-label={`Actions for ${projectTitle}`}
-        onClick={() => setOpen((v) => !v)}
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen((v) => !v);
+        }}
       >
         <MoreVertical className="h-4 w-4" aria-hidden />
       </Button>

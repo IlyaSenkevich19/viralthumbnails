@@ -17,8 +17,9 @@ import {
   MoreVertical,
   ChevronLeft,
   ChevronRight,
+  Youtube,
 } from 'lucide-react';
-import { useSignOutMutation } from '@/lib/hooks';
+import { useAdminStatus, useSignOutMutation } from '@/lib/hooks';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { SidebarCreditsBlock } from '@/components/layout/sidebar-credits';
@@ -31,6 +32,12 @@ const navItems = [
   { href: AppRoutes.projects, label: 'Projects', icon: FolderKanban },
   { href: AppRoutes.templates, label: 'Templates', icon: LayoutTemplate },
   { href: AppRoutes.avatars, label: 'My faces', icon: UserCircle },
+  {
+    href: AppRoutes.adminYoutubeInspiration,
+    label: 'YT inspiration',
+    icon: Youtube,
+    adminOnly: true,
+  },
   { href: AppRoutes.abTests, label: 'A/B Tests', icon: FlaskConical, soon: true },
   { href: AppRoutes.settings, label: 'Settings', icon: Settings, soon: true },
 ];
@@ -186,6 +193,8 @@ export function Sidebar({
   const pathname = usePathname();
   const [pendingHref, setPendingHref] = useState<string | null>(null);
   const compact = collapsed && !inDrawer;
+  const { data: adminStatus, isPending: adminStatusPending } = useAdminStatus();
+  const isAdmin = Boolean(adminStatus?.isAdmin);
 
   useEffect(() => {
     setPendingHref(null);
@@ -272,11 +281,16 @@ export function Sidebar({
 
       <div className="flex-1 overflow-y-auto overflow-x-hidden px-3 pb-4 pt-1">
         <nav className={cn('flex flex-col', compact ? 'items-center gap-1' : 'space-y-0.5')}>
-          {navItems.map(({ href, label, icon: Icon, soon }) => {
+          {navItems.map(({ href, label, icon: Icon, soon, adminOnly }) => {
+            if (adminOnly && (adminStatusPending || !isAdmin)) return null;
             const active =
               effectivePath === href ||
               (href !== AppRoutes.dashboard && effectivePath.startsWith(`${href}/`));
-            const tooltipLabel = soon ? `${label} (soon)` : label;
+            const tooltipLabel = soon
+              ? `${label} (soon)`
+              : adminOnly
+                ? `${label} (admin only)`
+                : label;
             return (
               <CollapsedSidebarTooltip key={href} enabled={compact} label={tooltipLabel}>
                 <Link
@@ -306,6 +320,14 @@ export function Sidebar({
                             className="shrink-0 px-1.5 py-0 text-[10px] font-medium uppercase tracking-wide"
                           >
                             Soon
+                          </Badge>
+                        ) : null}
+                        {adminOnly && !soon ? (
+                          <Badge
+                            variant="glass"
+                            className="shrink-0 px-1.5 py-0 text-[10px] font-medium uppercase tracking-wide"
+                          >
+                            Admin
                           </Badge>
                         ) : null}
                       </span>

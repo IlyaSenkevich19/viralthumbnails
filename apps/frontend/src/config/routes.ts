@@ -9,6 +9,8 @@ export const AppRoutes = {
   /** Legacy URL; root middleware redirects to dashboard with {@link AppSearchParams.openNewProject}. */
   projectsNew: '/projects/new',
   templates: '/templates',
+  /** YouTube inspiration (admin-only; env `ADMIN_USER_IDS`). */
+  adminYoutubeInspiration: '/admin/youtube-inspiration',
   avatars: '/avatars',
   abTests: '/ab-tests',
   settings: '/settings',

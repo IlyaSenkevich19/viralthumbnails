@@ -28,4 +28,20 @@ export const queryKeys = {
     all: ['billing'] as const,
     credits: (userId: string) => [...queryKeys.billing.all, 'credits', userId] as const,
   },
+
+  auth: {
+    adminStatus: (userId: string | undefined) =>
+      ['auth', 'admin-status', userId ?? 'anon'] as const,
+  },
+
+  youtube: {
+    all: ['youtube'] as const,
+    inspiration: (
+      niche: string,
+      perNiche: number,
+      videoDuration: string,
+      publishedAfter: string,
+    ) =>
+      [...queryKeys.youtube.all, 'inspiration', niche, perNiche, videoDuration, publishedAfter] as const,
+  },
 } as const;

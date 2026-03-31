@@ -26,3 +26,5 @@ export {
   useUpdatePasswordMutation,
 } from './use-auth-mutations';
 export { useGenerationCredits } from './use-generation-credits';
+export { useAdminStatus } from './use-admin-status';
+export { useYoutubeInspiration } from './use-youtube-inspiration';

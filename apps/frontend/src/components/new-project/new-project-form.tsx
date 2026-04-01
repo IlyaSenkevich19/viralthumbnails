@@ -106,7 +106,7 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
         const total = gen.results.length;
         if (ok === 0) {
           toast.error(
-            'Generation failed for all variants. Check GEMINI_API_KEY and Imagen access.',
+            'Generation failed for all variants. Check OPENROUTER_API_KEY and image model settings.',
           );
         } else if (ok < total) {
           toast.warning(`${ok} of ${total} thumbnails ready; some failed.`);

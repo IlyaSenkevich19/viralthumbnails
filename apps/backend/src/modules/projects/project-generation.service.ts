@@ -3,18 +3,18 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
-import { AiService } from '../ai/ai.service';
+import { ProjectVariantImageService } from '../project-thumbnail-generation/project-variant-image.service';
 import { BillingService } from '../billing/billing.service';
 
 /**
- * Orchestrates thumbnail variant creation, AI generation, billing refunds, and project status updates.
+ * Orchestrates thumbnail variant creation, OpenRouter image generation, billing refunds, and project status updates.
  * Kept separate from {@link ProjectsService} to limit that service to CRUD and signing.
  */
 @Injectable()
 export class ProjectGenerationService {
   constructor(
     private readonly supabase: SupabaseService,
-    private readonly ai: AiService,
+    private readonly projectVariantImage: ProjectVariantImageService,
     private readonly billing: BillingService,
   ) {}
 
@@ -56,7 +56,7 @@ export class ProjectGenerationService {
 
       const results = [];
       for (const variantId of createdIds) {
-        const result = await this.ai.generateThumbnailForProject({
+        const result = await this.projectVariantImage.generateThumbnailForProject({
           projectId,
           userId,
           variantId,

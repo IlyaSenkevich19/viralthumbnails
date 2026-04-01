@@ -35,7 +35,7 @@
 
 ## Связь с текущим кодом
 
-- Генерация: `apps/backend/src/modules/ai/ai.service.ts`, DTO генерации, `buildPrompt` / будущий prompt-builder.
+- Генерация: `apps/backend/src/modules/project-thumbnail-generation/project-variant-image.service.ts`, DTO генерации, `buildPrompt` / будущий prompt-builder.
 - Продукт: дашборд-хаб, страница вариантов, шаблоны, аватары.
 
 При реализации пунктов обновляй этот файл: отмечай выполненное или добавляй ссылки на PR/коммиты.

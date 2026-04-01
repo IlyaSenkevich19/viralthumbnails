@@ -63,6 +63,52 @@ export class StorageService {
     return { path };
   }
 
+  /**
+   * Short-lived upload so OpenRouter (or other servers) can fetch the file via signed URL.
+   * Caller should remove the object after processing.
+   */
+  async uploadTemporaryVideoForAnalysis(params: {
+    userId: string;
+    runId: string;
+    body: Buffer;
+    contentType: string;
+  }): Promise<{ path: string; signedUrl: string }> {
+    const ext =
+      params.contentType.includes('webm') ? 'webm' : params.contentType.includes('quicktime') ? 'mov' : 'mp4';
+    const path = `${params.userId}/from-video/temp/${params.runId}.${ext}`;
+    const client = this.supabase.getAdminClient();
+    const { error } = await client.storage.from(BUCKET_PROJECT_THUMBNAILS).upload(path, params.body, {
+      contentType: params.contentType,
+      upsert: true,
+    });
+    if (error) {
+      throw new Error(`temp video upload: ${error.message}`);
+    }
+    const signedUrl = await this.createSignedUrl(BUCKET_PROJECT_THUMBNAILS, path);
+    return { path, signedUrl };
+  }
+
+  async uploadFromVideoThumbnailOutput(params: {
+    userId: string;
+    runId: string;
+    index: number;
+    body: Buffer;
+    contentType: string;
+  }): Promise<{ path: string; signedUrl: string }> {
+    const ext = extensionForMime(params.contentType);
+    const path = `${params.userId}/from-video/out/${params.runId}/${params.index}.${ext}`;
+    const client = this.supabase.getAdminClient();
+    const { error } = await client.storage.from(BUCKET_PROJECT_THUMBNAILS).upload(path, params.body, {
+      contentType: params.contentType,
+      upsert: true,
+    });
+    if (error) {
+      throw new Error(`from-video thumbnail upload: ${error.message}`);
+    }
+    const signedUrl = await this.createSignedUrl(BUCKET_PROJECT_THUMBNAILS, path);
+    return { path, signedUrl };
+  }
+
   async uploadUserAvatarImage(params: {
     userId: string;
     avatarId: string;

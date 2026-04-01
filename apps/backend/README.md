@@ -1,6 +1,6 @@
 # Backend (NestJS)
 
-API for **ViralThumbnails**: Supabase-backed projects, thumbnail variants, template catalog, and optional **Google Gemini / Imagen** generation.
+API for **ViralThumbnails**: Supabase-backed projects, thumbnail variants, template catalog, and **OpenRouter**-powered thumbnail generation.
 
 - **Global prefix:** `/api` (e.g. health is `GET /api/health`)
 - **Root:** `GET /` returns a small JSON map (`health`, `docs`) so deploys don’t show “Cannot GET /”
@@ -16,20 +16,35 @@ API for **ViralThumbnails**: Supabase-backed projects, thumbnail variants, templ
 | `class-validator` | DTO validation + `ValidationPipe` (whitelist, forbid unknown fields) |
 | Swagger | `/api/docs` |
 
-## Modules (high level)
+## Карта ответственности (кто за что)
 
-| Module | Responsibility |
-|--------|----------------|
-| **Auth** | `SupabaseGuard` (Bearer JWT), `GET /api/auth/me` |
-| **Health** | Liveness-style check |
-| **Projects** | CRUD projects, list/delete variants, trigger generation |
-| **Templates** | List/create templates; niches + Storage paths (see Swagger) |
-| **Avatars** | `GET/POST/DELETE /api/avatars` — user face images in `user-avatars` bucket |
-| **AI** | Imagen (or placeholder) + upload variant image to Storage |
-| **Storage** | Signed URLs, uploads to `project-thumbnails` / `thumbnail-templates` |
-| **Supabase** | Injectable wrapper around admin client |
+| Модуль / слой | За что отвечает |
+|---------------|-----------------|
+| **ConfigModule** (+ `src/config/openrouter.config.ts`) | Env; типизированный namespace `openrouter` (`OpenRouterEnvConfig`) с дефолтами для моделей и URL |
+| **SupabaseModule** | Admin-клиент Supabase для БД и Storage с сервера |
+| **AuthModule** | Проверка JWT (`SupabaseGuard`), `GET /api/auth/me` |
+| **HealthModule** | Liveness |
+| **StorageModule** | Загрузки и signed URL: проекты, шаблоны, аватары, временное видео / выход `from-video` |
+| **BillingModule** | Резерв и возврат кредитов вокруг генерации вариантов и пайплайна `from-video` |
+| **OpenRouterModule** (`@Global`) | Один экземпляр `OpenRouterClient` на всё приложение |
+| **ProjectThumbnailGenerationModule** | `ProjectVariantImageService` — картинка для одной строки `thumbnail_variants` (OpenRouter или placeholder) |
+| **ProjectsModule** | CRUD проектов; `ProjectGenerationService` — оркестрация N вариантов + биллинг + вызов `ProjectVariantImageService` |
+| **TemplatesModule** | Каталог шаблонов, ниши, загрузки в `thumbnail-templates` |
+| **AvatarsModule** | `GET/POST/DELETE /api/avatars` — лица в `user-avatars` |
+| **VideoThumbnailsModule** | Пайплайн `POST /api/thumbnails/from-video`: ingestion → анализ видео → генерация → ранжирование → Storage |
 
-Cross-cutting: global **HTTP exception filter** (sanitizes non-HTTP errors in production), **shutdown hooks** for graceful stop.
+Cross-cutting: **HttpExceptionFilter**, **shutdown hooks**.
+
+### HTTP: два контроллера на пути `projects`
+
+Оба объявлены как `@Controller('projects')`, префикс приложения `/api`:
+
+| Файл | Типичные маршруты |
+|------|-------------------|
+| `projects.controller.ts` | `GET/POST/...` по самому проекту (список, создание, `GET :id`, `PATCH`, `DELETE`) |
+| `thumbnail-variants.controller.ts` | `POST :id/generate`, `GET :id/variants`, `DELETE :id/variants/:variantId` |
+
+Так REST остаётся под ресурсом «проект», а операции с вариантами сгруппированы отдельным контроллером.
 
 ## Environment variables
 
@@ -55,15 +70,43 @@ FRONTEND_URL=http://localhost:3000
 
 JSON body size limit is **15MB** in `main.ts` (base64 image uploads). If the frontend uses a **host proxy** (e.g. Next rewrites on Vercel), that platform may enforce a **smaller** max request size (~4.5MB on Vercel) — the frontend downscales avatar images before upload to stay under typical limits.
 
-### Optional — AI (Gemini Imagen)
+### Optional — OpenRouter
 
-Without `GEMINI_API_KEY`, generation falls back to a placeholder image URL (useful for local UI tests).
+Defaults and parsing live in **`src/config/openrouter.config.ts`** (`registerAs('openrouter', …)`). Code reads them via `getOpenRouterConfig(config)`.
+
+Without `OPENROUTER_API_KEY`, `POST /projects/:id/generate` still completes but stores a **placeholder** image URL per variant (local UI tests).
+
+| Variable | Role |
+|----------|------|
+| `OPENROUTER_API_KEY` | Required for real images |
+| `OPENROUTER_IMAGE_MODEL` | Project variant generation + video pipeline image step |
+| `OPENROUTER_PROJECT_GEN_TIMEOUT_MS` | Timeout for project variant image call (ms) |
+| `OPENROUTER_VIDEO_MODEL` | Video analysis (`POST /api/thumbnails/from-video`) |
+| `OPENROUTER_RANKING_MODEL` | Thumbnail scoring (optional; falls back to `OPENROUTER_VIDEO_MODEL`) |
+| `OPENROUTER_BASE_URL` | API base (default in config file) |
+| `OPENROUTER_HTTP_REFERER` / `OPENROUTER_APP_TITLE` | OpenRouter request headers |
 
 ```env
-GEMINI_API_KEY=
-GEMINI_IMAGEN_MODEL=imagen-4.0-fast-generate-001
-GEMINI_IMAGEN_TIMEOUT_MS=120000
+OPENROUTER_API_KEY=
+# OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
+# OPENROUTER_HTTP_REFERER=https://your-frontend.example
+# OPENROUTER_APP_TITLE=ViralThumbnails
+OPENROUTER_IMAGE_MODEL=google/gemini-2.5-flash-image-preview
+OPENROUTER_PROJECT_GEN_TIMEOUT_MS=120000
+OPENROUTER_VIDEO_MODEL=google/gemini-2.0-flash-001
+# OPENROUTER_RANKING_MODEL=google/gemini-2.0-flash-001
 ```
+
+`POST /api/thumbnails/from-video` (Bearer, `multipart/form-data`): field `file` **or** `videoUrl`, optional `count` (1–12), `style`. Temp uploads live under `{userId}/from-video/temp/…`, outputs under `{userId}/from-video/out/{runId}/…`.
+
+**Кредиты для `from-video`:** списывается **`1 + 2×count`** (один вызов анализа видео + `count` генераций изображений + `count` ранжирований). При ошибке пайплайна после резерва баланс возвращается.
+
+**Rate limiting (по пользователю, после JWT):**
+
+| Маршрут | Окно | Лимит |
+|---------|------|--------|
+| `POST /api/projects/:id/generate` | 1 мин | 15 |
+| `POST /api/thumbnails/from-video` | 1 ч | 8 |
 
 ### Optional — Storage signed URLs
 

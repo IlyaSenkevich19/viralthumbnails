@@ -1,5 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { getOpenRouterConfig } from '../../config/openrouter.config';
+import { OpenRouterClient } from '../openrouter/openrouter.client';
+import type { OpenRouterMessage } from '../openrouter/openrouter.types';
 import { SupabaseService } from '../supabase/supabase.service';
 import {
   BUCKET_PROJECT_THUMBNAILS,
@@ -15,25 +18,23 @@ export interface GenerateThumbnailResult {
   errorMessage?: string;
 }
 
-type ImagenPrediction = {
-  bytesBase64Encoded?: string;
-  bytes_base64_encoded?: string;
-  mimeType?: string;
-  mime_type?: string;
-};
-
 type GeneratedImage =
   | { kind: 'bytes'; buffer: Buffer; contentType: string }
   | { kind: 'external'; url: string };
 
+/**
+ * Generates one stored image for a `thumbnail_variants` row (OpenRouter image model).
+ * Used by {@link ProjectGenerationService} after billing + DB inserts.
+ */
 @Injectable()
-export class AiService {
-  private readonly logger = new Logger(AiService.name);
+export class ProjectVariantImageService {
+  private readonly logger = new Logger(ProjectVariantImageService.name);
 
   constructor(
     private readonly config: ConfigService,
     private readonly supabase: SupabaseService,
     private readonly storage: StorageService,
+    private readonly openRouter: OpenRouterClient,
   ) {}
 
   async generateThumbnailForProject(params: {
@@ -60,7 +61,7 @@ export class AiService {
     }
 
     const prompt = this.buildPrompt(project, params.templateId);
-    this.logger.log(`Generating variant ${params.variantId} via Gemini (Imagen)`);
+    this.logger.log(`Generating variant ${params.variantId} via OpenRouter`);
 
     let generated: GeneratedImage;
     try {
@@ -155,119 +156,53 @@ export class AiService {
   }
 
   private async resolveGeneratedImage(prompt: string, variantId: string): Promise<GeneratedImage> {
-    const apiKey = this.config.get<string>('GEMINI_API_KEY');
-    if (!apiKey?.trim()) {
+    if (!this.openRouter.getApiKey()) {
       return { kind: 'external', url: this.placeholderThumbnailUrl(variantId) };
     }
 
-    const model =
-      this.config.get<string>('GEMINI_IMAGEN_MODEL')?.trim() || 'imagen-4.0-fast-generate-001';
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:predict`;
+    const or = getOpenRouterConfig(this.config);
+    const model = or.imageModel;
 
+    const fullPrompt = `YouTube thumbnail 16:9, professional, bold readable title text, high contrast. ${prompt.slice(0, 2000)}`;
+
+    const messages: OpenRouterMessage[] = [{ role: 'user', content: fullPrompt }];
+
+    const timeoutMs = or.projectGenTimeoutMs;
     const controller = new AbortController();
-    const imagenTimeoutMs =
-      Number(this.config.get<string>('GEMINI_IMAGEN_TIMEOUT_MS')) || 120_000;
-    const timeout = setTimeout(() => controller.abort(), imagenTimeoutMs);
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
-    let res: Response;
+    let result;
     try {
-      res = await fetch(url, {
-        method: 'POST',
+      result = await this.openRouter.chatCompletions({
+        model,
+        messages,
+        modalities: ['image', 'text'],
+        temperature: 0.5,
+        maxTokens: 8192,
         signal: controller.signal,
-        headers: {
-          'x-goog-api-key': apiKey,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          instances: [{ prompt: prompt.slice(0, 2000) }],
-          parameters: {
-            sampleCount: 1,
-            aspectRatio: '16:9',
-          },
-        }),
       });
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') {
-        throw new Error(`Gemini Imagen: request timed out after ${imagenTimeoutMs}ms`);
+        throw new Error(`OpenRouter image gen: request timed out after ${timeoutMs}ms`);
       }
       throw err;
     } finally {
       clearTimeout(timeout);
     }
 
-    const rawText = await res.text();
-    if (!res.ok) {
-      let detail = rawText;
-      try {
-        const errJson = JSON.parse(rawText) as { error?: { message?: string } };
-        if (errJson.error?.message) detail = errJson.error.message;
-      } catch {
-        /* keep raw */
-      }
-      throw new Error(`Gemini Imagen: ${res.status} ${detail}`);
+    const imgs = this.openRouter.extractImagesFromParts(result.contentParts);
+    if (imgs.length === 0) {
+      this.logger.warn(`OpenRouter: no image in response for variant ${variantId}`);
+      throw new Error('OpenRouter: no image bytes in response');
     }
 
-    let json: unknown;
-    try {
-      json = JSON.parse(rawText) as unknown;
-    } catch {
-      throw new Error('Gemini Imagen: invalid JSON response');
+    const first = imgs[0];
+    const buffer = Buffer.from(first.base64, 'base64');
+    if (!buffer.length) {
+      throw new Error('OpenRouter: empty image buffer');
     }
-
-    const decoded = this.extractImagenImageBytes(json);
-    if (decoded) {
-      return {
-        kind: 'bytes',
-        buffer: decoded.buffer,
-        contentType: decoded.contentType,
-      };
-    }
-
-    this.logger.warn(`Unexpected Imagen response keys: ${this.jsonTopKeys(json)}`);
-    throw new Error('Gemini Imagen: no image bytes in response');
-  }
-
-  private extractImagenImageBytes(json: unknown): { buffer: Buffer; contentType: string } | null {
-    const root = json as Record<string, unknown>;
-
-    const predictions = root.predictions as ImagenPrediction[] | undefined;
-    if (Array.isArray(predictions) && predictions.length > 0) {
-      const b = this.predictionToBytes(predictions[0]);
-      if (b) return b;
-    }
-
-    const generatedImages = root.generatedImages as unknown[] | undefined;
-    if (Array.isArray(generatedImages) && generatedImages.length > 0) {
-      const first = generatedImages[0] as Record<string, unknown>;
-      const image = first.image as Record<string, unknown> | undefined;
-      const b64 =
-        (image?.imageBytes as string | undefined) ||
-        (image?.image_bytes as string | undefined);
-      if (typeof b64 === 'string' && b64.length > 0) {
-        const mime =
-          (image?.mimeType as string) || (image?.mime_type as string) || 'image/png';
-        const buffer = Buffer.from(b64, 'base64');
-        if (buffer.length) return { buffer, contentType: mime };
-      }
-    }
-
-    return null;
-  }
-
-  private predictionToBytes(p: ImagenPrediction): { buffer: Buffer; contentType: string } | null {
-    const b64 = p.bytesBase64Encoded ?? p.bytes_base64_encoded;
-    if (typeof b64 !== 'string' || !b64.length) return null;
-    const mime = p.mimeType ?? p.mime_type ?? 'image/png';
-    const buffer = Buffer.from(b64, 'base64');
-    if (!buffer.length) return null;
-    return { buffer, contentType: mime };
-  }
-
-  private jsonTopKeys(json: unknown): string {
-    if (json && typeof json === 'object' && !Array.isArray(json)) {
-      return Object.keys(json as object).join(', ');
-    }
-    return typeof json;
+    const contentType = first.mime.includes('jpeg') ? 'image/jpeg' : 'image/png';
+    return { kind: 'bytes', buffer, contentType };
   }
 
   private placeholderThumbnailUrl(variantId: string): string {

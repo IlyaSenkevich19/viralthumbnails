@@ -5,12 +5,18 @@ import { ProjectsService } from './projects.service';
 import { ProjectGenerationService } from './project-generation.service';
 import { AuthModule } from '../auth/auth.module';
 import { SupabaseModule } from '../supabase/supabase.module';
-import { AiModule } from '../ai/ai.module';
+import { ProjectThumbnailGenerationModule } from '../project-thumbnail-generation/project-thumbnail-generation.module';
 import { BillingModule } from '../billing/billing.module';
 import { StorageModule } from '../storage/storage.module';
 
 @Module({
-  imports: [AuthModule, SupabaseModule, StorageModule, AiModule, BillingModule],
+  imports: [
+    AuthModule,
+    SupabaseModule,
+    StorageModule,
+    ProjectThumbnailGenerationModule,
+    BillingModule,
+  ],
   controllers: [ThumbnailVariantsController, ProjectsController],
   providers: [ProjectsService, ProjectGenerationService],
   exports: [ProjectsService],

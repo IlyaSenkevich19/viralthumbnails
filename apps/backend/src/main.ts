@@ -41,7 +41,9 @@ async function bootstrap() {
 
   const config = new DocumentBuilder()
     .setTitle('API')
-    .setDescription('NestJS API: auth, health, projects, templates, user avatars, thumbnail generation')
+    .setDescription(
+      'NestJS API: auth, health, projects, templates, user avatars, thumbnail generation, video→thumbnails (OpenRouter)',
+    )
     .setVersion('1.0')
     .addBearerAuth()
     .build();

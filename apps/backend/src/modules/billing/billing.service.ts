@@ -10,11 +10,25 @@ import { SupabaseService } from '../supabase/supabase.service';
 const DEFAULT_CREDITS = { balance: 3, quota: 3 };
 const RESERVE_RETRY = 8;
 
+/**
+ * Credits for one `POST /thumbnails/from-video`: 1× video analysis + N× image gen + N× ranking.
+ * Keeps spend in line with multiple OpenRouter calls per request.
+ */
+export function creditsForVideoPipeline(requestedThumbnailCount: number): number {
+  const n = Math.min(12, Math.max(1, Math.floor(requestedThumbnailCount)));
+  return 1 + 2 * n;
+}
+
 @Injectable()
 export class BillingService {
   private readonly logger = new Logger(BillingService.name);
 
   constructor(private readonly supabase: SupabaseService) {}
+
+  /** @see creditsForVideoPipeline */
+  videoPipelineCreditCost(requestedThumbnailCount: number): number {
+    return creditsForVideoPipeline(requestedThumbnailCount);
+  }
 
   async reserveGenerationCredits(userId: string, amount: number): Promise<void> {
     if (amount <= 0) return;

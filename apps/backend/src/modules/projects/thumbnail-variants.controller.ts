@@ -10,8 +10,11 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { ApiControllerPaths } from '../../common/constants/api-controller-paths';
+import { THROTTLE_PROJECT_GENERATE } from '../../common/throttle/throttle-limits';
+import { UserIdThrottlerGuard } from '../../common/throttle/user-id-throttler.guard';
 import { SupabaseGuard } from '../auth/guards/supabase.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { ProjectsService } from './projects.service';
@@ -25,6 +28,8 @@ export class ThumbnailVariantsController {
   constructor(private readonly projects: ProjectsService) {}
 
   @Post(':id/generate')
+  @UseGuards(UserIdThrottlerGuard)
+  @Throttle({ default: { ...THROTTLE_PROJECT_GENERATE } })
   generate(
     @CurrentUser() userId: string,
     @Param('id', ParseUUIDPipe) id: string,

@@ -59,7 +59,10 @@ export function NewProjectModal() {
               New project
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Choose a source, then we&apos;ll create variants you can download or refine.
+              Use the tabs for <span className="text-foreground/90">video</span>,{' '}
+              <span className="text-foreground/90">script</span>, or extra options. To only describe an idea or paste a
+              YouTube link, close this and use the <span className="text-foreground/90">Dashboard</span> — it creates
+              and generates in one step.
             </p>
           </div>
           <Button

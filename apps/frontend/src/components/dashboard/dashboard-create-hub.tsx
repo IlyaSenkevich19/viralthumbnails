@@ -2,16 +2,13 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Clapperboard, FolderKanban, Link2, PenLine, Sparkles, Wand2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Clapperboard, FolderKanban, Link2, Loader2, PenLine, Sparkles, Wand2 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import { useNewProject } from '@/contexts/new-project-context';
-import { AppRoutes } from '@/config/routes';
+import { AppRoutes, projectVariantsPath, projectVariantsSearchParams } from '@/config/routes';
 import { isLikelyYoutubeUrl } from '@/lib/format';
-import {
-  NICHE_ALL,
-  useAvatarsList,
-  useTemplatesList,
-} from '@/lib/hooks';
+import { NICHE_ALL, useAvatarsList, useCreateProjectAndGenerateMutation, useTemplatesList } from '@/lib/hooks';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -23,8 +20,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 const DASHBOARD_TEMPLATES_LIMIT = 100;
+const DEFAULT_VARIANT_COUNT = 3;
 
 type HubMode = 'prompt' | 'youtube';
 
@@ -34,13 +33,17 @@ const modeTabs: { id: HubMode; label: string; icon: typeof PenLine }[] = [
 ];
 
 export function DashboardCreateHub() {
+  const router = useRouter();
   const { user, accessToken, isLoading: authLoading } = useAuth();
   const canLoadAssets = !authLoading && Boolean(user?.id && accessToken);
   const { openNewProject } = useNewProject();
+  const createAndGenerate = useCreateProjectAndGenerateMutation();
+
   const [mode, setMode] = useState<HubMode>('prompt');
   const [creative, setCreative] = useState('');
   const [youtubeUrl, setYoutubeUrl] = useState('');
   const [urlError, setUrlError] = useState('');
+  const [describeError, setDescribeError] = useState('');
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
   const [selectedAvatarId, setSelectedAvatarId] = useState('');
 
@@ -53,16 +56,17 @@ export function DashboardCreateHub() {
   const { data: avatars = [], isPending: avatarsPending } = useAvatarsList();
   const assetsBusy = !canLoadAssets || templatesPending || avatarsPending;
 
-  function assetQuery(): Record<string, string> {
-    const q: Record<string, string> = {};
-    if (selectedTemplateId) q.template_id = selectedTemplateId;
-    if (selectedAvatarId) q.avatar_id = selectedAvatarId;
-    return q;
-  }
+  const templateId = selectedTemplateId || undefined;
+  const avatarId = selectedAvatarId || undefined;
 
   function handleGenerate() {
     setUrlError('');
-    const assets = assetQuery();
+    setDescribeError('');
+    if (!accessToken) {
+      toast.error('Sign in to generate thumbnails.');
+      return;
+    }
+
     if (mode === 'youtube') {
       const trimmed = youtubeUrl.trim();
       if (!trimmed) {
@@ -73,15 +77,69 @@ export function DashboardCreateHub() {
         setUrlError('Use a full youtube.com or youtu.be link.');
         return;
       }
-      openNewProject({ tab: 'youtube', youtube_url: trimmed, ...assets });
+
+      createAndGenerate.mutate(
+        {
+          platform: 'youtube',
+          source_type: 'youtube_url',
+          source_data: { url: trimmed },
+          generate: { template_id: templateId, count: DEFAULT_VARIANT_COUNT },
+        },
+        {
+          onSuccess: ({ project, gen }) => {
+            const ok = gen.results.filter((r) => r.status === 'done').length;
+            const total = gen.results.length;
+            if (ok === 0) {
+              toast.error(
+                'Generation failed for all variants. Check OPENROUTER_API_KEY and image model settings.',
+              );
+            } else if (ok < total) {
+              toast.warning(`${ok} of ${total} thumbnails ready; some failed.`);
+            } else {
+              toast.success('Project ready — opening variants…');
+            }
+            router.push(
+              projectVariantsPath(project.id) +
+                projectVariantsSearchParams({ templateId, avatarId }),
+            );
+          },
+        },
+      );
       return;
     }
+
     const hint = creative.trim();
-    if (hint) {
-      openNewProject({ tab: 'text', prefill_text: hint, ...assets });
-    } else {
-      openNewProject({ tab: 'text', ...assets });
+    if (!hint) {
+      setDescribeError('Add a short description so we know what to generate.');
+      return;
     }
+
+    createAndGenerate.mutate(
+      {
+        platform: 'youtube',
+        source_type: 'text',
+        source_data: { text: hint },
+        generate: { template_id: templateId, count: DEFAULT_VARIANT_COUNT },
+      },
+      {
+        onSuccess: ({ project, gen }) => {
+          const ok = gen.results.filter((r) => r.status === 'done').length;
+          const total = gen.results.length;
+          if (ok === 0) {
+            toast.error(
+              'Generation failed for all variants. Check OPENROUTER_API_KEY and image model settings.',
+            );
+          } else if (ok < total) {
+            toast.warning(`${ok} of ${total} thumbnails ready; some failed.`);
+          } else {
+            toast.success('Project ready — opening variants…');
+          }
+          router.push(
+            projectVariantsPath(project.id) + projectVariantsSearchParams({ templateId, avatarId }),
+          );
+        },
+      },
+    );
   }
 
   return (
@@ -108,8 +166,8 @@ export function DashboardCreateHub() {
               What should your thumbnail look like?
             </h2>
             <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-              Describe the idea or paste a YouTube link. Template and face are optional; you can change them in
-              the project after this step.
+              Set optional template and face, describe your idea or paste a YouTube link, then generate — you’ll go
+              straight to your new thumbnails. No second form.
             </p>
           </div>
           <div
@@ -126,6 +184,7 @@ export function DashboardCreateHub() {
                 onClick={() => {
                   setMode(id);
                   setUrlError('');
+                  setDescribeError('');
                 }}
                 className={cn(
                   'inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium motion-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
@@ -144,7 +203,7 @@ export function DashboardCreateHub() {
         <div className="mt-6 rounded-xl border border-border/80 bg-muted/15 p-4 sm:p-5">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
             <h3 className="text-sm font-semibold text-foreground">Optional style</h3>
-            <p className="text-xs text-muted-foreground">Same controls exist in the project workspace.</p>
+            <p className="text-xs text-muted-foreground">Applied to this generation; you can change again on the project page.</p>
           </div>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div className="min-w-0 space-y-1.5">
@@ -159,10 +218,10 @@ export function DashboardCreateHub() {
                 disabled={assetsBusy}
               >
                 <SelectTrigger id="create-hub-template">
-                  <SelectValue placeholder="None — choose in project" />
+                  <SelectValue placeholder="None" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={SELECT_EMPTY_VALUE}>None — choose in project</SelectItem>
+                  <SelectItem value={SELECT_EMPTY_VALUE}>None</SelectItem>
                   {templates.map((t) => (
                     <SelectItem key={t.id} value={t.id}>
                       {t.name}
@@ -212,25 +271,36 @@ export function DashboardCreateHub() {
                 rows={6}
                 placeholder="e.g. Bold split layout: tired vs excited energy, big readable title, high contrast reds and dark background, YouTube-style click appeal…"
                 value={creative}
-                onChange={(e) => setCreative(e.target.value)}
-                className="w-full resize-y rounded-lg border-0 bg-transparent px-4 py-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 min-h-[160px]"
+                onChange={(e) => {
+                  setCreative(e.target.value);
+                  if (describeError) setDescribeError('');
+                }}
+                aria-invalid={Boolean(describeError)}
+                aria-describedby={describeError ? 'create-hub-describe-err' : undefined}
+                className="min-h-[160px] w-full resize-y rounded-lg border-0 bg-transparent px-4 py-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
               />
-              <p className="border-t border-border/80 px-3 py-2.5 text-[11px] leading-relaxed text-muted-foreground">
-                Manage your library in the sidebar:{' '}
-                <Link
-                  href={AppRoutes.templates}
-                  className="font-medium text-foreground/85 underline-offset-2 hover:text-foreground hover:underline"
-                >
-                  Templates
-                </Link>
-                {' · '}
-                <Link
-                  href={AppRoutes.avatars}
-                  className="font-medium text-foreground/85 underline-offset-2 hover:text-foreground hover:underline"
-                >
-                  My faces
-                </Link>
-              </p>
+              {describeError ? (
+                <p id="create-hub-describe-err" className="border-t border-border/80 px-3 py-2 text-sm text-destructive" role="alert">
+                  {describeError}
+                </p>
+              ) : (
+                <p className="border-t border-border/80 px-3 py-2.5 text-[11px] leading-relaxed text-muted-foreground">
+                  Manage your library in the sidebar:{' '}
+                  <Link
+                    href={AppRoutes.templates}
+                    className="font-medium text-foreground/85 underline-offset-2 hover:text-foreground hover:underline"
+                  >
+                    Templates
+                  </Link>
+                  {' · '}
+                  <Link
+                    href={AppRoutes.avatars}
+                    className="font-medium text-foreground/85 underline-offset-2 hover:text-foreground hover:underline"
+                  >
+                    My faces
+                  </Link>
+                </p>
+              )}
             </div>
           ) : (
             <div className="space-y-3 rounded-lg bg-card/90 px-4 py-5">
@@ -265,32 +335,44 @@ export function DashboardCreateHub() {
         </div>
 
         <div className="mt-5 flex flex-col items-stretch gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-1.5 justify-center sm:justify-start"
+              onClick={() => openNewProject({})}
+            >
+              <Wand2 className="h-3.5 w-3.5" aria-hidden />
+              Other sources…
+            </Button>
             <Button
               type="button"
               variant="ghost"
               size="sm"
               className="gap-1.5 text-muted-foreground hover:text-foreground"
-              onClick={() => openNewProject({})}
+              onClick={() => openNewProject({ tab: 'video' })}
             >
-              <Wand2 className="h-3.5 w-3.5" aria-hidden />
-              More sources
+              <Clapperboard className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              From video file or URL
             </Button>
-            <span className="hidden h-4 w-px bg-border sm:inline" aria-hidden />
-            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Clapperboard className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden />
-              <span>Video → batch thumbnails — soon</span>
-            </p>
           </div>
           <Button
             type="button"
             size="lg"
+            disabled={!canLoadAssets || createAndGenerate.isPending}
             className="relative gap-2 overflow-hidden shadow-lg shadow-primary/25 sm:min-w-[220px]"
             onClick={handleGenerate}
           >
             <span className="absolute inset-0 bg-gradient-to-t from-white/10 to-transparent opacity-50" aria-hidden />
-            <Sparkles className="relative h-5 w-5" aria-hidden />
-            <span className="relative font-semibold">Generate thumbnails</span>
+            {createAndGenerate.isPending ? (
+              <Loader2 className="relative h-5 w-5 animate-spin" aria-hidden />
+            ) : (
+              <Sparkles className="relative h-5 w-5" aria-hidden />
+            )}
+            <span className="relative font-semibold">
+              {createAndGenerate.isPending ? 'Creating…' : 'Generate thumbnails'}
+            </span>
           </Button>
         </div>
 

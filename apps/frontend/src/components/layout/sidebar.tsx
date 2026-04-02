@@ -11,7 +11,6 @@ import {
   FolderKanban,
   LayoutTemplate,
   UserCircle,
-  FlaskConical,
   Settings,
   LogOut,
   MoreVertical,
@@ -38,7 +37,6 @@ const navItems = [
     icon: Youtube,
     adminOnly: true,
   },
-  { href: AppRoutes.abTests, label: 'A/B Tests', icon: FlaskConical, soon: true },
   { href: AppRoutes.settings, label: 'Settings', icon: Settings, soon: true },
 ];
 

@@ -38,6 +38,11 @@ type CreateBody = {
   source_data: Record<string, unknown>;
 };
 
+/** Create project then run variant generation (same flow as dashboard hero + modal). */
+export type CreateProjectAndGenerateInput = CreateBody & {
+  generate?: { template_id?: string; count?: number };
+};
+
 export function useCreateProjectAndGenerateMutation() {
   const queryClient = useQueryClient();
   const { accessToken, user } = useAuth();
@@ -45,14 +50,18 @@ export function useCreateProjectAndGenerateMutation() {
 
   return useMutation({
     mutationKey: createProjectAndGenerateMutationKey,
-    mutationFn: async (body: CreateBody) => {
+    mutationFn: async (input: CreateProjectAndGenerateInput) => {
       if (!accessToken) throw new Error('Not signed in');
       if (!userId) throw new Error('Not signed in');
+      const { generate, ...body } = input;
       const project = await projectsApi.createProject(accessToken, body);
-      const gen = await projectsApi.generateThumbnails(accessToken, project.id, { count: 3 });
+      const gen = await projectsApi.generateThumbnails(accessToken, project.id, {
+        count: generate?.count ?? 3,
+        template_id: generate?.template_id,
+      });
       return { project, gen };
     },
-    onMutate: async (body) => {
+    onMutate: async (input) => {
       if (!userId) return {};
       const listKey = queryKeys.projects.list(userId);
       await queryClient.cancelQueries({ queryKey: queryKeys.projects.lists() });
@@ -62,10 +71,10 @@ export function useCreateProjectAndGenerateMutation() {
       const optimistic: ProjectRow = {
         id: optimisticId,
         user_id: userId,
-        title: body.title?.trim() || 'New project',
-        platform: body.platform ?? 'youtube',
-        source_type: body.source_type,
-        source_data: body.source_data,
+        title: input.title?.trim() || 'New project',
+        platform: input.platform ?? 'youtube',
+        source_type: input.source_type,
+        source_data: input.source_data,
         status: 'generating',
         cover_thumbnail_url: null,
         created_at: now,

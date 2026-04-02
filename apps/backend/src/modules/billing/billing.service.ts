@@ -30,8 +30,35 @@ export class BillingService {
     return creditsForVideoPipeline(requestedThumbnailCount);
   }
 
+  /**
+   * Migrations should add `007_profiles_auto_create.sql` (trigger on auth.users) so every user has a row.
+   * This upsert path covers older DBs and races before the trigger ran.
+   */
+  private async ensureProfileRow(userId: string): Promise<void> {
+    const client = this.supabase.getAdminClient();
+    const { data: existing, error: selErr } = await client
+      .from('profiles')
+      .select('id')
+      .eq('id', userId)
+      .maybeSingle();
+    if (selErr) throw new InternalServerErrorException(selErr.message);
+    if (existing) return;
+
+    const { error: insErr } = await client.from('profiles').insert({ id: userId });
+    if (!insErr) return;
+
+    const code = (insErr as { code?: string }).code;
+    const msg = (insErr.message ?? '').toLowerCase();
+    if (code === '23505' || msg.includes('duplicate') || msg.includes('unique')) {
+      return;
+    }
+    this.logger.warn(`ensureProfileRow insert failed for ${userId}: ${insErr.message}`);
+    throw new InternalServerErrorException(insErr.message);
+  }
+
   async reserveGenerationCredits(userId: string, amount: number): Promise<void> {
     if (amount <= 0) return;
+    await this.ensureProfileRow(userId);
     const client = this.supabase.getAdminClient();
 
     for (let attempt = 0; attempt < RESERVE_RETRY; attempt++) {
@@ -45,7 +72,7 @@ export class BillingService {
         throw new ForbiddenException({
           code: 'INSUFFICIENT_CREDITS',
           message:
-            'No profile row for this account. Complete onboarding or run Supabase migrations so profiles exist.',
+            'Profile row is still missing after create. Run Supabase migration 007_profiles_auto_create.sql (trigger + backfill) or check the profiles table.',
         });
       }
       const bal = row.generation_credits_balance as number;
@@ -112,6 +139,7 @@ export class BillingService {
   }
 
   async getGenerationCredits(userId: string) {
+    await this.ensureProfileRow(userId);
     const client = this.supabase.getAdminClient();
     const { data, error } = await client
       .from('profiles')

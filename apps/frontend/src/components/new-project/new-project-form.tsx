@@ -3,17 +3,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
-import { useCreateProjectAndGenerateMutation } from '@/lib/hooks';
+import { useCreateProjectAndGenerateMutation, useFromVideoThumbnailsMutation } from '@/lib/hooks';
 import type { ProjectSourceType } from '@/lib/types/project';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import { projectVariantsPath } from '@/config/routes';
+import { projectVariantsPath, projectVariantsSearchParams } from '@/config/routes';
 import { toast } from 'sonner';
 import { tabs } from './constants';
 import type { Tab } from './types';
 import { tabFromSearchParams } from './utils';
+import type { FromVideoResponse } from '@/lib/types/from-video';
 
 export type NewProjectFormProps = {
   initialQuery?: Record<string, string>;
@@ -24,6 +25,7 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
   const router = useRouter();
   const { accessToken } = useAuth();
   const createAndGenerate = useCreateProjectAndGenerateMutation();
+  const fromVideoThumbnails = useFromVideoThumbnailsMutation();
   const submitLock = useRef(false);
 
   const sp = useMemo(() => new URLSearchParams(initialQuery ?? {}), [initialQuery]);
@@ -33,7 +35,11 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
   const [youtubeUrl, setYoutubeUrl] = useState(() => sp.get('youtube_url') ?? '');
   const [script, setScript] = useState('');
   const [text, setText] = useState(() => sp.get('prefill_text') ?? '');
-  const [videoName, setVideoName] = useState<string | null>(null);
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [videoRemoteUrl, setVideoRemoteUrl] = useState('');
+  const [videoCount, setVideoCount] = useState(4);
+  const [videoStyle, setVideoStyle] = useState('');
+  const [videoResult, setVideoResult] = useState<FromVideoResponse | null>(null);
 
   useEffect(() => {
     setTab(tabFromSearchParams(sp));
@@ -41,11 +47,44 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
     setText(sp.get('prefill_text') ?? '');
   }, [sp]);
 
+  useEffect(() => {
+    if (tab !== 'video') setVideoResult(null);
+  }, [tab]);
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (submitLock.current) return;
     if (!accessToken) {
       toast.error('Not signed in');
+      return;
+    }
+
+    if (tab === 'video') {
+      const hasFile = Boolean(videoFile);
+      const url = videoRemoteUrl.trim();
+      if (!hasFile && !url) {
+        toast.error('Upload a video file or paste a direct HTTPS URL to the video.');
+        return;
+      }
+      const n = Math.min(12, Math.max(1, Math.floor(videoCount) || 4));
+      submitLock.current = true;
+      fromVideoThumbnails.mutate(
+        {
+          file: videoFile ?? undefined,
+          videoUrl: hasFile ? undefined : url || undefined,
+          count: n,
+          style: videoStyle.trim() || undefined,
+        },
+        {
+          onSuccess: (data) => {
+            setVideoResult(data);
+            toast.success(`${data.thumbnails.length} thumbnail(s) ready — ranked below.`);
+          },
+          onSettled: () => {
+            submitLock.current = false;
+          },
+        },
+      );
       return;
     }
 
@@ -60,17 +99,6 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
         }
         source_type = 'youtube_url';
         source_data = { url: youtubeUrl.trim() };
-        break;
-      case 'video':
-        if (!videoName) {
-          toast.error('Choose a video file first');
-          return;
-        }
-        source_type = 'video';
-        source_data = {
-          file_name: videoName,
-          note: 'Video binary upload can be wired to storage in a follow-up.',
-        };
         break;
       case 'script':
         if (!script.trim()) {
@@ -93,38 +121,38 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
     submitLock.current = true;
     onRequestClose?.();
 
-    const body = {
-      title: title.trim() || undefined,
-      platform: 'youtube',
-      source_type,
-      source_data,
-    };
+    const templateId = sp.get('template_id') || undefined;
+    const avatarId = sp.get('avatar_id') || undefined;
 
-    createAndGenerate.mutate(body, {
-      onSuccess: ({ project, gen }) => {
-        const ok = gen.results.filter((r) => r.status === 'done').length;
-        const total = gen.results.length;
-        if (ok === 0) {
-          toast.error(
-            'Generation failed for all variants. Check OPENROUTER_API_KEY and image model settings.',
+    createAndGenerate.mutate(
+      {
+        title: title.trim() || undefined,
+        platform: 'youtube',
+        source_type,
+        source_data,
+        generate: { template_id: templateId, count: 3 },
+      },
+      {
+        onSuccess: ({ project, gen }) => {
+          const ok = gen.results.filter((r) => r.status === 'done').length;
+          const total = gen.results.length;
+          if (ok === 0) {
+            toast.error(
+              'Generation failed for all variants. Check OPENROUTER_API_KEY and image model settings.',
+            );
+          } else if (ok < total) {
+            toast.warning(`${ok} of ${total} thumbnails ready; some failed.`);
+          }
+          router.push(
+            projectVariantsPath(project.id) +
+              projectVariantsSearchParams({ templateId, avatarId }),
           );
-        } else if (ok < total) {
-          toast.warning(`${ok} of ${total} thumbnails ready; some failed.`);
-        }
-        const next = new URLSearchParams();
-        const tid = sp.get('template_id');
-        const aid = sp.get('avatar_id');
-        if (tid) next.set('template_id', tid);
-        if (aid) next.set('avatar_id', aid);
-        const qs = next.toString();
-        router.push(
-          projectVariantsPath(project.id) + (qs ? `?${qs}` : ''),
-        );
+        },
+        onSettled: () => {
+          submitLock.current = false;
+        },
       },
-      onSettled: () => {
-        submitLock.current = false;
-      },
-    });
+    );
   }
 
   return (
@@ -190,21 +218,66 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
             )}
 
             {tab === 'video' && (
-              <div className="space-y-2">
-                <label htmlFor="video-file" className="text-sm font-medium text-foreground">
-                  Video file
-                </label>
-                <Input
-                  id="video-file"
-                  type="file"
-                  accept="video/*"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    setVideoName(f?.name ?? null);
-                  }}
-                />
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label htmlFor="video-file" className="text-sm font-medium text-foreground">
+                    Video file
+                  </label>
+                  <Input
+                    id="video-file"
+                    type="file"
+                    accept="video/mp4,video/webm,video/quicktime,video/*"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      setVideoFile(f ?? null);
+                    }}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Or paste a direct HTTPS link to the file (no YouTube watch pages).
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <label htmlFor="video-url" className="text-sm font-medium text-foreground">
+                    Video URL (optional if uploading)
+                  </label>
+                  <Input
+                    id="video-url"
+                    placeholder="https://…"
+                    value={videoRemoteUrl}
+                    onChange={(e) => setVideoRemoteUrl(e.target.value)}
+                    inputMode="url"
+                    autoComplete="off"
+                  />
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-1">
+                    <label htmlFor="video-count" className="text-sm font-medium text-foreground">
+                      Thumbnail count (1–12)
+                    </label>
+                    <Input
+                      id="video-count"
+                      type="number"
+                      min={1}
+                      max={12}
+                      value={videoCount}
+                      onChange={(e) => setVideoCount(Number(e.target.value))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label htmlFor="video-style" className="text-sm font-medium text-foreground">
+                      Style hint (optional)
+                    </label>
+                    <Input
+                      id="video-style"
+                      placeholder="e.g. bold text, neon accents"
+                      value={videoStyle}
+                      onChange={(e) => setVideoStyle(e.target.value)}
+                      autoComplete="off"
+                    />
+                  </div>
+                </div>
                 <p className="text-xs text-muted-foreground">
-                  For now we only store the file name; connect Supabase Storage or S3 to persist video.
+                  Uses backend credits: 1 analysis + 2×count generations. Heavy runs are rate-limited per hour.
                 </p>
               </div>
             )}
@@ -239,10 +312,61 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
               </div>
             )}
 
-            <Button type="submit" className="w-full sm:w-auto">
-              Create & generate
+            <Button
+              type="submit"
+              className="w-full sm:w-auto"
+              disabled={
+                tab === 'video'
+                  ? fromVideoThumbnails.isPending
+                  : createAndGenerate.isPending
+              }
+            >
+              {tab === 'video'
+                ? fromVideoThumbnails.isPending
+                  ? 'Working…'
+                  : 'Generate from video'
+                : createAndGenerate.isPending
+                  ? 'Working…'
+                  : 'Create & generate'}
             </Button>
           </form>
+
+          {tab === 'video' && videoResult && videoResult.thumbnails.length > 0 && (
+            <div className="mt-8 border-t border-border pt-6">
+              <h3 className="text-sm font-semibold text-foreground">Results</h3>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Run <span className="font-mono text-[11px]">{videoResult.runId}</span> — open or save each image.
+              </p>
+              <ul className="mt-4 grid gap-4 sm:grid-cols-2">
+                {videoResult.thumbnails.map((t) => (
+                  <li
+                    key={`${t.storagePath}-${t.rank}`}
+                    className="overflow-hidden rounded-xl border border-border bg-card"
+                  >
+                    <a
+                      href={t.signedUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block"
+                    >
+                      {/* Signed Supabase URLs are per-project; skip next/image remote config. */}
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={t.signedUrl}
+                        alt={t.prompt.slice(0, 120)}
+                        className="aspect-video w-full object-cover"
+                        loading="lazy"
+                      />
+                    </a>
+                    <div className="space-y-1 p-3">
+                      <p className="text-xs font-medium text-foreground">Rank #{t.rank}</p>
+                      <p className="line-clamp-3 text-xs text-muted-foreground">{t.prompt}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

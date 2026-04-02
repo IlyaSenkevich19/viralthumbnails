@@ -51,7 +51,7 @@ export const pricingPlans: PricingPlan[] = [
     description: 'For serious creators who want max CTR.',
     features: [
       'Higher monthly credits',
-      'A/B testing (when launched)',
+      'Video-to-thumbnail pipeline',
       'Custom branding',
       'Priority support',
       'Advanced analytics',

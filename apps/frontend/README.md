@@ -18,7 +18,7 @@
 | Area | Paths |
 |------|--------|
 | Public | `/` (sign in), `/auth/register` |
-| App shell (sidebar) | `/dashboard`, `/projects`, `/projects/[id]`, `/projects/[id]/variants`, `/templates`, `/credits`, `/settings`, `/ab-tests` |
+| App shell (sidebar) | `/dashboard`, `/projects`, `/projects/[id]`, `/projects/[id]/variants`, `/templates`, `/avatars`, `/credits`, `/settings` (+ admin `/admin/youtube-inspiration`) |
 
 Protected routes rely on **middleware** + Supabase session (`src/middleware.ts`, `src/lib/supabase/middleware.ts`).  
 `/projects/new` is rewritten to `/dashboard?openNewProject=1` (see middleware).
@@ -33,6 +33,19 @@ Protected routes rely on **middleware** + Supabase session (`src/middleware.ts`,
 - Default backend in dev: `http://localhost:3001`. In production, set **`NEXT_PUBLIC_BACKEND_URL`** to your deployed API origin (no trailing slash).
 
 No separate `NEXT_PUBLIC_API_URL` is required for the current codebase.
+
+### Backend feature parity (high level)
+
+| Backend area | Frontend |
+|--------------|----------|
+| Auth, projects CRUD, variant generate/delete | Projects list/detail/variants, hooks in `src/lib/api/projects.ts` |
+| Templates, niches | `/templates`, `templatesApi` |
+| Avatars | `/avatars`, `avatarsApi` |
+| Billing credits | `/credits`, sidebar/header credits, `billingApi` |
+| **`POST /api/thumbnails/from-video`** | **New project → tab “Upload video”**: multipart upload or `videoUrl`, optional count/style; results shown in the same modal (`thumbnailsApi`, `useFromVideoThumbnailsMutation`) |
+| Admin YouTube inspiration | `/admin/youtube-inspiration` (when `ADMIN_USER_IDS` matches) |
+
+Not wired end-to-end yet: attaching `from-video` outputs to a `projects` row as `thumbnail_variants` (would need new API or client flow). Script/text/YouTube tabs still create a project and run **`POST …/generate`** only (no backend script parser beyond stored `source_data`).
 
 ## Environment variables
 

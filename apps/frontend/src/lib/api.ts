@@ -8,3 +8,4 @@ export {
 export * as templatesApi from './api/templates';
 export * as avatarsApi from './api/avatars';
 export * as billingApi from './api/billing';
+export * as thumbnailsApi from './api/thumbnails';

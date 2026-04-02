@@ -24,6 +24,9 @@ export const ApiRoutes = {
     variant: (projectId: string, variantId: string) =>
       `/projects/${projectId}/variants/${variantId}`,
   },
+  thumbnails: {
+    fromVideo: '/thumbnails/from-video',
+  },
 } as const;
 
 export function templatesListPath(queryString: string): string {

@@ -1,5 +1,6 @@
--- Template: optional user profile row (1:1 with auth.users)
+-- Template: user profile row (1:1 with auth.users)
 -- Run in Supabase Dashboard → SQL Editor after enabling Email (or other) auth.
+-- After 001–003, run 007_profiles_auto_create.sql so new signups get a profile row automatically.
 
 CREATE TABLE IF NOT EXISTS profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,

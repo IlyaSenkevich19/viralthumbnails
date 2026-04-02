@@ -12,7 +12,6 @@ export const AppRoutes = {
   /** YouTube inspiration (admin-only; env `ADMIN_USER_IDS`). */
   adminYoutubeInspiration: '/admin/youtube-inspiration',
   avatars: '/avatars',
-  abTests: '/ab-tests',
   settings: '/settings',
   credits: '/credits',
   auth: {
@@ -29,6 +28,18 @@ export const AppSearchParams = {
 
 export function projectVariantsPath(projectId: string): string {
   return `${AppRoutes.projects}/${projectId}/variants`;
+}
+
+/** Query string for variants workspace (template / face preselection). */
+export function projectVariantsSearchParams(options: {
+  templateId?: string;
+  avatarId?: string;
+}): string {
+  const q = new URLSearchParams();
+  if (options.templateId) q.set('template_id', options.templateId);
+  if (options.avatarId) q.set('avatar_id', options.avatarId);
+  const s = q.toString();
+  return s ? `?${s}` : '';
 }
 
 /**

@@ -24,7 +24,7 @@ The backend uses **`FRONTEND_URL`** for CORS — use your real frontend origin i
 
 1. **Node**: use `.nvmrc` (`nvm use`).
 
-2. **Supabase**: create a project, enable Email (or other) auth. Optionally run `supabase/migrations/001_optional_profiles.sql` in the SQL Editor.
+2. **Supabase**: create a project, enable Email (or other) auth. Run SQL migrations in order from `supabase/migrations/` (at minimum **001** → **002** → **003_generation_credits** → **007_profiles_auto_create**). **007** adds a trigger on `auth.users` and backfills `profiles` for existing users — without it, billing/generation often fails for new accounts.
 
 3. **Env**: `cp .env.example .env` and fill Supabase keys. `yarn dev` / `yarn build` sync `NEXT_PUBLIC_*` into `apps/frontend/.env.local` via `scripts/sync-frontend-env.js`.
 
@@ -64,6 +64,7 @@ yarn dev
 
 ## Where to extend
 
+- **OpenRouter / модели**: какая модель для какого сценария (проект vs `from-video`) — в **`apps/backend/README.md`**, раздел *OpenRouter: модели и сценарии*.
 - **Backend**: register new modules in `apps/backend/src/app.module.ts`.
 - **Frontend**: add routes under `apps/frontend/src/app`, API clients under `src/lib/api`, React Query hooks under `src/lib/queries`.
 - **Branding**: set **`NEXT_PUBLIC_APP_NAME`** in `.env` (used for document title, sidebar, landing). Override in `src/config/site.ts` if you need more logic.

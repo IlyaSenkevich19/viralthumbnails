@@ -70,21 +70,32 @@ FRONTEND_URL=http://localhost:3000
 
 JSON body size limit is **15MB** in `main.ts` (base64 image uploads). If the frontend uses a **host proxy** (e.g. Next rewrites on Vercel), that platform may enforce a **smaller** max request size (~4.5MB on Vercel) — the frontend downscales avatar images before upload to stay under typical limits.
 
-### Optional — OpenRouter
+### OpenRouter: модели и сценарии
 
-Defaults and parsing live in **`src/config/openrouter.config.ts`** (`registerAs('openrouter', …)`). Code reads them via `getOpenRouterConfig(config)`.
+Все slug’и моделей — это идентификаторы на [OpenRouter](https://openrouter.ai/models); в коде они читаются из env в **`src/config/openrouter.config.ts`** (`getOpenRouterConfig`).
 
-Without `OPENROUTER_API_KEY`, `POST /projects/:id/generate` still completes but stores a **placeholder** image URL per variant (local UI tests).
+| Сценарий | Эндпоинт / этап | Переменная окружения | Дефолтная модель | Где в коде |
+|----------|-----------------|----------------------|------------------|------------|
+| Картинка для одного варианта проекта | `POST /api/projects/:id/generate` | `OPENROUTER_IMAGE_MODEL` | `google/gemini-2.5-flash-image-preview` | `project-variant-image.service.ts` |
+| Анализ видео (описание кадров, стиль) | `POST /api/thumbnails/from-video`, шаг analyze | `OPENROUTER_VIDEO_MODEL` | `google/gemini-2.0-flash-001` | `video-analysis.service.ts` |
+| Генерация N кандидатов превью по анализу | тот же пайплайн, шаг generate | `OPENROUTER_IMAGE_MODEL` | как выше | `thumbnail-generation.service.ts` |
+| Скоринг и ранжирование кандидатов | тот же пайплайн, шаг rank | `OPENROUTER_RANKING_MODEL` *(если пусто — берётся `OPENROUTER_VIDEO_MODEL`)* | fallback = video-модель | `thumbnail-ranking.service.ts` |
+
+Без **`OPENROUTER_API_KEY`** генерация вариантов проекта всё равно отрабатывает, но сохраняет **placeholder**-URL картинки. Пайплайн **`from-video`** для реальных вызовов к моделям тоже ожидает ключ.
+
+#### OpenRouter: остальные переменные
+
+Парсинг и дефолты — в **`openrouter.config.ts`**.
 
 | Variable | Role |
 |----------|------|
-| `OPENROUTER_API_KEY` | Required for real images |
-| `OPENROUTER_IMAGE_MODEL` | Project variant generation + video pipeline image step |
-| `OPENROUTER_PROJECT_GEN_TIMEOUT_MS` | Timeout for project variant image call (ms) |
-| `OPENROUTER_VIDEO_MODEL` | Video analysis (`POST /api/thumbnails/from-video`) |
-| `OPENROUTER_RANKING_MODEL` | Thumbnail scoring (optional; falls back to `OPENROUTER_VIDEO_MODEL`) |
-| `OPENROUTER_BASE_URL` | API base (default in config file) |
-| `OPENROUTER_HTTP_REFERER` / `OPENROUTER_APP_TITLE` | OpenRouter request headers |
+| `OPENROUTER_API_KEY` | Доступ к API OpenRouter |
+| `OPENROUTER_IMAGE_MODEL` | См. таблицу выше (проект + картинки в `from-video`) |
+| `OPENROUTER_PROJECT_GEN_TIMEOUT_MS` | Таймаут HTTP для **одного** вызова картинки варианта проекта (мс) |
+| `OPENROUTER_VIDEO_MODEL` | См. таблицу выше (анализ видео; fallback для ранжирования) |
+| `OPENROUTER_RANKING_MODEL` | Отдельная модель для ранжирования (опционально) |
+| `OPENROUTER_BASE_URL` | База API (дефолт в конфиге) |
+| `OPENROUTER_HTTP_REFERER` / `OPENROUTER_APP_TITLE` | Заголовки запросов к OpenRouter |
 
 ```env
 OPENROUTER_API_KEY=
@@ -117,6 +128,12 @@ SUPABASE_STORAGE_SIGN_EXPIRES_SEC=3600
 ## Database & Storage
 
 SQL migrations live in the monorepo: **`supabase/migrations/`**. Apply them in the Supabase SQL Editor or via Supabase CLI so tables (`projects`, `thumbnail_variants`, `thumbnail_templates`, `profiles`, …) and Storage policies exist before calling the API.
+
+### `profiles` and generation credits
+
+- **`001`** creates `public.profiles`; **`003_generation_credits.sql`** adds `generation_credits_balance` / `quota` (defaults **3**).
+- New users only appear in **`auth.users`** until a matching **`profiles`** row exists. **`007_profiles_auto_create.sql`** defines **`handle_new_user`** on **`AFTER INSERT ON auth.users`** and **backfills** any existing auth users without a profile.
+- If you skipped **007**, the API used to error with *“No profile row for this account”* on reserve credits. The backend now **lazy-inserts** a `profiles` row via the service role when needed, but you should still run **007** in production so the DB stays consistent and triggers work for all new signups.
 
 ## Scripts
 

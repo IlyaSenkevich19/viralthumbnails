@@ -8,6 +8,7 @@ import {
   ThumbnailScoreSchema,
 } from '../schemas/thumbnail-ranking.schema';
 import type { GeneratedThumbnailCandidate } from './thumbnail-generation.service';
+import { userContentTextThenImageUrl } from '../../openrouter/multipart-user-content';
 import type { OpenRouterMessage } from '../../openrouter/openrouter.types';
 
 export type RankedThumbnail = GeneratedThumbnailCandidate & {
@@ -40,16 +41,10 @@ export class ThumbnailRankingService {
       const messages: OpenRouterMessage[] = [
         {
           role: 'user',
-          content: [
-            {
-              type: 'image_url',
-              image_url: { url: dataUrl },
-            },
-            {
-              type: 'text',
-              text: `You are scoring a YouTube thumbnail candidate. ${RANKING_JSON}`,
-            },
-          ],
+          content: userContentTextThenImageUrl(
+            `You are scoring a YouTube thumbnail candidate. ${RANKING_JSON}`,
+            dataUrl,
+          ),
         },
       ];
 

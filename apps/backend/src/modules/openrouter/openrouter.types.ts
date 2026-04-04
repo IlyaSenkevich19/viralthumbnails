@@ -23,3 +23,5 @@ export type OpenRouterChatResult = {
   model: string;
   latencyMs: number;
 };
+
+export type OpenRouterDecodedImage = { mime: string; base64: string };

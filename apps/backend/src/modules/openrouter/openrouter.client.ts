@@ -1,13 +1,18 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { getOpenRouterConfig } from '../../config/openrouter.config';
-import type { OpenRouterChatResult, OpenRouterMessage, OpenRouterUsage } from './openrouter.types';
+import { extractImagesFromOpenRouterParts } from './extract-images-from-parts';
+import type {
+  OpenRouterChatResult,
+  OpenRouterDecodedImage,
+  OpenRouterMessage,
+  OpenRouterUsage,
+} from './openrouter.types';
 
 type ChatCompletionsResponse = {
   choices?: Array<{
     message?: {
       content?: string | unknown[];
-      role?: string;
     };
   }>;
   usage?: OpenRouterUsage;
@@ -39,13 +44,10 @@ export class OpenRouterClient {
     }
 
     const or = getOpenRouterConfig(this.config);
-    const base = or.baseUrl;
-    const url = `${base.replace(/\/$/, '')}/chat/completions`;
+    const base = or.baseUrl.replace(/\/$/, '');
+    const url = `${base}/chat/completions`;
     const referer =
-      or.httpReferer ||
-      this.config.get<string>('FRONTEND_URL')?.trim() ||
-      'http://localhost:3000';
-    const title = or.appTitle;
+      or.httpReferer || this.config.get<string>('FRONTEND_URL')?.trim() || 'http://localhost:3000';
 
     const body: Record<string, unknown> = {
       model: params.model,
@@ -54,7 +56,6 @@ export class OpenRouterClient {
       temperature: params.temperature ?? 0.4,
       max_tokens: params.maxTokens ?? 4096,
     };
-
     if (params.modalities?.length) {
       body.modalities = params.modalities;
     }
@@ -66,7 +67,7 @@ export class OpenRouterClient {
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
         'HTTP-Referer': referer,
-        'X-Title': title,
+        'X-OpenRouter-Title': or.appTitle,
       },
       body: JSON.stringify(body),
       signal: params.signal,
@@ -116,25 +117,7 @@ export class OpenRouterClient {
     };
   }
 
-  extractImagesFromParts(parts: unknown[]): Array<{ mime: string; base64: string }> {
-    const out: Array<{ mime: string; base64: string }> = [];
-    for (const p of parts) {
-      if (!p || typeof p !== 'object') continue;
-      const o = p as Record<string, unknown>;
-      if (o.type === 'image_url' && o.image_url && typeof o.image_url === 'object') {
-        const u = (o.image_url as { url?: string }).url;
-        if (typeof u === 'string' && u.startsWith('data:')) {
-          const m = /^data:([^;]+);base64,(.+)$/i.exec(u);
-          if (m) out.push({ mime: m[1], base64: m[2] });
-        }
-      }
-      if (o.type === 'image' && typeof o.source === 'object' && o.source) {
-        const s = o.source as { type?: string; data?: string; media_type?: string };
-        if (s.type === 'base64' && typeof s.data === 'string') {
-          out.push({ mime: s.media_type || 'image/png', base64: s.data });
-        }
-      }
-    }
-    return out;
+  extractImagesFromParts(parts: unknown[]): OpenRouterDecodedImage[] {
+    return extractImagesFromOpenRouterParts(parts);
   }
 }

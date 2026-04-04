@@ -8,6 +8,7 @@ import {
   VideoAnalysisJsonPrompt,
   VideoAnalysisSchema,
 } from '../schemas/video-analysis.schema';
+import { userContentTextThenVideoUrl } from '../../openrouter/multipart-user-content';
 import type { OpenRouterMessage } from '../../openrouter/openrouter.types';
 
 const MAX_JSON_RETRIES = 2;
@@ -32,16 +33,10 @@ export class VideoAnalysisService {
     const system = `You are an expert YouTube thumbnail director. ${styleLine}
 ${VideoAnalysisJsonPrompt}`;
 
-    const userContent: OpenRouterMessage['content'] = [
-      {
-        type: 'video_url',
-        video_url: { url: videoUrl },
-      },
-      {
-        type: 'text',
-        text: 'Analyze this video and output the JSON object only.',
-      },
-    ];
+    const userContent: OpenRouterMessage['content'] = userContentTextThenVideoUrl(
+      'Analyze this video and output the JSON object only.',
+      videoUrl,
+    );
 
     const messages: OpenRouterMessage[] = [
       { role: 'system', content: system },

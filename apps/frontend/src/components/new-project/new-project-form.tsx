@@ -15,6 +15,8 @@ import { tabs } from './constants';
 import type { Tab } from './types';
 import { tabFromSearchParams } from './utils';
 import type { FromVideoResponse } from '@/lib/types/from-video';
+import { VIDEO_ANALYSIS_MAX_SECONDS } from '@/lib/video/clip-limits';
+import { maybeTrimVideoForThumbnails, TrimVideoError } from '@/lib/video/trim-video-for-thumbnails';
 
 export type NewProjectFormProps = {
   initialQuery?: Record<string, string>;
@@ -40,6 +42,7 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
   const [videoCount, setVideoCount] = useState(4);
   const [videoStyle, setVideoStyle] = useState('');
   const [videoResult, setVideoResult] = useState<FromVideoResponse | null>(null);
+  const [videoPreparing, setVideoPreparing] = useState(false);
 
   useEffect(() => {
     setTab(tabFromSearchParams(sp));
@@ -51,7 +54,7 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
     if (tab !== 'video') setVideoResult(null);
   }, [tab]);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (submitLock.current) return;
     if (!accessToken) {
@@ -67,10 +70,34 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
         return;
       }
       const n = Math.min(12, Math.max(1, Math.floor(videoCount) || 4));
+
+      let fileToSend: File | undefined;
+      if (videoFile) {
+        setVideoPreparing(true);
+        try {
+          const trimmed = await maybeTrimVideoForThumbnails(videoFile);
+          fileToSend = trimmed;
+          if (trimmed !== videoFile) {
+            toast.message(
+              `Using the first ${VIDEO_ANALYSIS_MAX_SECONDS / 60} minutes for analysis (full video was longer).`,
+            );
+          }
+        } catch (err) {
+          if (err instanceof TrimVideoError) {
+            toast.error(err.message);
+            return;
+          }
+          toast.error(err instanceof Error ? err.message : 'Could not prepare video');
+          return;
+        } finally {
+          setVideoPreparing(false);
+        }
+      }
+
       submitLock.current = true;
       fromVideoThumbnails.mutate(
         {
-          file: videoFile ?? undefined,
+          file: fileToSend,
           videoUrl: hasFile ? undefined : url || undefined,
           count: n,
           style: videoStyle.trim() || undefined,
@@ -233,7 +260,13 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
                     }}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Or paste a direct HTTPS link to the file (no YouTube watch pages).
+                    Long files: only the <strong className="text-foreground/90">first {VIDEO_ANALYSIS_MAX_SECONDS / 60} minutes</strong>{' '}
+                    are sent for analysis (trimmed in your browser before upload). Very large files may need a shorter clip or a
+                    direct HTTPS link instead.
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Or paste a direct HTTPS link to the file (no YouTube watch pages) — the server fetches the full file; trim
+                    applies to uploads only.
                   </p>
                 </div>
                 <div className="space-y-1">
@@ -317,14 +350,16 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
               className="w-full sm:w-auto"
               disabled={
                 tab === 'video'
-                  ? fromVideoThumbnails.isPending
+                  ? fromVideoThumbnails.isPending || videoPreparing
                   : createAndGenerate.isPending
               }
             >
               {tab === 'video'
-                ? fromVideoThumbnails.isPending
-                  ? 'Working…'
-                  : 'Generate from video'
+                ? videoPreparing
+                  ? 'Preparing video…'
+                  : fromVideoThumbnails.isPending
+                    ? 'Working…'
+                    : 'Generate from video'
                 : createAndGenerate.isPending
                   ? 'Working…'
                   : 'Create & generate'}

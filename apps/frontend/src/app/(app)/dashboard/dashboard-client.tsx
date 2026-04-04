@@ -30,15 +30,10 @@ export function DashboardClient() {
       <Suspense fallback={null}>
         <DashboardOpenNewProjectFromUrl />
       </Suspense>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground">Dashboard</h1>
-          <p className="text-sm text-muted-foreground">
-            Start here; use <span className="text-foreground/90">Projects</span> in the sidebar for your
-            library and drafts.
-          </p>
-        </div>
-      </div>
+      <header>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Dashboard</h1>
+        <p className="mt-1 text-sm text-muted-foreground">Projects live in the sidebar.</p>
+      </header>
 
       <DashboardCreateHub />
     </div>

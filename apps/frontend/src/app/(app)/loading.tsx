@@ -1,5 +1,5 @@
-import { PageLoader } from '@/components/ui/page-loader';
+import { RouteSegmentProgress } from '@/components/providers/route-segment-progress';
 
 export default function AppLoading() {
-  return <PageLoader />;
+  return <RouteSegmentProgress />;
 }

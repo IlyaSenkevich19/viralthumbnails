@@ -1,9 +1,25 @@
+@import 'nprogress/nprogress.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+#nprogress .spinner {
+  display: none !important;
+}
+
+#nprogress .peg {
+  display: none !important;
+}
+
+#nprogress .bar {
+  background: var(--route-progress-bar) !important;
+  height: 2px !important;
+  z-index: 99999 !important;
+  box-shadow: none !important;
+}
+
 :root {
-  /* Dark soft premium palette — layered: sidebar < background < card < secondary */
   --sidebar: #141417;
   --background: #1c1c20;
   --foreground: #ececef;
@@ -34,6 +50,7 @@
   --duration-normal: 220ms;
   --duration-slow: 320ms;
   --ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
+  --route-progress-bar: color-mix(in srgb, var(--foreground) 55%, transparent);
 }
 
 .light {
@@ -55,6 +72,7 @@
   --border-hover: #cbd5e1;
   --input: #e2e8f0;
   --ring: rgba(51, 65, 85, 0.35);
+  --route-progress-bar: color-mix(in srgb, var(--foreground) 42%, transparent);
 }
 
 body {

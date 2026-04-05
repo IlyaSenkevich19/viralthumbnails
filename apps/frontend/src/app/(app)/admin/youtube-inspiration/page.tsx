@@ -3,7 +3,6 @@ import { Suspense } from 'react';
 import { userIdIsAdmin } from '@/lib/admin';
 import { AppRoutes } from '@/config/routes';
 import { createClient } from '@/lib/supabase/server';
-import { PageLoader } from '@/components/ui/page-loader';
 import { YoutubeInspirationAdminClient } from './youtube-inspiration-admin-client';
 
 export default async function AdminYoutubeInspirationPage() {
@@ -17,7 +16,7 @@ export default async function AdminYoutubeInspirationPage() {
   }
 
   return (
-    <Suspense fallback={<PageLoader />}>
+    <Suspense fallback={null}>
       <YoutubeInspirationAdminClient />
     </Suspense>
   );

@@ -146,14 +146,13 @@ export function ProjectVariantsWorkspace({
       toast.error('Not signed in');
       return;
     }
-    if (prioritizeFace) {
-      toast.message('Face reference will apply once the pipeline supports avatars in prompts.');
-    }
     generate.mutate({
       count: GENERATE_COUNT,
       template_id: selectedTemplateId ?? undefined,
+      avatar_id: selectedAvatarId.trim() || undefined,
+      prioritize_face: prioritizeFace,
     });
-  }, [accessToken, generate, prioritizeFace, selectedTemplateId]);
+  }, [accessToken, generate, prioritizeFace, selectedAvatarId, selectedTemplateId]);
 
   const previewUrl = selectedVariant?.generated_image_url ?? null;
 
@@ -365,8 +364,7 @@ export function ProjectVariantsWorkspace({
             </Button>
             {selectedAvatarId ? (
               <p className="text-xs text-muted-foreground">
-                Avatar selection is stored for the next step; generation still uses project source only until the API
-                accepts a face reference.
+                Your face reference is sent with each generation so the model can match likeness when possible.
               </p>
             ) : null}
           </div>

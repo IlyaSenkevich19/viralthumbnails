@@ -17,7 +17,6 @@ import { inferNicheFromTemplatePath } from './lib/infer-niche-from-path';
 
 type StorageTemplatePath = { path: string; mimeType: string; updatedAt: string };
 
-/** Files in Storage without a `thumbnail_templates` row still appear in the API (e.g. manual Dashboard uploads). */
 @Injectable()
 export class TemplatesService {
   private readonly storagePathsCache = new Map<string, { expiresAt: number; paths: StorageTemplatePath[] }>();
@@ -71,6 +70,38 @@ export class TemplatesService {
     const items = await Promise.all(pageRows.map((row) => this.attachPreviewUrl(row)));
 
     return { items, total, page, limit };
+  }
+
+  async resolveTemplateForGeneration(
+    userId: string,
+    templateId: string,
+  ): Promise<{ storagePath: string; mimeType: string } | null> {
+    const client = this.supabase.getAdminClient();
+    const isUuid =
+      templateId.length === 36 &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(templateId);
+    if (isUuid) {
+      const { data, error } = await client
+        .from('thumbnail_templates')
+        .select('storage_path, mime_type')
+        .eq('id', templateId)
+        .or(`user_id.is.null,user_id.eq.${userId}`)
+        .maybeSingle();
+      if (error || !data?.storage_path) return null;
+      return {
+        storagePath: data.storage_path as string,
+        mimeType: (data.mime_type as string) || 'image/png',
+      };
+    }
+    if (templateId.startsWith('st-')) {
+      const paths = await this.listTemplateImagePathsCached(userId);
+      for (const p of paths) {
+        if (syntheticTemplateId(p.path) === templateId) {
+          return { storagePath: p.path, mimeType: p.mimeType };
+        }
+      }
+    }
+    return null;
   }
 
   /**

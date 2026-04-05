@@ -157,7 +157,7 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
         platform: 'youtube',
         source_type,
         source_data,
-        generate: { template_id: templateId, count: 3 },
+        generate: { template_id: templateId, count: 3, avatar_id: avatarId },
       },
       {
         onSuccess: ({ project, gen }) => {

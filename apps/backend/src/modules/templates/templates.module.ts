@@ -9,5 +9,6 @@ import { StorageModule } from '../storage/storage.module';
   imports: [AuthModule, SupabaseModule, StorageModule],
   controllers: [TemplatesController],
   providers: [TemplatesService],
+  exports: [TemplatesService],
 })
 export class TemplatesModule {}

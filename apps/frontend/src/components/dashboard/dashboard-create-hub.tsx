@@ -179,7 +179,11 @@ export function DashboardCreateHub() {
           platform: 'youtube',
           source_type: 'youtube_url',
           source_data: { url: trimmed },
-          generate: { template_id: templateId, count: DEFAULT_VARIANT_COUNT },
+          generate: {
+            template_id: templateId,
+            count: DEFAULT_VARIANT_COUNT,
+            avatar_id: avatarId || undefined,
+          },
         },
         {
           onSuccess: ({ project, gen }) =>
@@ -200,7 +204,11 @@ export function DashboardCreateHub() {
         platform: 'youtube',
         source_type: 'text',
         source_data: { text: hint },
-        generate: { template_id: templateId, count: DEFAULT_VARIANT_COUNT },
+        generate: {
+          template_id: templateId,
+          count: DEFAULT_VARIANT_COUNT,
+          avatar_id: avatarId || undefined,
+        },
       },
       {
         onSuccess: ({ project, gen }) =>

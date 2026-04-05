@@ -90,6 +90,7 @@ JSON body size limit is **15MB** in `main.ts` (base64 image uploads). If the fro
 | Variable | Role |
 |----------|------|
 | `OPENROUTER_API_KEY` | Доступ к API OpenRouter |
+| `OPENROUTER_USE_FREE_MODELS` | `1` / `true`: дефолты для **анализа видео** и **ранжирования** → `openrouter/free` (если не заданы `OPENROUTER_VIDEO_MODEL` / `OPENROUTER_RANKING_MODEL`). Генерация **картинок** превью по-прежнему через платную image-модель. |
 | `OPENROUTER_IMAGE_MODEL` | См. таблицу выше (проект + картинки в `from-video`) |
 | `OPENROUTER_PROJECT_GEN_TIMEOUT_MS` | Таймаут HTTP для **одного** вызова картинки варианта проекта (мс) |
 | `OPENROUTER_VIDEO_MODEL` | См. таблицу выше (анализ видео; fallback для ранжирования) |
@@ -99,6 +100,7 @@ JSON body size limit is **15MB** in `main.ts` (base64 image uploads). If the fro
 
 ```env
 OPENROUTER_API_KEY=
+# OPENROUTER_USE_FREE_MODELS=1
 # OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
 # OPENROUTER_HTTP_REFERER=https://your-frontend.example
 # OPENROUTER_APP_TITLE=ViralThumbnails

@@ -36,7 +36,7 @@ export class ThumbnailVariantsController {
     @Body() dto: GenerateThumbnailsDto,
   ) {
     const count = dto.count ?? 1;
-    return this.projects.generateVariants(id, userId, dto.template_id, count);
+    return this.projects.generateVariants(id, userId, dto.template_id, count, dto.avatar_id, dto.prioritize_face);
   }
 
   @Get(':id/variants')

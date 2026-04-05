@@ -1,11 +1,5 @@
 import type { OpenRouterContentPart } from './openrouter.types';
 
-/**
- * Builds a user `content` array for OpenRouter multimodal chat.
- * Docs recommend putting the text prompt before `image_url` / `video_url` parts so providers parse reliably.
- *
- * @see OpenRouter docs: sending images via `chat/completions` (text before `image_url` in `content`).
- */
 export function userContentTextThenImageUrl(
   instruction: string,
   /** Public HTTPS URL or `data:image/...;base64,...` */
@@ -22,4 +16,18 @@ export function userContentTextThenVideoUrl(instruction: string, videoUrl: strin
     { type: 'text', text: instruction },
     { type: 'video_url', video_url: { url: videoUrl } },
   ];
+}
+
+export function userContentTextThenReferenceImages(
+  instruction: string,
+  imageUrlOrDataUrls: string[],
+): OpenRouterContentPart[] {
+  if (imageUrlOrDataUrls.length === 0) {
+    return [{ type: 'text', text: instruction }];
+  }
+  const parts: OpenRouterContentPart[] = [{ type: 'text', text: instruction }];
+  for (const url of imageUrlOrDataUrls) {
+    parts.push({ type: 'image_url', image_url: { url } });
+  }
+  return parts;
 }

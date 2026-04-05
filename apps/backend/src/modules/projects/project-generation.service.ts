@@ -24,6 +24,8 @@ export class ProjectGenerationService {
     userId: string,
     templateId: string | undefined,
     count: number,
+    avatarId?: string,
+    prioritizeFace?: boolean,
   ) {
     await this.billing.reserveGenerationCredits(userId, count);
 
@@ -61,6 +63,8 @@ export class ProjectGenerationService {
           userId,
           variantId,
           templateId,
+          avatarId,
+          prioritizeFace,
         });
         results.push(result);
       }

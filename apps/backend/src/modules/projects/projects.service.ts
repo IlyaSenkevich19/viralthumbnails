@@ -211,6 +211,8 @@ export class ProjectsService {
     userId: string,
     templateId: string | undefined,
     count: number,
+    avatarId?: string,
+    prioritizeFace?: boolean,
   ) {
     const project = await this.getByIdForUser(projectId, userId);
     return this.projectGeneration.generateThumbnailVariants(
@@ -219,6 +221,8 @@ export class ProjectsService {
       userId,
       templateId,
       count,
+      avatarId,
+      prioritizeFace,
     );
   }
 

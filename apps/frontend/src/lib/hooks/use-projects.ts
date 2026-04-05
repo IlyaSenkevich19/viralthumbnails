@@ -40,7 +40,12 @@ type CreateBody = {
 
 /** Create project then run variant generation (same flow as dashboard hero + modal). */
 export type CreateProjectAndGenerateInput = CreateBody & {
-  generate?: { template_id?: string; count?: number };
+  generate?: {
+    template_id?: string;
+    avatar_id?: string;
+    prioritize_face?: boolean;
+    count?: number;
+  };
 };
 
 export function useCreateProjectAndGenerateMutation() {
@@ -58,6 +63,8 @@ export function useCreateProjectAndGenerateMutation() {
       const gen = await projectsApi.generateThumbnails(accessToken, project.id, {
         count: generate?.count ?? 3,
         template_id: generate?.template_id,
+        avatar_id: generate?.avatar_id,
+        prioritize_face: generate?.prioritize_face,
       });
       return { project, gen };
     },
@@ -146,7 +153,12 @@ export function useGenerateThumbnailsMutation(projectId: string) {
   const userId = user?.id;
 
   return useMutation({
-    mutationFn: async (opts: { template_id?: string; count?: number }) => {
+    mutationFn: async (opts: {
+      template_id?: string;
+      avatar_id?: string;
+      prioritize_face?: boolean;
+      count?: number;
+    }) => {
       if (!accessToken) throw new Error('Not signed in');
       return projectsApi.generateThumbnails(accessToken, projectId, opts);
     },

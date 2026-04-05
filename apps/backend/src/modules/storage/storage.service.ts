@@ -6,6 +6,15 @@ export const BUCKET_PROJECT_THUMBNAILS = 'project-thumbnails';
 export const BUCKET_THUMBNAIL_TEMPLATES = 'thumbnail-templates';
 export const BUCKET_USER_AVATARS = 'user-avatars';
 
+function guessMimeFromFilename(name: string): string {
+  const lower = name.toLowerCase();
+  if (lower.endsWith('.png')) return 'image/png';
+  if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
+  if (lower.endsWith('.webp')) return 'image/webp';
+  if (lower.endsWith('.gif')) return 'image/gif';
+  return 'application/octet-stream';
+}
+
 @Injectable()
 export class StorageService {
   private readonly logger = new Logger(StorageService.name);
@@ -159,6 +168,19 @@ export class StorageService {
       }
       return row;
     }
+  }
+
+  async downloadObject(bucket: string, objectPath: string): Promise<{ buffer: Buffer; contentType: string }> {
+    const client = this.supabase.getAdminClient();
+    const { data, error } = await client.storage.from(bucket).download(objectPath);
+    if (error || !data) {
+      throw new Error(error?.message ?? 'storage download failed');
+    }
+    const ab = await data.arrayBuffer();
+    const buffer = Buffer.from(ab);
+    const name = objectPath.split('/').pop() ?? objectPath;
+    const contentType = guessMimeFromFilename(name);
+    return { buffer, contentType };
   }
 
   async removeObjectsIfPresent(bucket: string, paths: string[]): Promise<void> {

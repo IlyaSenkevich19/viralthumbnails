@@ -36,7 +36,12 @@ export async function createProject(
 export async function generateThumbnails(
   token: string | null,
   projectId: string,
-  options?: { template_id?: string; count?: number },
+  options?: {
+    template_id?: string;
+    avatar_id?: string;
+    prioritize_face?: boolean;
+    count?: number;
+  },
 ): Promise<GenerateThumbnailsResponse> {
   return fetchJson<GenerateThumbnailsResponse>(ApiRoutes.projects.generate(projectId), token, {
     method: 'POST',

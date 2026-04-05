@@ -26,15 +26,18 @@ export class VideoAnalysisService {
     return getOpenRouterConfig(this.config).videoModel;
   }
 
-  async analyze(videoUrl: string, style?: string): Promise<VideoAnalysis> {
+  async analyze(videoUrl: string, style?: string, creativePrompt?: string): Promise<VideoAnalysis> {
     const model = this.videoModel();
     const styleLine = style?.trim() ? `Preferred visual style: ${style.trim()}` : '';
 
     const system = `You are an expert YouTube thumbnail director. ${styleLine}
 ${VideoAnalysisJsonPrompt}`;
 
+    const direction = creativePrompt?.trim()
+      ? `\n\nCreator direction (use when choosing scenes, angles, and prompt seeds): ${creativePrompt.trim()}`
+      : '';
     const userContent: OpenRouterMessage['content'] = userContentTextThenVideoUrl(
-      'Analyze this video and output the JSON object only.',
+      `Analyze this video and output the JSON object only.${direction}`,
       videoUrl,
     );
 

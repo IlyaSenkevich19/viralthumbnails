@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
 import { BillingModule } from '../billing/billing.module';
 import { OpenRouterModule } from '../openrouter/openrouter.module';
+import { ProjectThumbnailGenerationModule } from '../project-thumbnail-generation/project-thumbnail-generation.module';
 import { StorageModule } from '../storage/storage.module';
 import { FromVideoThumbnailsService } from './from-video-thumbnails.service';
 import { VideoThumbnailsController } from './video-thumbnails.controller';
@@ -11,7 +12,7 @@ import { ThumbnailGenerationService } from './services/thumbnail-generation.serv
 import { ThumbnailRankingService } from './services/thumbnail-ranking.service';
 
 @Module({
-  imports: [AuthModule, BillingModule, StorageModule, OpenRouterModule],
+  imports: [AuthModule, BillingModule, StorageModule, OpenRouterModule, ProjectThumbnailGenerationModule],
   controllers: [VideoThumbnailsController],
   providers: [
     VideoIngestionService,

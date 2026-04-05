@@ -44,6 +44,89 @@ export class ProjectVariantImageService {
     private readonly templates: TemplatesService,
   ) {}
 
+  /**
+   * Loads template + avatar images as data URLs for multimodal image generation (e.g. from-video pipeline).
+   */
+  async resolveReferenceDataUrlsForUser(params: {
+    userId: string;
+    templateId?: string;
+    avatarId?: string;
+    logContext?: string;
+  }): Promise<{
+    dataUrls: string[];
+    hasTemplateImage: boolean;
+    hasAvatarImage: boolean;
+  }> {
+    const logCtx = params.logContext ?? 'refs';
+    const client = this.supabase.getAdminClient();
+    const dataUrls: string[] = [];
+    let hasTemplateImage = false;
+    let hasAvatarImage = false;
+
+    if (params.templateId?.trim()) {
+      try {
+        const resolved = await this.templates.resolveTemplateForGeneration(
+          params.userId,
+          params.templateId.trim(),
+        );
+        if (resolved) {
+          const { buffer, contentType } = await this.storage.downloadObject(
+            BUCKET_THUMBNAIL_TEMPLATES,
+            resolved.storagePath,
+          );
+          if (buffer.length > MAX_REFERENCE_IMAGE_BYTES) {
+            this.logger.warn(
+              `Template image too large (${buffer.length}b) for ${logCtx}, skipping reference`,
+            );
+          } else {
+            dataUrls.push(this.bufferToDataUrl(contentType, buffer));
+            hasTemplateImage = true;
+          }
+        } else {
+          this.logger.warn(`Template id not resolved (${logCtx}): ${params.templateId}`);
+        }
+      } catch (e) {
+        this.logger.warn(
+          `Template reference load failed (${logCtx}): ${e instanceof Error ? e.message : e}`,
+        );
+      }
+    }
+
+    if (params.avatarId?.trim()) {
+      try {
+        const { data: av, error: avErr } = await client
+          .from('user_avatars')
+          .select('storage_path, mime_type')
+          .eq('id', params.avatarId.trim())
+          .eq('user_id', params.userId)
+          .maybeSingle();
+        if (avErr || !av?.storage_path) {
+          this.logger.warn(`Avatar not found for user (${logCtx}): ${params.avatarId}`);
+        } else {
+          const { buffer, contentType } = await this.storage.downloadObject(
+            BUCKET_USER_AVATARS,
+            av.storage_path as string,
+          );
+          if (buffer.length > MAX_REFERENCE_IMAGE_BYTES) {
+            this.logger.warn(
+              `Avatar image too large (${buffer.length}b) for ${logCtx}, skipping reference`,
+            );
+          } else {
+            const mime = (av.mime_type as string) || contentType;
+            dataUrls.push(this.bufferToDataUrl(mime, buffer));
+            hasAvatarImage = true;
+          }
+        }
+      } catch (e) {
+        this.logger.warn(
+          `Avatar reference load failed (${logCtx}): ${e instanceof Error ? e.message : e}`,
+        );
+      }
+    }
+
+    return { dataUrls, hasTemplateImage, hasAvatarImage };
+  }
+
   async generateThumbnailForProject(params: {
     projectId: string;
     userId: string;
@@ -69,70 +152,16 @@ export class ProjectVariantImageService {
       };
     }
 
-    const refImages: string[] = [];
-    let hasTemplateImage = false;
-    let hasAvatarImage = false;
-
-    if (params.templateId?.trim()) {
-      try {
-        const resolved = await this.templates.resolveTemplateForGeneration(
-          params.userId,
-          params.templateId.trim(),
-        );
-        if (resolved) {
-          const { buffer, contentType } = await this.storage.downloadObject(
-            BUCKET_THUMBNAIL_TEMPLATES,
-            resolved.storagePath,
-          );
-          if (buffer.length > MAX_REFERENCE_IMAGE_BYTES) {
-            this.logger.warn(
-              `Template image too large (${buffer.length}b) for variant ${params.variantId}, skipping reference`,
-            );
-          } else {
-            refImages.push(this.bufferToDataUrl(contentType, buffer));
-            hasTemplateImage = true;
-          }
-        } else {
-          this.logger.warn(`Template id not resolved: ${params.templateId}`);
-        }
-      } catch (e) {
-        this.logger.warn(
-          `Template reference load failed for ${params.variantId}: ${e instanceof Error ? e.message : e}`,
-        );
-      }
-    }
-
-    if (params.avatarId?.trim()) {
-      try {
-        const { data: av, error: avErr } = await client
-          .from('user_avatars')
-          .select('storage_path, mime_type')
-          .eq('id', params.avatarId.trim())
-          .eq('user_id', params.userId)
-          .maybeSingle();
-        if (avErr || !av?.storage_path) {
-          this.logger.warn(`Avatar not found for user: ${params.avatarId}`);
-        } else {
-          const { buffer, contentType } = await this.storage.downloadObject(
-            BUCKET_USER_AVATARS,
-            av.storage_path as string,
-          );
-          if (buffer.length > MAX_REFERENCE_IMAGE_BYTES) {
-            this.logger.warn(
-              `Avatar image too large (${buffer.length}b) for variant ${params.variantId}, skipping reference`,
-            );
-          } else {
-            const mime = (av.mime_type as string) || contentType;
-            refImages.push(this.bufferToDataUrl(mime, buffer));
-            hasAvatarImage = true;
-          }
-        }
-      } catch (e) {
-        this.logger.warn(
-          `Avatar reference load failed for ${params.variantId}: ${e instanceof Error ? e.message : e}`,
-        );
-      }
-    }
+    const {
+      dataUrls: refImages,
+      hasTemplateImage,
+      hasAvatarImage,
+    } = await this.resolveReferenceDataUrlsForUser({
+      userId: params.userId,
+      templateId: params.templateId,
+      avatarId: params.avatarId,
+      logContext: `variant ${params.variantId}`,
+    });
 
     const prompt = this.buildPrompt(project as Record<string, unknown>, params.templateId, {
       hasTemplateImage,

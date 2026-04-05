@@ -11,6 +11,7 @@ export type FromVideoThumbnailRow = {
 
 export type FromVideoResponse = {
   runId: string;
+  projectId: string;
   analysis: unknown;
   selectedShots: unknown;
   thumbnails: FromVideoThumbnailRow[];

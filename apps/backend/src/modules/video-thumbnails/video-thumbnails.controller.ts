@@ -37,6 +37,10 @@ export class VideoThumbnailsController {
         videoUrl: { type: 'string' },
         count: { type: 'integer', minimum: 1, maximum: 12 },
         style: { type: 'string' },
+        prompt: { type: 'string', description: 'Creative direction (second prompt)' },
+        template_id: { type: 'string' },
+        avatar_id: { type: 'string', format: 'uuid' },
+        prioritize_face: { type: 'boolean' },
       },
     },
   })
@@ -58,6 +62,10 @@ export class VideoThumbnailsController {
       file,
       count: body.count,
       style: body.style,
+      prompt: body.prompt,
+      template_id: body.template_id,
+      avatar_id: body.avatar_id,
+      prioritize_face: body.prioritize_face,
     });
   }
 }

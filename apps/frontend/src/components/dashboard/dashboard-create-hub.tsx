@@ -77,6 +77,8 @@ export function DashboardCreateHub() {
   const [videoRemoteUrl, setVideoRemoteUrl] = useState('');
   const [videoCount, setVideoCount] = useState(DEFAULT_VIDEO_THUMBNAIL_COUNT);
   const [videoStyle, setVideoStyle] = useState('');
+  const [videoPrompt, setVideoPrompt] = useState('');
+  const [videoPrioritizeFace, setVideoPrioritizeFace] = useState(false);
   const [videoResult, setVideoResult] = useState<FromVideoResponse | null>(null);
   const [videoPreparing, setVideoPreparing] = useState(false);
 
@@ -152,11 +154,19 @@ export function DashboardCreateHub() {
           videoUrl: hasFile ? undefined : url || undefined,
           count: n,
           style: videoStyle.trim() || undefined,
+          prompt: videoPrompt.trim() || undefined,
+          template_id: templateId,
+          avatar_id: avatarId,
+          prioritize_face: videoPrioritizeFace && Boolean(avatarId) ? true : undefined,
         },
         {
           onSuccess: (data) => {
             setVideoResult(data);
-            toast.success(`${data.thumbnails.length} thumbnail(s) ready.`);
+            toast.success(`${data.thumbnails.length} thumbnail(s) ready. Opening project…`);
+            router.push(
+              projectVariantsPath(data.projectId) +
+                projectVariantsSearchParams({ templateId, avatarId }),
+            );
           },
         },
       );
@@ -230,8 +240,8 @@ export function DashboardCreateHub() {
           Create thumbnails
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Prompt, YouTube link, or video — then optional template and face. Project flows open variants;
-          video analysis shows results here.
+          Prompt, YouTube link, or video — optional template, face, and creative notes. Video runs save a
+          project and open variants when done.
         </p>
       </div>
 
@@ -370,6 +380,22 @@ export function DashboardCreateHub() {
                 />
               </div>
             </div>
+            <div className="space-y-1.5">
+              <label htmlFor="dash-video-prompt" className="text-sm font-medium text-foreground">
+                Creative direction (optional)
+              </label>
+              <textarea
+                id="dash-video-prompt"
+                rows={4}
+                placeholder="What should thumbnails emphasize? e.g. product close-up, shocked reaction, title about X…"
+                value={videoPrompt}
+                onChange={(e) => setVideoPrompt(e.target.value)}
+                className="w-full resize-y rounded-lg border border-input bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
+              <p className="text-xs text-muted-foreground">
+                Used in video analysis and in each generated thumbnail (separate from the short style hint).
+              </p>
+            </div>
           </div>
         )}
       </div>
@@ -378,15 +404,11 @@ export function DashboardCreateHub() {
         <p className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
           Template & face
         </p>
-        {mode === 'video' ? (
-          <p className="mb-3 text-xs text-muted-foreground">
-            Used when you start from <strong className="font-medium text-foreground/90">Prompt</strong> or{' '}
-            <strong className="font-medium text-foreground/90">YouTube</strong> (opens a project). Video analysis
-            ignores these for now; use style hint above.
-          </p>
-        ) : (
-          <p className="mb-3 text-xs text-muted-foreground">Optional. Applied to this generation.</p>
-        )}
+        <p className="mb-3 text-xs text-muted-foreground">
+          Optional. Template and face are sent to the image model when you use{' '}
+          <strong className="font-medium text-foreground/90">Video</strong> (with your creative direction above) or
+          when you generate from Prompt / YouTube.
+        </p>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
             <label htmlFor="dash-template" className="text-sm font-medium text-foreground">
@@ -433,6 +455,22 @@ export function DashboardCreateHub() {
             </Select>
           </div>
         </div>
+        {mode === 'video' && selectedAvatarId ? (
+          <label className="mt-3 flex cursor-pointer items-start gap-2 text-sm text-foreground">
+            <input
+              type="checkbox"
+              className="mt-0.5 h-4 w-4 rounded border-input"
+              checked={videoPrioritizeFace}
+              onChange={(e) => setVideoPrioritizeFace(e.target.checked)}
+            />
+            <span>
+              <span className="font-medium">Prioritize face likeness</span>
+              <span className="block text-xs text-muted-foreground">
+                Stress a recognizable match to your face reference in the thumbnails.
+              </span>
+            </span>
+          </label>
+        ) : null}
         <p className="mt-2 text-xs text-muted-foreground">
           <Link href={AppRoutes.templates} className="underline-offset-2 hover:underline">
             All templates

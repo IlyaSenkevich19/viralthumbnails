@@ -41,6 +41,7 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
   const [videoRemoteUrl, setVideoRemoteUrl] = useState('');
   const [videoCount, setVideoCount] = useState(4);
   const [videoStyle, setVideoStyle] = useState('');
+  const [videoPrompt, setVideoPrompt] = useState('');
   const [videoResult, setVideoResult] = useState<FromVideoResponse | null>(null);
   const [videoPreparing, setVideoPreparing] = useState(false);
 
@@ -94,6 +95,9 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
         }
       }
 
+      const templateIdFromQuery = sp.get('template_id') || undefined;
+      const avatarIdFromQuery = sp.get('avatar_id') || undefined;
+
       submitLock.current = true;
       fromVideoThumbnails.mutate(
         {
@@ -101,11 +105,22 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
           videoUrl: hasFile ? undefined : url || undefined,
           count: n,
           style: videoStyle.trim() || undefined,
+          prompt: videoPrompt.trim() || undefined,
+          template_id: templateIdFromQuery,
+          avatar_id: avatarIdFromQuery,
         },
         {
           onSuccess: (data) => {
             setVideoResult(data);
-            toast.success(`${data.thumbnails.length} thumbnail(s) ready — ranked below.`);
+            toast.success(`${data.thumbnails.length} thumbnail(s) ready — opening project…`);
+            onRequestClose?.();
+            router.push(
+              projectVariantsPath(data.projectId) +
+                projectVariantsSearchParams({
+                  templateId: templateIdFromQuery,
+                  avatarId: avatarIdFromQuery,
+                }),
+            );
           },
           onSettled: () => {
             submitLock.current = false;
@@ -309,8 +324,21 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
                     />
                   </div>
                 </div>
+                <div className="space-y-1">
+                  <label htmlFor="video-creative" className="text-sm font-medium text-foreground">
+                    Creative direction (optional)
+                  </label>
+                  <textarea
+                    id="video-creative"
+                    className="flex min-h-[100px] w-full rounded-lg border border-input bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground motion-base focus-ring focus-visible:border-primary"
+                    placeholder="What to emphasize in analysis and thumbnails…"
+                    value={videoPrompt}
+                    onChange={(e) => setVideoPrompt(e.target.value)}
+                  />
+                </div>
                 <p className="text-xs text-muted-foreground">
-                  Uses backend credits: 1 analysis + 2×count generations. Heavy runs are rate-limited per hour.
+                  Template and face from the page URL (if opened with template_id / avatar_id) are passed to generation.
+                  Saves a project and opens variants when done. Credits: 1 analysis + 2×count generations; rate-limited.
                 </p>
               </div>
             )}

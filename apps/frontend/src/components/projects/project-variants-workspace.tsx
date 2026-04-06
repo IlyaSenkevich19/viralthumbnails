@@ -23,7 +23,6 @@ import {
   useTemplateNiches,
   useTemplatesList,
 } from '@/lib/hooks';
-import { humanizeKey } from '@/lib/format';
 import { statusToneClass } from '@/lib/status-tone';
 import type { ProjectWithVariants, ThumbnailVariantRow } from '@/lib/types/project';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -198,17 +197,6 @@ export function ProjectVariantsWorkspace({
               <RefreshCw className={cn('h-4 w-4', refreshing && 'animate-spin')} />
               Refresh
             </Button>
-          </div>
-
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground lg:text-xl">
-              {project.title}
-            </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              <span className="capitalize">{project.platform}</span>
-              <span aria-hidden> · </span>
-              {humanizeKey(project.source_type)}
-            </p>
           </div>
 
           <div className="space-y-3">

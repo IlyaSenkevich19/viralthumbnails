@@ -1,15 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BackendHealth } from '@/components/backend-health';
+import { SetPageFrame } from '@/components/layout/set-page-frame';
 
 export default function SettingsPage() {
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground">Settings</h1>
-        <p className="text-sm text-muted-foreground">
-          Account preferences and workspace status. More options will appear here as the product grows.
-        </p>
-      </div>
+      <SetPageFrame title="Settings" />
 
       <Card>
         <CardHeader className="pb-2">

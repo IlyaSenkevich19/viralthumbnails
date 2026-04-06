@@ -155,20 +155,17 @@ export function TemplatesClient() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground">Templates</h1>
-        <p className="text-sm text-muted-foreground">
-          In Storage you can use root folders per niche:{' '}
-          <code className="rounded bg-secondary px-1 text-xs">cooking/…</code>,{' '}
-          <code className="rounded bg-secondary px-1 text-xs">vlog/…</code>, etc. (folder name = niche code). Alternatively{' '}
-          <code className="rounded bg-secondary px-1 text-xs">system/&lt;niche&gt;/…</code> or set{' '}
-          <code className="rounded bg-secondary px-1 text-xs">niche</code> on the DB row. API uploads with{' '}
-          <code className="rounded bg-secondary px-1 text-xs">niche</code> use{' '}
-          <code className="rounded bg-secondary px-1 text-xs">{`{user_id}/{niche}/{slug}.png`}</code>. Lists are paginated so
-          previews load in batches; use <strong className="text-foreground">Per page</strong> and page controls below to tune
-          traffic.
-        </p>
-      </div>
+      <p className="text-sm leading-relaxed text-muted-foreground">
+        In Storage you can use root folders per niche:{' '}
+        <code className="rounded bg-secondary px-1 text-xs">cooking/…</code>,{' '}
+        <code className="rounded bg-secondary px-1 text-xs">vlog/…</code>, etc. (folder name = niche code). Alternatively{' '}
+        <code className="rounded bg-secondary px-1 text-xs">system/&lt;niche&gt;/…</code> or set{' '}
+        <code className="rounded bg-secondary px-1 text-xs">niche</code> on the DB row. API uploads with{' '}
+        <code className="rounded bg-secondary px-1 text-xs">niche</code> use{' '}
+        <code className="rounded bg-secondary px-1 text-xs">{`{user_id}/{niche}/{slug}.png`}</code>. Lists are paginated so
+        previews load in batches; use <strong className="text-foreground">Per page</strong> and page controls below to tune
+        traffic.
+      </p>
 
       {hasSession && niches.length > 0 ? (
         <div className="flex flex-wrap items-center gap-2">

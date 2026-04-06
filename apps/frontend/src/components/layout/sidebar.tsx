@@ -203,9 +203,10 @@ export function Sidebar({
   return (
     <aside
       className={cn(
-        'relative flex h-full min-h-screen shrink-0 flex-col border-r border-border bg-sidebar',
+        'relative flex h-full min-h-screen shrink-0 flex-col overflow-visible border-r border-border bg-sidebar',
         'transition-[width] duration-300 ease-[var(--ease-standard)]',
-        inDrawer ? 'w-full min-h-0 border-0' : 'z-10 hidden lg:flex',
+        /* Above HeaderShell (z-30) so the collapse control on the edge isn’t clipped; below mobile drawer (z-40). */
+        inDrawer ? 'w-full min-h-0 border-0' : 'z-[35] hidden lg:flex',
         !inDrawer && (compact ? 'w-[4.5rem]' : 'w-72'),
       )}
     >
@@ -345,11 +346,14 @@ export function Sidebar({
           compact ? 'flex flex-col items-center gap-2 px-2 pb-3' : 'space-y-3 p-3',
         )}
       >
-        <SidebarCreditsBlock
-          collapsed={collapsed}
-          inDrawer={!!inDrawer}
-          onDrawerNavigate={inDrawer ? onClose : undefined}
-        />
+        {/* Credits live in AppShell header on lg+; keep block in drawer and collapsed sidebar tooltip. */}
+        <div className={cn(!inDrawer && 'lg:hidden')}>
+          <SidebarCreditsBlock
+            collapsed={collapsed}
+            inDrawer={!!inDrawer}
+            onDrawerNavigate={inDrawer ? onClose : undefined}
+          />
+        </div>
         <SidebarUserBlock collapsed={collapsed} inDrawer={!!inDrawer} />
       </div>
     </aside>

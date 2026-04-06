@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useNewProject } from '@/contexts/new-project-context';
 import { AppRoutes, AppSearchParams } from '@/config/routes';
 import { DashboardCreateHub } from '@/components/dashboard/dashboard-create-hub';
+import { SetPageFrame } from '@/components/layout/set-page-frame';
 
 function DashboardOpenNewProjectFromUrl() {
   const searchParams = useSearchParams();
@@ -27,13 +28,10 @@ function DashboardOpenNewProjectFromUrl() {
 export function DashboardClient() {
   return (
     <div className="space-y-8">
+      <SetPageFrame title="Dashboard" />
       <Suspense fallback={null}>
         <DashboardOpenNewProjectFromUrl />
       </Suspense>
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Dashboard</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Projects live in the sidebar.</p>
-      </header>
 
       <DashboardCreateHub />
     </div>

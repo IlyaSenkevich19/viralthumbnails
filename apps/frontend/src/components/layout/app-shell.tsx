@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useIsMutating } from '@tanstack/react-query';
 import { createProjectAndGenerateMutationKey } from '@/lib/hooks';
+import { PageFrameProvider } from '@/contexts/page-frame-context';
 import { Sidebar } from './sidebar';
 import { HeaderShell } from './header-shell';
 import { cn } from '@/lib/utils';
@@ -56,28 +57,30 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen flex-col bg-[var(--background)]">
-      <div className="flex flex-1 min-h-0">
+      <div className="flex flex-1 min-h-0 overflow-visible">
         <Sidebar
           collapsed={hydrated && sidebarCollapsed}
           onToggleCollapsed={toggleSidebarCollapsed}
         />
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <HeaderShell className="lg:hidden" onMobileMenuClick={openMobileSidebar} />
-          <main className="min-h-0 flex-1 overflow-auto">
-            <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
-              {creatingProject ? (
-                <div
-                  className="mb-4 rounded-lg border border-primary/25 bg-primary/5 px-4 py-2.5 text-sm text-foreground"
-                  role="status"
-                  aria-live="polite"
-                >
-                  Creating project and generating thumbnails…
-                </div>
-              ) : null}
-              {children}
-            </div>
-          </main>
-        </div>
+        <PageFrameProvider>
+          <div className="relative z-0 flex min-h-0 min-w-0 flex-1 flex-col">
+            <HeaderShell onMobileMenuClick={openMobileSidebar} />
+            <main className="min-h-0 flex-1 overflow-auto">
+              <div className="mx-auto w-full max-w-7xl px-4 pb-10 pt-6 sm:px-6 sm:pb-12 sm:pt-8 lg:px-10 lg:pb-14 lg:pt-10">
+                {creatingProject ? (
+                  <div
+                    className="mb-6 rounded-xl border border-primary/25 bg-primary/5 px-4 py-3 text-sm text-foreground"
+                    role="status"
+                    aria-live="polite"
+                  >
+                    Creating project and generating thumbnails…
+                  </div>
+                ) : null}
+                {children}
+              </div>
+            </main>
+          </div>
+        </PageFrameProvider>
       </div>
 
       {/* Mobile drawer: when closed, wrapper must not capture hits (z-40 sits above header z-30). */}

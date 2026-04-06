@@ -5,20 +5,13 @@ import { Check } from 'lucide-react';
 import { AppRoutes } from '@/config/routes';
 import { pricingPlans } from '@/config/pricing-plans';
 import { Button } from '@/components/ui/button';
+import { SetPageFrame } from '@/components/layout/set-page-frame';
 import { cn } from '@/lib/utils';
 
 export default function CreditsPricingPage() {
   return (
-    <div className="mx-auto max-w-7xl space-y-10 pb-8">
-      <div className="text-center">
-        <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-          Simple, creator-friendly pricing
-        </h1>
-        <p className="mx-auto mt-3 max-w-xl text-sm text-muted-foreground sm:text-base">
-          Plans and limits below are previews. Secure checkout (e.g. Stripe) will unlock upgrades and
-          top-ups once billing is connected.
-        </p>
-      </div>
+    <div className="space-y-10 pb-8">
+      <SetPageFrame title="Pricing & credits" />
 
       <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-center text-sm text-foreground">
         <strong className="font-semibold">Checkout not enabled yet.</strong>{' '}

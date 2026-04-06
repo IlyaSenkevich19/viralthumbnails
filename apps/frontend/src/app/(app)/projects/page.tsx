@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils';
 import { ConfirmationModal } from '@/components/ui/confirmation-modal';
 import { projectVariantsPath } from '@/config/routes';
 import { ProjectRowMenu } from '@/components/projects/project-row-menu';
+import { SetPageFrame } from '@/components/layout/set-page-frame';
 
 export default function ProjectsListPage() {
   const router = useRouter();
@@ -45,6 +46,7 @@ export default function ProjectsListPage() {
 
   return (
     <div className="space-y-6">
+      <SetPageFrame title="Projects" />
       <ConfirmationModal
         open={projectToDelete !== null}
         onOpenChange={(open) => {
@@ -67,11 +69,7 @@ export default function ProjectsListPage() {
         }}
       />
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground">Projects</h1>
-          <p className="text-sm text-muted-foreground">All thumbnail projects for your account.</p>
-        </div>
+      <div className="flex flex-wrap items-center justify-end gap-3">
         <Button type="button" className="inline-flex h-10 gap-2" onClick={() => openNewProject()}>
           <Plus className="h-4 w-4" aria-hidden />
           New project

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Sparkles } from 'lucide-react';
+import { Coins } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/auth-context';
 import { DEFAULT_TRIAL_GENERATION_CREDITS } from '@/config/credits';
@@ -86,9 +86,10 @@ export function SidebarCreditsBlock({
                 'from-amber-500/35 via-amber-500/18 to-amber-600/10 shadow-amber-500/20',
             )}
           >
-            <Sparkles
-              className={cn('h-2.5 w-2.5 shrink-0 text-primary', exhausted && 'text-amber-300')}
+            <Coins
+              className={cn('h-2.5 w-2.5 shrink-0 text-amber-200', exhausted && 'text-amber-300/90')}
               aria-hidden
+              strokeWidth={2.25}
             />
             <span className="text-[11px] font-bold tabular-nums leading-none text-white">{balance}</span>
             <span className="sr-only">{title}</span>
@@ -118,8 +119,8 @@ export function SidebarCreditsBlock({
         aria-hidden
       />
       <div className="relative flex items-start gap-3">
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/45">
-          <Sparkles className="h-5 w-5" aria-hidden />
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 text-amber-950 shadow-lg shadow-amber-900/40">
+          <Coins className="h-5 w-5" aria-hidden strokeWidth={2.25} />
         </span>
         <div className="min-w-0 flex-1 pt-0.5">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-primary">Credits</p>

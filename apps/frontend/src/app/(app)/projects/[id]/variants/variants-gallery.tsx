@@ -11,6 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { AppRoutes } from '@/config/routes';
 import { toast } from 'sonner';
+import { SetPageFrame } from '@/components/layout/set-page-frame';
 import { ProjectVariantsWorkspace } from '@/components/projects/project-variants-workspace';
 
 function WorkspaceSkeleton() {
@@ -94,14 +95,17 @@ function VariantsGalleryInner({ projectId }: { projectId: string }) {
   const refreshing = isFetching && !isPending;
 
   return (
-    <ProjectVariantsWorkspace
-      project={data}
-      projectId={projectId}
-      onRefresh={handleRefresh}
-      refreshing={refreshing}
-      initialTemplateId={initialTemplateId}
-      initialAvatarId={initialAvatarId}
-    />
+    <>
+      <SetPageFrame title={data.title} />
+      <ProjectVariantsWorkspace
+        project={data}
+        projectId={projectId}
+        onRefresh={handleRefresh}
+        refreshing={refreshing}
+        initialTemplateId={initialTemplateId}
+        initialAvatarId={initialAvatarId}
+      />
+    </>
   );
 }
 

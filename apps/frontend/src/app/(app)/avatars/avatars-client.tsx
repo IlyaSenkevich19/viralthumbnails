@@ -14,6 +14,7 @@ import { ConfirmationModal } from '@/components/ui/confirmation-modal';
 import { toast } from 'sonner';
 import { Trash2, Upload } from 'lucide-react';
 import { prepareAvatarImageFile } from '@/lib/prepare-avatar-image';
+import { SetPageFrame } from '@/components/layout/set-page-frame';
 
 function fileToBase64(file: File): Promise<{ base64: string; mimeType: string }> {
   return new Promise((resolve, reject) => {
@@ -79,13 +80,7 @@ export function AvatarsClient() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground">My faces</h1>
-        <p className="text-sm text-muted-foreground">
-          Upload a clear photo of your face. Later you can pick one of these avatars when generating thumbnails with face
-          swap.
-        </p>
-      </div>
+      <SetPageFrame title="My faces" />
 
       <Card>
         <CardHeader className="pb-3">

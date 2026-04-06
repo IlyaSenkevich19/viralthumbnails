@@ -26,7 +26,7 @@ export default function CreditsPricingPage() {
           <div
             key={plan.id}
             className={cn(
-              'relative flex flex-col rounded-2xl border border-border bg-card p-6 shadow-soft',
+              'surface relative flex flex-col rounded-2xl p-6',
               plan.featured &&
                 'border-primary/60 shadow-[0_0_0_1px_rgba(255,59,59,0.35),0_20px_50px_-24px_rgba(255,59,59,0.25)] lg:scale-[1.02] lg:py-7',
             )}

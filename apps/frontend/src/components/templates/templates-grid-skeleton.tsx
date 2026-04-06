@@ -23,7 +23,7 @@ export function TemplatesGridSkeleton({
   return (
     <div className={cn(gridClass, className)} aria-busy="true" aria-label="Loading templates">
       {Array.from({ length: n }, (_, i) => (
-        <div key={i} className="overflow-hidden rounded-xl border border-border bg-card">
+        <div key={i} className="surface overflow-hidden">
           <Skeleton className="aspect-video w-full rounded-none" />
           {variant === 'page' ? (
             <div className="space-y-2 p-3">

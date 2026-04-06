@@ -404,7 +404,7 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
                 {videoResult.thumbnails.map((t) => (
                   <li
                     key={`${t.storagePath}-${t.rank}`}
-                    className="overflow-hidden rounded-xl border border-border bg-card"
+                    className="surface overflow-hidden"
                   >
                     <a
                       href={t.signedUrl}

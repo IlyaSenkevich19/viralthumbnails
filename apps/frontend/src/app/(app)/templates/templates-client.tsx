@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo } from 'react';
+import { LayoutTemplate } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   NICHE_ALL,
@@ -209,23 +210,42 @@ export function TemplatesClient() {
         )
       ) : hasSession && items.length === 0 && total === 0 ? (
         <Card>
-          <CardContent className="py-8 text-sm text-muted-foreground">
-            {selectedNiche !== NICHE_ALL ? (
-              <>
-                No templates in <strong className="text-foreground">{nicheLabel(selectedNiche)}</strong>. Try
-                another niche or{' '}
-                <button type="button" className="text-primary underline" onClick={() => setNiche(NICHE_ALL)}>
-                  show all
-                </button>
-                .
-              </>
-            ) : (
-              <>
-                No templates found. Upload images in the Dashboard (bucket root,{' '}
-                <code className="rounded bg-secondary px-1 text-xs">system/</code>, or your user folder) or create via{' '}
-                <code className="rounded bg-secondary px-1 text-xs">POST /api/templates</code>.
-              </>
-            )}
+          <CardContent className="flex flex-col items-center gap-5 px-6 py-12 text-center sm:py-14">
+            <div
+              className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/15 text-primary ring-1 ring-primary/20"
+              aria-hidden
+            >
+              <LayoutTemplate className="h-7 w-7" strokeWidth={1.75} />
+            </div>
+            <div className="space-y-3">
+              {selectedNiche !== NICHE_ALL ? (
+                <>
+                  <p className="text-base font-semibold tracking-tight text-foreground">
+                    No templates in {nicheLabel(selectedNiche)}
+                  </p>
+                  <p className="mx-auto max-w-md text-sm leading-relaxed text-muted-foreground">
+                    Try another niche or{' '}
+                    <button
+                      type="button"
+                      className="font-medium text-primary underline-offset-2 hover:underline"
+                      onClick={() => setNiche(NICHE_ALL)}
+                    >
+                      show all
+                    </button>
+                    .
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-base font-semibold tracking-tight text-foreground">No templates yet</p>
+                  <p className="mx-auto max-w-md text-sm leading-relaxed text-muted-foreground">
+                    Upload layout images to Storage (root,{' '}
+                    <code className="rounded bg-secondary px-1.5 py-0.5 text-xs">system/</code>, or your user folder) or
+                    add them via <code className="rounded bg-secondary px-1.5 py-0.5 text-xs">POST /api/templates</code>.
+                  </p>
+                </>
+              )}
+            </div>
           </CardContent>
         </Card>
       ) : hasSession ? (

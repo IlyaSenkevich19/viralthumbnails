@@ -292,7 +292,7 @@ export function ProjectVariantsWorkspace({
             ) : null}
           </div>
 
-          <div className="space-y-4 rounded-xl border border-border bg-card/50 p-4">
+          <div className={cn('surface space-y-4 p-4', 'bg-card/50')}>
             <div className="space-y-1.5">
               <label htmlFor="variant-character" className="text-sm font-medium text-foreground">
                 Character (optional)
@@ -373,24 +373,38 @@ export function ProjectVariantsWorkspace({
 
           {variants.length === 0 ? (
             <Card>
-              <CardContent className="flex min-h-[200px] flex-col items-center justify-center gap-2 py-12 text-center text-sm text-muted-foreground">
-                <p>No variants yet.</p>
-                <p className="max-w-sm">
-                  Choose a template (optional), then tap <strong className="text-foreground">Generate thumbnails</strong>.
-                </p>
+              <CardContent className="flex min-h-[220px] flex-col items-center justify-center gap-4 px-6 py-12 text-center">
+                <div
+                  className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/15 text-primary ring-1 ring-primary/20"
+                  aria-hidden
+                >
+                  <Sparkles className="h-7 w-7" strokeWidth={1.75} />
+                </div>
+                <div className="space-y-2">
+                  <p className="text-base font-semibold tracking-tight text-foreground">No variants yet</p>
+                  <p className="mx-auto max-w-sm text-sm leading-relaxed text-muted-foreground">
+                    Pick a template on the left (optional), set face if you want, then{' '}
+                    <strong className="text-foreground/90">Generate thumbnails</strong>.
+                  </p>
+                </div>
               </CardContent>
             </Card>
           ) : (
             <>
-              <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+              <div className="surface overflow-hidden">
                 <div className="relative aspect-video max-h-[min(70vh,520px)] w-full bg-muted">
                   {previewUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={previewUrl}
-                      alt={`Selected thumbnail for ${project.title}`}
-                      className="h-full w-full object-contain"
-                    />
+                    <div
+                      key={selectedVariantId}
+                      className="vt-preview-reveal flex h-full w-full items-center justify-center"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={previewUrl}
+                        alt={`Selected thumbnail for ${project.title}`}
+                        className="max-h-full max-w-full object-contain"
+                      />
+                    </div>
                   ) : selectedVariant ? (
                     <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center text-sm text-muted-foreground">
                       {selectedVariant.status === 'failed' ? (
@@ -452,9 +466,10 @@ export function ProjectVariantsWorkspace({
               <div className="space-y-2">
                 <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">All variants</p>
                 <div className="flex gap-2 overflow-x-auto pb-1">
-                  {variants.map((v) => (
+                  {variants.map((v, i) => (
                     <VariantStripThumb
                       key={v.id}
+                      enterIndex={i}
                       variant={v}
                       projectTitle={project.title}
                       selected={v.id === selectedVariantId}
@@ -476,19 +491,22 @@ function VariantStripThumb({
   projectTitle,
   selected,
   onSelect,
+  enterIndex,
 }: {
   variant: ThumbnailVariantRow;
   projectTitle: string;
   selected: boolean;
   onSelect: () => void;
+  enterIndex: number;
 }) {
   const url = variant.generated_image_url;
   return (
     <button
       type="button"
       onClick={onSelect}
+      style={{ animationDelay: `${Math.min(enterIndex, 24) * 42}ms` }}
       className={cn(
-        'relative w-28 shrink-0 overflow-hidden rounded-lg border-2 bg-muted transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        'vt-variant-enter relative w-28 shrink-0 overflow-hidden rounded-lg border-2 bg-muted transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
         selected ? 'border-primary ring-2 ring-primary/20' : 'border-transparent ring-1 ring-border',
       )}
     >

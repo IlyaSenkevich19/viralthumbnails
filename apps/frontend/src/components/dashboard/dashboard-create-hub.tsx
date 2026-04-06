@@ -1,9 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Clapperboard, FolderKanban, Link2, Loader2, PenLine, Sparkles, Wand2 } from 'lucide-react';
+import {
+  ChevronDown,
+  Clapperboard,
+  FolderKanban,
+  Link2,
+  Loader2,
+  PenLine,
+  Sparkles,
+  Wand2,
+} from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import { useNewProject } from '@/contexts/new-project-context';
 import { AppRoutes, projectVariantsPath, projectVariantsSearchParams } from '@/config/routes';
@@ -81,6 +90,8 @@ export function DashboardCreateHub() {
   const [videoPrioritizeFace, setVideoPrioritizeFace] = useState(false);
   const [videoResult, setVideoResult] = useState<FromVideoResponse | null>(null);
   const [videoPreparing, setVideoPreparing] = useState(false);
+  const [moreOptionsOpen, setMoreOptionsOpen] = useState(false);
+  const [videoStylingOpen, setVideoStylingOpen] = useState(false);
 
   const [urlError, setUrlError] = useState('');
   const [describeError, setDescribeError] = useState('');
@@ -98,6 +109,18 @@ export function DashboardCreateHub() {
 
   const templateId = selectedTemplateId || undefined;
   const avatarId = selectedAvatarId || undefined;
+
+  useEffect(() => {
+    if (selectedTemplateId || selectedAvatarId) {
+      setMoreOptionsOpen(true);
+    }
+  }, [selectedTemplateId, selectedAvatarId]);
+
+  useEffect(() => {
+    if (videoStyle.trim() || videoPrompt.trim()) {
+      setVideoStylingOpen(true);
+    }
+  }, [videoStyle, videoPrompt]);
 
   const busyProject =
     mode === 'prompt' || mode === 'youtube' ? createAndGenerate.isPending : false;
@@ -228,20 +251,17 @@ export function DashboardCreateHub() {
   }
 
   return (
-    <section
-      className="rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8"
-      aria-labelledby="dashboard-create-heading"
-    >
+    <section className="surface-dashboard p-6 sm:p-8" aria-labelledby="dashboard-create-heading">
       <div className="max-w-3xl">
         <h2
           id="dashboard-create-heading"
           className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl"
         >
-          Create thumbnails
+          Create <span className="text-primary">thumbnails</span>
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Prompt, YouTube link, or video — optional template, face, and creative notes. Video runs save a
-          project and open variants when done.
+          Pick a starting point below. Template, face, and extra video styling stay under{' '}
+          <span className="font-medium text-foreground/90">More options</span> until you need them.
         </p>
       </div>
 
@@ -273,6 +293,10 @@ export function DashboardCreateHub() {
           </button>
         ))}
       </div>
+      <p className="mt-3 text-xs text-muted-foreground">
+        <span className="font-medium text-foreground/80">Tip:</span> Prompt is the fastest first try. YouTube and Video
+        add more context when you need it.
+      </p>
 
       <div className="mt-4">
         {mode === 'prompt' && (
@@ -338,8 +362,8 @@ export function DashboardCreateHub() {
                 onChange={(e) => setVideoFile(e.target.files?.[0] ?? null)}
               />
               <p className="text-xs text-muted-foreground">
-                Long uploads: first {VIDEO_ANALYSIS_MAX_SECONDS / 60} min are kept (trimmed in browser if needed). Very
-                large files: use a shorter clip or URL.
+                First {VIDEO_ANALYSIS_MAX_SECONDS / 60} min analyzed (trimmed in browser). Huge files: shorter clip or
+                URL.
               </p>
             </div>
             <div className="space-y-1.5">
@@ -354,134 +378,163 @@ export function DashboardCreateHub() {
                 inputMode="url"
               />
             </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <label htmlFor="dash-video-count" className="text-sm font-medium text-foreground">
-                  Count (1–12)
-                </label>
-                <Input
-                  id="dash-video-count"
-                  type="number"
-                  min={1}
-                  max={12}
-                  value={videoCount}
-                  onChange={(e) => setVideoCount(Number(e.target.value))}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label htmlFor="dash-video-style" className="text-sm font-medium text-foreground">
-                  Style hint (optional)
-                </label>
-                <Input
-                  id="dash-video-style"
-                  placeholder="e.g. bold title, neon"
-                  value={videoStyle}
-                  onChange={(e) => setVideoStyle(e.target.value)}
-                />
-              </div>
-            </div>
             <div className="space-y-1.5">
-              <label htmlFor="dash-video-prompt" className="text-sm font-medium text-foreground">
-                Creative direction (optional)
+              <label htmlFor="dash-video-count" className="text-sm font-medium text-foreground">
+                Thumbnail count (1–12)
               </label>
-              <textarea
-                id="dash-video-prompt"
-                rows={4}
-                placeholder="What should thumbnails emphasize? e.g. product close-up, shocked reaction, title about X…"
-                value={videoPrompt}
-                onChange={(e) => setVideoPrompt(e.target.value)}
-                className="w-full resize-y rounded-lg border border-input bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              <Input
+                id="dash-video-count"
+                type="number"
+                min={1}
+                max={12}
+                value={videoCount}
+                onChange={(e) => setVideoCount(Number(e.target.value))}
               />
-              <p className="text-xs text-muted-foreground">
-                Used in video analysis and in each generated thumbnail (separate from the short style hint).
-              </p>
             </div>
+
+            <details
+              className="group rounded-xl border border-border/80 bg-muted/15 [&_summary::-webkit-details-marker]:hidden"
+              open={videoStylingOpen}
+              onToggle={(e) => setVideoStylingOpen(e.currentTarget.open)}
+            >
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3.5 text-left motion-base hover:bg-muted/25">
+                <span>
+                  <span className="text-sm font-medium text-foreground">Video styling</span>
+                  <span className="mt-0.5 block text-xs text-muted-foreground">
+                    Optional style hint and creative direction for analysis
+                  </span>
+                </span>
+                <ChevronDown
+                  className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-open:rotate-180"
+                  aria-hidden
+                />
+              </summary>
+              <div className="space-y-4 border-t border-border/60 px-4 pb-4 pt-4">
+                <div className="space-y-1.5">
+                  <label htmlFor="dash-video-style" className="text-sm font-medium text-foreground">
+                    Style hint (optional)
+                  </label>
+                  <Input
+                    id="dash-video-style"
+                    placeholder="e.g. bold title, neon"
+                    value={videoStyle}
+                    onChange={(e) => setVideoStyle(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label htmlFor="dash-video-prompt" className="text-sm font-medium text-foreground">
+                    Creative direction (optional)
+                  </label>
+                  <textarea
+                    id="dash-video-prompt"
+                    rows={4}
+                    placeholder="What should thumbnails emphasize? e.g. product close-up, shocked reaction…"
+                    value={videoPrompt}
+                    onChange={(e) => setVideoPrompt(e.target.value)}
+                    className="w-full resize-y rounded-lg border border-input bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Used in analysis and each thumbnail (separate from the short style hint).
+                  </p>
+                </div>
+              </div>
+            </details>
           </div>
         )}
       </div>
 
-      <div className="mt-8 border-t border-border pt-6">
-        <p className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          Template & face
-        </p>
-        <p className="mb-3 text-xs text-muted-foreground">
-          Optional. Template and face are sent to the image model when you use{' '}
-          <strong className="font-medium text-foreground/90">Video</strong> (with your creative direction above) or
-          when you generate from Prompt / YouTube.
-        </p>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <label htmlFor="dash-template" className="text-sm font-medium text-foreground">
-              Template
-            </label>
-            <Select
-              value={selectedTemplateId || SELECT_EMPTY_VALUE}
-              onValueChange={(v) => setSelectedTemplateId(v === SELECT_EMPTY_VALUE ? '' : v)}
-              disabled={assetsBusy}
-            >
-              <SelectTrigger id="dash-template">
-                <SelectValue placeholder="None" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={SELECT_EMPTY_VALUE}>None</SelectItem>
-                {templates.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>
-                    {t.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <label htmlFor="dash-face" className="text-sm font-medium text-foreground">
-              Face
-            </label>
-            <Select
-              value={selectedAvatarId || SELECT_EMPTY_VALUE}
-              onValueChange={(v) => setSelectedAvatarId(v === SELECT_EMPTY_VALUE ? '' : v)}
-              disabled={assetsBusy}
-            >
-              <SelectTrigger id="dash-face">
-                <SelectValue placeholder="None" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={SELECT_EMPTY_VALUE}>None</SelectItem>
-                {avatars.map((a) => (
-                  <SelectItem key={a.id} value={a.id}>
-                    {a.name?.trim() ? a.name : a.id.slice(0, 8)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        {mode === 'video' && selectedAvatarId ? (
-          <label className="mt-3 flex cursor-pointer items-start gap-2 text-sm text-foreground">
-            <input
-              type="checkbox"
-              className="mt-0.5 h-4 w-4 rounded border-input"
-              checked={videoPrioritizeFace}
-              onChange={(e) => setVideoPrioritizeFace(e.target.checked)}
-            />
-            <span>
-              <span className="font-medium">Prioritize face likeness</span>
-              <span className="block text-xs text-muted-foreground">
-                Stress a recognizable match to your face reference in the thumbnails.
-              </span>
+      <details
+        className="group mt-8 border-t border-border pt-2 [&_summary::-webkit-details-marker]:hidden"
+        open={moreOptionsOpen}
+        onToggle={(e) => setMoreOptionsOpen(e.currentTarget.open)}
+      >
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-2 py-3 text-left motion-base hover:bg-secondary/30">
+          <span>
+            <span className="text-sm font-medium text-foreground">More options</span>
+            <span className="mt-0.5 block text-xs text-muted-foreground">
+              Template & face — optional for every mode; face checkbox applies to Video
             </span>
-          </label>
-        ) : null}
-        <p className="mt-2 text-xs text-muted-foreground">
-          <Link href={AppRoutes.templates} className="underline-offset-2 hover:underline">
-            All templates
-          </Link>
-          {' · '}
-          <Link href={AppRoutes.avatars} className="underline-offset-2 hover:underline">
-            My faces
-          </Link>
-          {!canLoadAssets ? ' · Sign in to load lists.' : null}
-        </p>
-      </div>
+          </span>
+          <ChevronDown
+            className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-open:rotate-180"
+            aria-hidden
+          />
+        </summary>
+        <div className="space-y-4 border-t border-border/70 pt-5">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <label htmlFor="dash-template" className="text-sm font-medium text-foreground">
+                Template
+              </label>
+              <Select
+                value={selectedTemplateId || SELECT_EMPTY_VALUE}
+                onValueChange={(v) => setSelectedTemplateId(v === SELECT_EMPTY_VALUE ? '' : v)}
+                disabled={assetsBusy}
+              >
+                <SelectTrigger id="dash-template">
+                  <SelectValue placeholder="None" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={SELECT_EMPTY_VALUE}>None</SelectItem>
+                  {templates.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <label htmlFor="dash-face" className="text-sm font-medium text-foreground">
+                Face
+              </label>
+              <Select
+                value={selectedAvatarId || SELECT_EMPTY_VALUE}
+                onValueChange={(v) => setSelectedAvatarId(v === SELECT_EMPTY_VALUE ? '' : v)}
+                disabled={assetsBusy}
+              >
+                <SelectTrigger id="dash-face">
+                  <SelectValue placeholder="None" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={SELECT_EMPTY_VALUE}>None</SelectItem>
+                  {avatars.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.name?.trim() ? a.name : a.id.slice(0, 8)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          {mode === 'video' && selectedAvatarId ? (
+            <label className="flex cursor-pointer items-start gap-2 text-sm text-foreground">
+              <input
+                type="checkbox"
+                className="mt-0.5 h-4 w-4 rounded border-input"
+                checked={videoPrioritizeFace}
+                onChange={(e) => setVideoPrioritizeFace(e.target.checked)}
+              />
+              <span>
+                <span className="font-medium">Prioritize face likeness</span>
+                <span className="block text-xs text-muted-foreground">
+                  Stronger match to your face reference in thumbnails.
+                </span>
+              </span>
+            </label>
+          ) : null}
+          <p className="text-xs text-muted-foreground">
+            <Link href={AppRoutes.templates} className="underline-offset-2 hover:underline">
+              All templates
+            </Link>
+            {' · '}
+            <Link href={AppRoutes.avatars} className="underline-offset-2 hover:underline">
+              My faces
+            </Link>
+            {!canLoadAssets ? ' · Sign in to load lists.' : null}
+          </p>
+        </div>
+      </details>
 
       {mode === 'video' && videoResult && videoResult.thumbnails.length > 0 && (
         <div className="mt-8 border-t border-border pt-6">
@@ -490,10 +543,11 @@ export function DashboardCreateHub() {
             Run <span className="font-mono text-[11px]">{videoResult.runId}</span>
           </p>
           <ul className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {videoResult.thumbnails.map((t) => (
+            {videoResult.thumbnails.map((t, i) => (
               <li
                 key={`${t.storagePath}-${t.rank}`}
-                className="overflow-hidden rounded-lg border border-border bg-background"
+                style={{ animationDelay: `${Math.min(i, 24) * 42}ms` }}
+                className="vt-variant-enter overflow-hidden rounded-lg border border-border bg-background"
               >
                 <a href={t.signedUrl} target="_blank" rel="noopener noreferrer" className="block">
                   {/* eslint-disable-next-line @next/next/no-img-element */}

@@ -82,7 +82,7 @@ export default function ProjectsListPage() {
         </p>
       )}
       {showSkeleton ? (
-        <div className="overflow-hidden rounded-xl border border-border">
+        <div className="surface overflow-hidden">
           <div className="divide-y divide-border bg-card">
             {[1, 2, 3, 4, 5].map((i) => (
               <div key={i} className="flex items-center gap-4 px-4 py-3">
@@ -98,17 +98,29 @@ export default function ProjectsListPage() {
         </div>
       ) : projects.length === 0 ? (
         <Card>
-          <CardContent className="flex flex-col items-center gap-4 py-16 text-center">
-            <FolderOpen className="h-12 w-12 text-muted-foreground opacity-50" aria-hidden />
-            <p className="text-sm text-muted-foreground">No projects yet.</p>
+          <CardContent className="flex flex-col items-center gap-5 px-6 py-14 text-center sm:py-16">
+            <div
+              className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/15 text-primary ring-1 ring-primary/20"
+              aria-hidden
+            >
+              <FolderOpen className="h-7 w-7" strokeWidth={1.75} />
+            </div>
+            <div className="space-y-2">
+              <p className="text-base font-semibold tracking-tight text-foreground">No projects yet</p>
+              <p className="mx-auto max-w-sm text-sm leading-relaxed text-muted-foreground">
+                Start from the dashboard with a prompt, YouTube link, or video — then open projects here to refine
+                variants.
+              </p>
+            </div>
             <Button type="button" className={buttonVariants()} onClick={() => openNewProject()}>
-              Create your first project
+              <Plus className="h-4 w-4" aria-hidden />
+              New project
             </Button>
           </CardContent>
         </Card>
       ) : (
         <>
-          <div className="hidden overflow-x-auto rounded-xl border border-border shadow-sm md:block">
+          <div className="surface hidden overflow-x-auto md:block">
             <table className="w-full min-w-[min(100%,720px)] text-left text-sm">
               <thead className="border-b border-border bg-card text-muted-foreground">
                 <tr>

@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ConfirmationModal } from '@/components/ui/confirmation-modal';
 import { toast } from 'sonner';
-import { Trash2, Upload } from 'lucide-react';
+import { Trash2, Upload, UserCircle } from 'lucide-react';
 import { prepareAvatarImageFile } from '@/lib/prepare-avatar-image';
 import { SetPageFrame } from '@/components/layout/set-page-frame';
 
@@ -127,7 +127,22 @@ export function AvatarsClient() {
       {loading ? (
         <p className="text-sm text-muted-foreground">Loading avatars…</p>
       ) : hasSession && items.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No saved faces yet. Upload one above.</p>
+        <Card>
+          <CardContent className="flex flex-col items-center gap-5 px-6 py-12 text-center sm:py-14">
+            <div
+              className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/15 text-primary ring-1 ring-primary/20"
+              aria-hidden
+            >
+              <UserCircle className="h-7 w-7" strokeWidth={1.75} />
+            </div>
+            <div className="space-y-2">
+              <p className="text-base font-semibold tracking-tight text-foreground">No saved faces yet</p>
+              <p className="mx-auto max-w-sm text-sm leading-relaxed text-muted-foreground">
+                Add a clear photo above — we&apos;ll use it as a reference when you generate thumbnails with your face.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       ) : hasSession && items.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((a) => (

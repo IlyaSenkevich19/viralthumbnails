@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Check } from 'lucide-react';
+import { Check, ChevronDown } from 'lucide-react';
 import { AppRoutes } from '@/config/routes';
 import { pricingPlans } from '@/config/pricing-plans';
 import { Button } from '@/components/ui/button';
@@ -98,83 +98,90 @@ export default function CreditsPricingPage() {
           className="pointer-events-none absolute -right-16 -top-20 h-52 w-52 rounded-full bg-primary/10 blur-3xl"
           aria-hidden
         />
-        <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-          <div className="relative">
-            <h3 className="text-base font-semibold text-foreground">Credits history</h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Last operations on your credit balance.
-            </p>
-          </div>
-          <div className="relative rounded-xl border border-primary/20 bg-primary/[0.08] px-3 py-1.5 text-sm">
-            Balance:{' '}
-            <span className="font-semibold tabular-nums text-foreground">{credits?.balance ?? '—'}</span>
-          </div>
+        <div className="relative flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2 border-b border-border/60 pb-4">
+          <h3 className="text-base font-semibold text-foreground">Your balance</h3>
+          <p className="text-sm tabular-nums text-muted-foreground">
+            <span className="sr-only">Current credits: </span>
+            <span className="text-2xl font-semibold tracking-tight text-foreground">
+              {credits?.balance ?? '—'}
+            </span>{' '}
+            <span className="text-xs font-medium uppercase tracking-wide">credits</span>
+          </p>
         </div>
 
-        <div className="relative overflow-x-auto rounded-xl border border-white/10 bg-black/15">
-          <table className="min-w-full text-sm">
-            <thead className="bg-white/[0.03] text-muted-foreground">
-              <tr>
-                <th className="px-4 py-2.5 text-left font-medium">Date</th>
-                <th className="px-4 py-2.5 text-left font-medium">Reason</th>
-                <th className="px-4 py-2.5 text-left font-medium">Reference</th>
-                <th className="px-4 py-2.5 text-right font-medium">Delta</th>
-                <th className="px-4 py-2.5 text-right font-medium">Balance after</th>
-              </tr>
-            </thead>
-            <tbody>
-              {ledgerPending ? (
+        <details className="group relative [&_summary::-webkit-details-marker]:hidden">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 py-4 text-left motion-base rounded-lg outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 -mx-1 px-1 hover:bg-muted/25">
+            <span>
+              <span className="text-sm font-medium text-foreground">Credits history</span>
+              <span className="mt-0.5 block text-xs text-muted-foreground">
+                Tap to show or hide recent balance changes
+              </span>
+            </span>
+            <ChevronDown
+              className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-open:rotate-180"
+              aria-hidden
+            />
+          </summary>
+          <div className="overflow-x-auto pb-1 pt-1">
+            <table className="min-w-full text-sm">
+              <thead className="border-b border-border/50 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 <tr>
-                  <td className="px-4 py-8 text-center text-muted-foreground/90" colSpan={5}>
-                    Loading history...
-                  </td>
+                  <th className="py-2.5 pr-3 font-medium">Date</th>
+                  <th className="py-2.5 pr-3 font-medium">Reason</th>
+                  <th className="py-2.5 pr-3 font-medium">Reference</th>
+                  <th className="py-2.5 pr-2 text-right font-medium">Delta</th>
+                  <th className="py-2.5 pl-2 text-right font-medium">After</th>
                 </tr>
-              ) : !ledger || ledger.length === 0 ? (
-                <tr>
-                  <td className="px-4 py-8 text-center text-muted-foreground/90" colSpan={5}>
-                    No credit operations yet.
-                  </td>
-                </tr>
-              ) : (
-                ledger.map((item) => {
-                  const isPositive = item.delta > 0;
-                  const reasonLabel = REASON_LABEL[item.reason] ?? item.reason;
-                  const reference = item.reference_type
-                    ? `${item.reference_type}${item.reference_id ? `:${item.reference_id}` : ''}`
-                    : '—';
-                  return (
-                    <tr
-                      key={item.id}
-                      className="border-t border-white/10 transition-colors hover:bg-white/[0.02]"
-                    >
-                      <td className="px-4 py-3 text-muted-foreground">
-                        {new Date(item.created_at).toLocaleString()}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="inline-flex rounded-md border border-white/10 bg-white/[0.03] px-2 py-0.5 text-xs text-foreground/90">
-                          {reasonLabel}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{reference}</td>
-                      <td
-                        className={cn(
-                          'px-4 py-3 text-right font-semibold tabular-nums',
-                          isPositive ? 'text-emerald-300' : 'text-foreground',
-                        )}
-                      >
-                        {isPositive ? '+' : ''}
-                        {item.delta}
-                      </td>
-                      <td className="px-4 py-3 text-right tabular-nums text-foreground/95">
-                        {item.balance_after}
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-border/40">
+                {ledgerPending ? (
+                  <tr>
+                    <td className="py-8 text-center text-muted-foreground" colSpan={5}>
+                      Loading history…
+                    </td>
+                  </tr>
+                ) : !ledger || ledger.length === 0 ? (
+                  <tr>
+                    <td className="py-8 text-center text-muted-foreground" colSpan={5}>
+                      No credit operations yet.
+                    </td>
+                  </tr>
+                ) : (
+                  ledger.map((item) => {
+                    const isPositive = item.delta > 0;
+                    const reasonLabel = REASON_LABEL[item.reason] ?? item.reason;
+                    const reference = item.reference_type
+                      ? `${item.reference_type}${item.reference_id ? `:${item.reference_id}` : ''}`
+                      : '—';
+                    return (
+                      <tr key={item.id} className="transition-colors hover:bg-muted/20">
+                        <td className="py-3 pr-3 text-muted-foreground">
+                          {new Date(item.created_at).toLocaleString()}
+                        </td>
+                        <td className="py-3 pr-3">
+                          <span className="inline-flex rounded-md bg-muted/60 px-2 py-0.5 text-xs font-medium text-foreground/90">
+                            {reasonLabel}
+                          </span>
+                        </td>
+                        <td className="py-3 pr-3 font-mono text-xs text-muted-foreground">{reference}</td>
+                        <td
+                          className={cn(
+                            'py-3 pr-2 text-right font-semibold tabular-nums',
+                            isPositive ? 'text-emerald-500 dark:text-emerald-400' : 'text-foreground',
+                          )}
+                        >
+                          {isPositive ? '+' : ''}
+                          {item.delta}
+                        </td>
+                        <td className="py-3 pl-2 text-right tabular-nums text-foreground">{item.balance_after}</td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </details>
       </section>
 
       <p className="text-center text-xs text-muted-foreground">

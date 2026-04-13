@@ -1,33 +1,18 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import Link from 'next/link';
-import { X } from 'lucide-react';
 import { AppRoutes } from '@/config/routes';
-import { DEFAULT_TRIAL_GENERATION_CREDITS } from '@/config/credits';
 import { useGenerationCredits } from '@/lib/hooks/use-generation-credits';
 import { emitPaywallFunnelEvent } from '@/lib/paywall-funnel';
 import { buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
-const STORAGE_TRIAL_BANNER = 'vt_trial_paywall_banner_dismissed';
 const SESSION_LOW_CREDITS = 'vt_low_credits_toast_shown';
 
-/**
- * Dashboard-only surfaces: explain trial / paid model, warn at 0 credits, soft hint at 1 credit.
- */
 export function TrialPaywallSurfaces() {
   const { data: credits, isPending, isError } = useGenerationCredits();
-  const [trialDismissed, setTrialDismissed] = useState(false);
-
-  useEffect(() => {
-    try {
-      setTrialDismissed(window.localStorage.getItem(STORAGE_TRIAL_BANNER) === '1');
-    } catch {
-      setTrialDismissed(false);
-    }
-  }, []);
 
   useEffect(() => {
     if (isPending || isError || !credits) return;
@@ -52,8 +37,7 @@ export function TrialPaywallSurfaces() {
 
   if (isPending || isError || !credits) return null;
 
-  const { balance, totalGranted } = credits;
-  const isTrialSizing = totalGranted <= DEFAULT_TRIAL_GENERATION_CREDITS;
+  const { balance } = credits;
 
   if (balance <= 0) {
     return (
@@ -78,45 +62,5 @@ export function TrialPaywallSurfaces() {
     );
   }
 
-  if (trialDismissed) return null;
-
-  const headline = isTrialSizing
-    ? 'You’re on trial credits'
-    : 'Credit-based app — no subscription';
-  const body = isTrialSizing
-    ? `You have ${balance} generation credit${balance === 1 ? '' : 's'} left to explore. After that, use one-time credit packs whenever you need more.`
-    : `You have ${balance} credit${balance === 1 ? '' : 's'}. Top up with a pack anytime — pay per use, no monthly plan.`;
-
-  return (
-    <div
-      className={cn(
-        'relative rounded-xl border border-primary/25 bg-primary/[0.08] px-4 py-3 pr-10 text-sm text-foreground',
-      )}
-    >
-      <p className="font-medium text-foreground">{headline}</p>
-      <p className="mt-1 text-muted-foreground leading-snug">{body}</p>
-      <Link
-        href={AppRoutes.credits}
-        className="mt-2 inline-block text-sm font-medium text-primary underline-offset-4 hover:underline"
-      >
-        Credit packs
-      </Link>
-      <button
-        type="button"
-        className="absolute right-2 top-2 rounded-md p-1 text-muted-foreground transition-colors hover:bg-background/60 hover:text-foreground"
-        aria-label="Dismiss"
-        onClick={() => {
-          try {
-            window.localStorage.setItem(STORAGE_TRIAL_BANNER, '1');
-          } catch {
-            /* ignore */
-          }
-          setTrialDismissed(true);
-          emitPaywallFunnelEvent('trial_banner_dismissed');
-        }}
-      >
-        <X className="h-4 w-4" />
-      </button>
-    </div>
-  );
+  return null;
 }

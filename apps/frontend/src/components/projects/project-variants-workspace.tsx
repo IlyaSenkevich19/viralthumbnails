@@ -530,8 +530,11 @@ function VariantStripThumb({
       onClick={onSelect}
       style={{ animationDelay: `${Math.min(enterIndex, 24) * 42}ms` }}
       className={cn(
-        'vt-variant-enter relative w-28 shrink-0 overflow-hidden rounded-lg border-2 bg-muted transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-        selected ? 'border-primary ring-2 ring-primary/20' : 'border-transparent ring-1 ring-border',
+        'vt-variant-enter relative w-28 shrink-0 overflow-hidden rounded-lg border-2 bg-muted transition-[border-color,box-shadow]',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+        selected
+          ? 'border-primary shadow-sm shadow-primary/10 focus-visible:ring-primary/50'
+          : 'border-border/50 hover:border-border focus-visible:ring-ring',
       )}
     >
       <div className="aspect-video w-full">

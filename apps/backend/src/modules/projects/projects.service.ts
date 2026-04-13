@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -215,15 +216,40 @@ export class ProjectsService {
     prioritizeFace?: boolean,
   ) {
     const project = await this.getByIdForUser(projectId, userId);
-    return this.projectGeneration.generateThumbnailVariants(
-      project as Record<string, unknown>,
-      projectId,
-      userId,
-      templateId,
-      count,
-      avatarId,
-      prioritizeFace,
-    );
+    const wasDraft = (project as { status?: string }).status === 'draft';
+    let removedAfterAllFailed = false;
+
+    try {
+      const result = await this.projectGeneration.generateThumbnailVariants(
+        project as Record<string, unknown>,
+        projectId,
+        userId,
+        templateId,
+        count,
+        avatarId,
+        prioritizeFace,
+      );
+      const done = result.results.filter((r) => r.status === 'done').length;
+      if (wasDraft && done === 0) {
+        await this.deleteProject(projectId, userId);
+        removedAfterAllFailed = true;
+        throw new BadRequestException({
+          code: 'INITIAL_GENERATION_ALL_FAILED',
+          message:
+            'No thumbnails could be generated. Credits were refunded — try a different prompt or template.',
+        });
+      }
+      return result;
+    } catch (err) {
+      if (wasDraft && !removedAfterAllFailed) {
+        try {
+          await this.deleteProject(projectId, userId);
+        } catch {
+          /* best-effort cleanup for orphan draft after hard failure */
+        }
+      }
+      throw err;
+    }
   }
 
   private signProjectRow<T extends Record<string, unknown>>(row: T): Promise<T> {

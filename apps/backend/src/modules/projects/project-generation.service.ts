@@ -46,7 +46,7 @@ export class ProjectGenerationService {
     const createdIds: string[] = [];
 
     try {
-      for (let i = 0; i < count; i++) {
+      for (let i = 0; i < safeCount; i++) {
         const { data: row, error } = await client
           .from('thumbnail_variants')
           .insert({

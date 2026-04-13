@@ -34,7 +34,7 @@ export function HeaderCreditsLink({ className }: { className?: string }) {
         'lg:h-10 lg:max-w-[11rem] lg:gap-2 lg:px-3.5 lg:text-[13px]',
         className,
       )}
-      aria-label={`${label}. View plans and top up.`}
+      aria-label={`${label}. View credit packs and top up.`}
     >
       <span
         className={cn(

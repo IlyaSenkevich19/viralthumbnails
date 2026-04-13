@@ -7,6 +7,7 @@ export const ApiRoutes = {
   health: '/health',
   billing: {
     credits: '/billing/credits',
+    creditsLedger: '/billing/credits/ledger',
   },
   templates: {
     root: '/templates',

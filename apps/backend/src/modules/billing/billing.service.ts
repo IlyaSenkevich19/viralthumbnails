@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 
-const DEFAULT_CREDITS = { balance: 3, quota: 3 };
+const DEFAULT_CREDITS = { balance: 3, totalGranted: 3 };
 const RESERVE_RETRY = 8;
 
 /**
@@ -24,6 +24,30 @@ export class BillingService {
   private readonly logger = new Logger(BillingService.name);
 
   constructor(private readonly supabase: SupabaseService) {}
+
+  private async appendCreditLedgerEntry(params: {
+    userId: string;
+    delta: number;
+    balanceAfter: number;
+    reason: 'trial_grant' | 'purchase' | 'reserve' | 'refund' | 'manual_adjustment';
+    referenceType?: string;
+    referenceId?: string;
+    metadata?: Record<string, unknown>;
+  }): Promise<void> {
+    const client = this.supabase.getAdminClient();
+    const { error } = await client.from('credit_ledger').insert({
+      user_id: params.userId,
+      delta: params.delta,
+      balance_after: params.balanceAfter,
+      reason: params.reason,
+      reference_type: params.referenceType ?? null,
+      reference_id: params.referenceId ?? null,
+      metadata: params.metadata ?? {},
+    });
+    if (error) {
+      this.logger.warn(`credit_ledger insert failed: ${error.message}`);
+    }
+  }
 
   /** @see creditsForVideoPipeline */
   videoPipelineCreditCost(requestedThumbnailCount: number): number {
@@ -56,7 +80,11 @@ export class BillingService {
     throw new InternalServerErrorException(insErr.message);
   }
 
-  async reserveGenerationCredits(userId: string, amount: number): Promise<void> {
+  async reserveGenerationCredits(
+    userId: string,
+    amount: number,
+    context?: { referenceType?: string; referenceId?: string },
+  ): Promise<void> {
     if (amount <= 0) return;
     await this.ensureProfileRow(userId);
     const client = this.supabase.getAdminClient();
@@ -93,7 +121,18 @@ export class BillingService {
         .select('id')
         .maybeSingle();
       if (upErr) throw new InternalServerErrorException(upErr.message);
-      if (updated) return;
+      if (updated) {
+        await this.appendCreditLedgerEntry({
+          userId,
+          delta: -amount,
+          balanceAfter: bal - amount,
+          reason: 'reserve',
+          referenceType: context?.referenceType,
+          referenceId: context?.referenceId,
+          metadata: { amount },
+        });
+        return;
+      }
     }
 
     throw new ConflictException({
@@ -103,7 +142,11 @@ export class BillingService {
   }
 
   /** Increments balance (e.g. refund unused reserved credits). Best-effort compare-and-swap. */
-  async refundGenerationCredits(userId: string, amount: number): Promise<void> {
+  async refundGenerationCredits(
+    userId: string,
+    amount: number,
+    context?: { referenceType?: string; referenceId?: string },
+  ): Promise<void> {
     if (amount <= 0) return;
     const client = this.supabase.getAdminClient();
 
@@ -133,7 +176,18 @@ export class BillingService {
         this.logger.warn(`refund update failed: ${upErr.message}`);
         return;
       }
-      if (updated) return;
+      if (updated) {
+        await this.appendCreditLedgerEntry({
+          userId,
+          delta: amount,
+          balanceAfter: bal + amount,
+          reason: 'refund',
+          referenceType: context?.referenceType,
+          referenceId: context?.referenceId,
+          metadata: { amount },
+        });
+        return;
+      }
     }
     this.logger.warn(`refund gave up after ${RESERVE_RETRY} attempts for user ${userId}`);
   }
@@ -143,14 +197,44 @@ export class BillingService {
     const client = this.supabase.getAdminClient();
     const { data, error } = await client
       .from('profiles')
-      .select('generation_credits_balance, generation_credits_quota')
+      .select(
+        'generation_credits_balance, generation_credits_total_granted, generation_credits_quota',
+      )
       .eq('id', userId)
       .maybeSingle();
     if (error) throw new InternalServerErrorException(error.message);
     if (!data) return DEFAULT_CREDITS;
     return {
       balance: data.generation_credits_balance as number,
-      quota: data.generation_credits_quota as number,
+      totalGranted:
+        (data.generation_credits_total_granted as number | null) ??
+        (data.generation_credits_quota as number | null) ??
+        DEFAULT_CREDITS.totalGranted,
     };
+  }
+
+  async getCreditLedger(userId: string, limit = 30) {
+    const client = this.supabase.getAdminClient();
+    const safeLimit = Math.min(100, Math.max(1, Math.floor(limit)));
+    const { data, error } = await client
+      .from('credit_ledger')
+      .select(
+        'id, delta, balance_after, reason, reference_type, reference_id, metadata, created_at',
+      )
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(safeLimit);
+
+    if (error) throw new InternalServerErrorException(error.message);
+    return (data ?? []) as Array<{
+      id: string;
+      delta: number;
+      balance_after: number;
+      reason: 'trial_grant' | 'purchase' | 'reserve' | 'refund' | 'manual_adjustment';
+      reference_type: string | null;
+      reference_id: string | null;
+      metadata: Record<string, unknown>;
+      created_at: string;
+    }>;
   }
 }

@@ -42,7 +42,7 @@ export function SidebarCreditsBlock({
           onClick={() => {
             if (inDrawer && pathname === AppRoutes.credits) onDrawerNavigate?.();
           }}
-          aria-label="Credits — view plans and top up"
+          aria-label="Credits — view credit packs and top up"
           className={cn(
             creditsLinkFocus,
             compact ? 'flex w-full justify-center rounded-xl' : 'block w-full rounded-2xl',
@@ -60,13 +60,13 @@ export function SidebarCreditsBlock({
 
   const fallback = {
     balance: DEFAULT_TRIAL_GENERATION_CREDITS,
-    quota: DEFAULT_TRIAL_GENERATION_CREDITS,
+    totalGranted: DEFAULT_TRIAL_GENERATION_CREDITS,
   };
   const effective = isError || !data ? fallback : data;
-  const { balance, quota } = effective;
+  const { balance, totalGranted } = effective;
   const exhausted = balance <= 0;
-  const showQuota = quota !== balance;
-  const title = `${balance} credits${showQuota ? ` of ${quota}` : ''}`;
+  const showGranted = totalGranted > balance;
+  const title = `${balance} credits${showGranted ? ` of ${totalGranted}` : ''}`;
 
   if (compact) {
     return (
@@ -77,7 +77,7 @@ export function SidebarCreditsBlock({
             onClick={() => {
               if (inDrawer && pathname === AppRoutes.credits) onDrawerNavigate?.();
             }}
-            aria-label="Credits — view plans and top up"
+            aria-label="Credits — view credit packs and top up"
             className={cn(
               creditsLinkFocus,
               'flex size-10 shrink-0 flex-col items-center justify-center gap-0 rounded-xl bg-gradient-to-br from-primary/40 via-primary/22 to-primary/10 text-center shadow-md shadow-primary/25',
@@ -105,7 +105,7 @@ export function SidebarCreditsBlock({
       onClick={() => {
         if (inDrawer && pathname === AppRoutes.credits) onDrawerNavigate?.();
       }}
-      aria-label="Credits — view plans and top up"
+      aria-label="Credits — view credit packs and top up"
       className={cn(
         creditsLinkFocus,
         'relative block overflow-hidden rounded-2xl bg-gradient-to-br from-primary/35 from-10% via-primary/[0.14] to-transparent p-4 shadow-[0_0_40px_-10px_rgba(255,59,59,0.55)]',
@@ -126,12 +126,12 @@ export function SidebarCreditsBlock({
           <p className="text-[11px] font-semibold uppercase tracking-wider text-primary">Credits</p>
           <p className="mt-1 text-3xl font-bold tabular-nums tracking-tight text-white">
             {balance}
-            {showQuota ? (
-              <span className="text-lg font-semibold text-white/45"> / {quota}</span>
+            {showGranted ? (
+              <span className="text-lg font-semibold text-white/45"> / {totalGranted}</span>
             ) : null}
           </p>
           {exhausted ? (
-            <p className="mt-1 text-xs leading-snug text-muted-foreground">Upgrade to add more credits</p>
+            <p className="mt-1 text-xs leading-snug text-muted-foreground">Buy a credit pack to add more credits</p>
           ) : null}
         </div>
       </div>

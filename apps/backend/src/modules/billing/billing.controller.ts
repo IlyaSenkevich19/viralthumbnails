@@ -16,4 +16,9 @@ export class BillingController {
   credits(@CurrentUser() userId: string) {
     return this.billing.getGenerationCredits(userId);
   }
+
+  @Get('credits/ledger')
+  creditsLedger(@CurrentUser() userId: string) {
+    return this.billing.getCreditLedger(userId);
+  }
 }

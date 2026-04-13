@@ -133,7 +133,7 @@ SQL migrations live in the monorepo: **`supabase/migrations/`**. Apply them in t
 
 ### `profiles` and generation credits
 
-- **`001`** creates `public.profiles`; **`003_generation_credits.sql`** adds `generation_credits_balance` / `quota` (defaults **3**).
+- **`001`** creates `public.profiles`; **`003_generation_credits.sql`** adds `generation_credits_balance`; **`008_credit_ledger_and_credit_model_cleanup.sql`** adds `generation_credits_total_granted` + `credit_ledger` (defaults **3**).
 - New users only appear in **`auth.users`** until a matching **`profiles`** row exists. **`007_profiles_auto_create.sql`** defines **`handle_new_user`** on **`AFTER INSERT ON auth.users`** and **backfills** any existing auth users without a profile.
 - If you skipped **007**, the API used to error with *“No profile row for this account”* on reserve credits. The backend now **lazy-inserts** a `profiles` row via the service role when needed, but you should still run **007** in production so the DB stays consistent and triggers work for all new signups.
 

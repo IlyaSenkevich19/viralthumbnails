@@ -58,7 +58,10 @@ export class FromVideoThumbnailsService {
     const runId = randomUUID();
     const count = Math.min(12, Math.max(1, params.count ?? 4));
     const creditCost = this.billing.videoPipelineCreditCost(count);
-    await this.billing.reserveGenerationCredits(params.userId, creditCost);
+    await this.billing.reserveGenerationCredits(params.userId, creditCost, {
+      referenceType: 'from_video_run',
+      referenceId: runId,
+    });
 
     let tempPath: string | undefined;
 
@@ -152,7 +155,10 @@ export class FromVideoThumbnailsService {
       };
     } catch (e) {
       try {
-        await this.billing.refundGenerationCredits(params.userId, creditCost);
+        await this.billing.refundGenerationCredits(params.userId, creditCost, {
+          referenceType: 'from_video_run',
+          referenceId: runId,
+        });
       } catch {
         /* best-effort; BillingService logs */
       }

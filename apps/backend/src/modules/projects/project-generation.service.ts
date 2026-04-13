@@ -27,7 +27,10 @@ export class ProjectGenerationService {
     avatarId?: string,
     prioritizeFace?: boolean,
   ) {
-    await this.billing.reserveGenerationCredits(userId, count);
+    await this.billing.reserveGenerationCredits(userId, count, {
+      referenceType: 'project',
+      referenceId: projectId,
+    });
 
     const client = this.supabase.getAdminClient();
     const now = () => new Date().toISOString();
@@ -103,14 +106,20 @@ export class ProjectGenerationService {
 
       const doneCount = results.filter((r) => r.status === 'done').length;
       try {
-        await this.billing.refundGenerationCredits(userId, count - doneCount);
+        await this.billing.refundGenerationCredits(userId, count - doneCount, {
+          referenceType: 'project',
+          referenceId: projectId,
+        });
       } catch {
         /* refund is best-effort; logged inside BillingService */
       }
 
       return { variant_ids: createdIds, results };
     } catch (e) {
-      await this.billing.refundGenerationCredits(userId, count);
+      await this.billing.refundGenerationCredits(userId, count, {
+        referenceType: 'project',
+        referenceId: projectId,
+      });
       const msg = e instanceof Error ? e.message : 'Generation failed';
       if (createdIds.length > 0) {
         await client

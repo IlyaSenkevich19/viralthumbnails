@@ -12,7 +12,7 @@ const STATIC_PAGE_FRAMES: Record<string, PageFrameState> = {
   [AppRoutes.templates]: { title: 'Templates', eyebrow: null },
   [AppRoutes.avatars]: { title: 'My faces', eyebrow: null },
   [AppRoutes.settings]: { title: 'Settings', eyebrow: null },
-  [AppRoutes.credits]: { title: 'Pricing & credits', eyebrow: null },
+  [AppRoutes.credits]: { title: 'Credit packs', eyebrow: null },
   [AppRoutes.adminYoutubeInspiration]: {
     eyebrow: 'Admin',
     title: 'YouTube inspiration',

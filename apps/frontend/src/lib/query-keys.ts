@@ -27,6 +27,7 @@ export const queryKeys = {
   billing: {
     all: ['billing'] as const,
     credits: (userId: string) => [...queryKeys.billing.all, 'credits', userId] as const,
+    creditsLedger: (userId: string) => [...queryKeys.billing.all, 'credits-ledger', userId] as const,
   },
 
   auth: {

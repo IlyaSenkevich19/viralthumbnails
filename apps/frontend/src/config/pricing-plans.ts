@@ -2,8 +2,8 @@ export type PricingPlan = {
   id: string;
   name: string;
   price: string;
-  period?: string;
   description: string;
+  credits: number;
   features: string[];
   cta: string;
   /** outline = ghost border, primary = coral CTA, featured = border + badge + gold CTA */
@@ -14,69 +14,66 @@ export type PricingPlan = {
 
 export const pricingPlans: PricingPlan[] = [
   {
-    id: 'free',
-    name: 'Free',
+    id: 'trial',
+    name: 'Trial',
     price: '$0',
-    description: 'Try it out — zero commitment.',
+    credits: 3,
+    description: 'Try the product with a small free balance.',
     features: [
-      'Trial generation credits',
-      'Core templates',
-      'Watermarked exports (when enabled)',
-      'Community support',
+      '3 trial credits',
+      'Core generation flow',
+      'Templates and face references',
+      'No commitment',
     ],
     cta: 'Start Free',
     ctaStyle: 'outline',
   },
   {
-    id: 'starter',
-    name: 'Starter',
+    id: 'pack_100',
+    name: 'Pack 100',
     price: '$19',
-    period: '/mo',
-    description: 'For creators uploading 1–2 videos/week.',
+    credits: 100,
+    description: 'One-time credits for regular creators.',
     features: [
-      'Monthly generation credits',
+      '100 one-time credits',
+      'Prompt, YouTube URL, and video inputs',
       'All templates',
-      'Canva import (when available)',
-      'No watermark',
-      'Email support',
+      'No subscription',
     ],
-    cta: 'Get Starter',
+    cta: 'Buy 100 credits',
     ctaStyle: 'primary',
   },
   {
-    id: 'pro',
-    name: 'Pro',
+    id: 'pack_300',
+    name: 'Pack 300',
     price: '$49',
-    period: '/mo',
-    description: 'For serious creators who want max CTR.',
+    credits: 300,
+    description: 'Best value for frequent generation sessions.',
     features: [
-      'Higher monthly credits',
+      '300 one-time credits',
+      'Lower effective cost per thumbnail',
       'Video-to-thumbnail pipeline',
-      'Custom branding',
-      'Priority support',
-      'Advanced analytics',
-      'No watermark',
+      'Priority queue (when enabled)',
     ],
-    cta: 'Get Pro',
+    cta: 'Buy 300 credits',
     ctaStyle: 'gold',
     featured: true,
-    badge: 'Most Popular',
+    badge: 'Best Value',
   },
   {
-    id: 'agency',
-    name: 'Agency',
+    id: 'pack_700',
+    name: 'Pack 700',
     price: '$99',
-    period: '/mo',
-    description: 'For teams managing multiple channels.',
+    credits: 700,
+    description: 'High-volume package for power users and teams.',
     features: [
-      'Highest credit pools',
-      'Team access (5 seats)',
-      'API access (when launched)',
-      'White-label exports',
-      'Dedicated support',
-      'All Pro features',
+      '700 one-time credits',
+      'Bulk ideation in multiple styles',
+      'Team workflows (when enabled)',
+      'Dedicated support channel',
     ],
-    cta: 'Get Agency',
+    cta: 'Buy 700 credits',
     ctaStyle: 'primary',
   },
 ];
+

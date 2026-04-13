@@ -1,7 +1,9 @@
 import {
   Body,
   Controller,
+  Get,
   Post,
+  Query,
   UploadedFile,
   UseGuards,
   UseInterceptors,
@@ -14,8 +16,11 @@ import { THROTTLE_VIDEO_FROM } from '../../common/throttle/throttle-limits';
 import { UserIdThrottlerGuard } from '../../common/throttle/user-id-throttler.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { SupabaseGuard } from '../auth/guards/supabase.guard';
+import { GetVideoMetaDto } from './dto/get-video-meta.dto';
 import { FromVideoBodyDto } from './dto/from-video-body.dto';
+import { ParseVideoUrlQueryDto } from './dto/parse-video-url-query.dto';
 import { FromVideoThumbnailsService } from './from-video-thumbnails.service';
+import { YoutubeVideoMetaService } from './services/youtube-video-meta.service';
 import type { UploadedVideoFile } from './types/upload.types';
 
 const VIDEO_UPLOAD_LIMIT_BYTES = 80 * 1024 * 1024;
@@ -25,7 +30,20 @@ const VIDEO_UPLOAD_LIMIT_BYTES = 80 * 1024 * 1024;
 @Controller(ApiControllerPaths.thumbnails)
 @UseGuards(SupabaseGuard)
 export class VideoThumbnailsController {
-  constructor(private readonly fromVideo: FromVideoThumbnailsService) {}
+  constructor(
+    private readonly fromVideo: FromVideoThumbnailsService,
+    private readonly youtubeMeta: YoutubeVideoMetaService,
+  ) {}
+
+  @Get('parse-url')
+  parseVideoUrl(@Query() query: ParseVideoUrlQueryDto) {
+    return this.youtubeMeta.parseUrl(query.url);
+  }
+
+  @Post('get-video-meta')
+  getVideoMeta(@Body() body: GetVideoMetaDto) {
+    return this.youtubeMeta.getVideoMeta(body.video_url);
+  }
 
   @Post('from-video')
   @ApiConsumes('multipart/form-data')

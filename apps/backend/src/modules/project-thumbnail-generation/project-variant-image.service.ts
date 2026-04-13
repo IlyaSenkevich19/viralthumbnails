@@ -26,7 +26,23 @@ type GeneratedImage =
   | { kind: 'bytes'; buffer: Buffer; contentType: string }
   | { kind: 'external'; url: string };
 
+type YoutubeVideoMeta = {
+  title?: string;
+  author?: string;
+  thumbnailUrl?: string;
+  source: 'source_data' | 'oembed';
+};
+
 const MAX_REFERENCE_IMAGE_BYTES = 12 * 1024 * 1024;
+const YOUTUBE_OEMBED_TIMEOUT_MS = 4500;
+const STYLE_VARIANTS = [
+  'Style angle: bold high-contrast text + dramatic focal subject.',
+  'Style angle: clean minimal composition, premium modern look, restrained text.',
+  'Style angle: high emotion/reaction, expressive face and motion energy.',
+  'Style angle: authority/educational look with clear hierarchy and readable labels.',
+  'Style angle: curiosity-gap concept, intriguing visual conflict, strong contrast.',
+  'Style angle: news/urgent vibe, punchy framing and decisive focal point.',
+] as const;
 
 /**
  * Generates one stored image for a `thumbnail_variants` row (OpenRouter image model).
@@ -35,6 +51,7 @@ const MAX_REFERENCE_IMAGE_BYTES = 12 * 1024 * 1024;
 @Injectable()
 export class ProjectVariantImageService {
   private readonly logger = new Logger(ProjectVariantImageService.name);
+  private readonly youtubeMetaCache = new Map<string, YoutubeVideoMeta | null>();
 
   constructor(
     private readonly config: ConfigService,
@@ -134,6 +151,8 @@ export class ProjectVariantImageService {
     templateId?: string;
     avatarId?: string;
     prioritizeFace?: boolean;
+    styleVariantIndex?: number;
+    totalVariants?: number;
   }): Promise<GenerateThumbnailResult> {
     const client = this.supabase.getAdminClient();
     const { data: project, error: pErr } = await client
@@ -163,11 +182,18 @@ export class ProjectVariantImageService {
       logContext: `variant ${params.variantId}`,
     });
 
-    const prompt = this.buildPrompt(project as Record<string, unknown>, params.templateId, {
-      hasTemplateImage,
-      hasAvatarImage,
-      prioritizeFace: Boolean(params.prioritizeFace) && hasAvatarImage,
-    });
+    const prompt = await this.buildPrompt(
+      project as Record<string, unknown>,
+      params.projectId,
+      params.templateId,
+      {
+        hasTemplateImage,
+        hasAvatarImage,
+        prioritizeFace: Boolean(params.prioritizeFace) && hasAvatarImage,
+      },
+      params.styleVariantIndex,
+      params.totalVariants,
+    );
     this.logger.log(`Generating variant ${params.variantId} via OpenRouter (refs: ${refImages.length})`);
 
     let generated: GeneratedImage;
@@ -250,26 +276,22 @@ export class ProjectVariantImageService {
     }
   }
 
-  private buildPrompt(
+  private async buildPrompt(
     project: Record<string, unknown>,
+    projectId: string,
     templateId: string | undefined,
     refs: {
       hasTemplateImage: boolean;
       hasAvatarImage: boolean;
       prioritizeFace: boolean;
     },
-  ): string {
+    styleVariantIndex?: number,
+    totalVariants?: number,
+  ): Promise<string> {
     const title = String(project.title ?? 'Video');
     const sourceType = String(project.source_type ?? 'text');
     const sourceData = (project.source_data as Record<string, unknown>) ?? {};
-    const excerpt =
-      typeof sourceData.text === 'string'
-        ? sourceData.text.slice(0, 500)
-        : typeof sourceData.script === 'string'
-          ? sourceData.script.slice(0, 500)
-          : typeof sourceData.url === 'string'
-            ? `YouTube: ${sourceData.url}`
-            : JSON.stringify(sourceData).slice(0, 500);
+    const excerpt = this.buildSourceExcerpt(sourceType, sourceData, projectId);
 
     const templateText =
       templateId && !refs.hasTemplateImage
@@ -289,7 +311,123 @@ export class ProjectVariantImageService {
             : ' The attached image is a face reference for the main person; keep them recognizable and well-lit.'
           : '';
 
-    return `YouTube thumbnail, bold readable title, high contrast, no small text, subject: "${title}". Source (${sourceType}): ${excerpt}.${templateText}${faceText}`;
+    const styleVariantLine =
+      styleVariantIndex === undefined
+        ? ''
+        : ` ${STYLE_VARIANTS[styleVariantIndex % STYLE_VARIANTS.length]} Variation ${styleVariantIndex + 1}${typeof totalVariants === 'number' ? ` of ${totalVariants}` : ''}; keep output distinct from other variations.`;
+
+    return `YouTube thumbnail, bold readable title, high contrast, no small text, subject: "${title}". Source (${sourceType}): ${await excerpt}.${styleVariantLine}${templateText}${faceText}`;
+  }
+
+  private async buildSourceExcerpt(
+    sourceType: string,
+    sourceData: Record<string, unknown>,
+    projectId: string,
+  ): Promise<string> {
+    if (typeof sourceData.text === 'string') {
+      return sourceData.text.slice(0, 500);
+    }
+    if (typeof sourceData.script === 'string') {
+      return sourceData.script.slice(0, 500);
+    }
+    if (typeof sourceData.url !== 'string') {
+      return JSON.stringify(sourceData).slice(0, 500);
+    }
+
+    const url = sourceData.url;
+    if (sourceType !== 'youtube_url') {
+      return `URL: ${url}`;
+    }
+
+    const meta = await this.resolveYoutubeVideoMeta(url, sourceData, projectId);
+    if (!meta) {
+      return `YouTube URL: ${url}`;
+    }
+
+    const parts: string[] = [];
+    if (meta.title) parts.push(`title "${meta.title}"`);
+    if (meta.author) parts.push(`channel "${meta.author}"`);
+    if (meta.thumbnailUrl) parts.push(`thumbnail ${meta.thumbnailUrl}`);
+    parts.push(`url ${url}`);
+    return `YouTube metadata: ${parts.join(', ')}`;
+  }
+
+  private async resolveYoutubeVideoMeta(
+    videoUrl: string,
+    sourceData: Record<string, unknown>,
+    projectId: string,
+  ): Promise<YoutubeVideoMeta | null> {
+    const fromSourceData = this.extractMetaFromSourceData(sourceData);
+    if (fromSourceData) {
+      return fromSourceData;
+    }
+
+    if (this.youtubeMetaCache.has(projectId)) {
+      return this.youtubeMetaCache.get(projectId) ?? null;
+    }
+
+    const fetched = await this.fetchYoutubeOembedMeta(videoUrl);
+    this.youtubeMetaCache.set(projectId, fetched);
+    return fetched;
+  }
+
+  private extractMetaFromSourceData(sourceData: Record<string, unknown>): YoutubeVideoMeta | null {
+    const raw = sourceData.video_meta;
+    if (!raw || typeof raw !== 'object') {
+      return null;
+    }
+    const obj = raw as Record<string, unknown>;
+    const title = typeof obj.title === 'string' ? obj.title.trim() : '';
+    const author = typeof obj.author === 'string' ? obj.author.trim() : '';
+    const thumbnailUrl = typeof obj.thumbnail === 'string' ? obj.thumbnail.trim() : '';
+    if (!title && !author && !thumbnailUrl) {
+      return null;
+    }
+    return {
+      title: title || undefined,
+      author: author || undefined,
+      thumbnailUrl: thumbnailUrl || undefined,
+      source: 'source_data',
+    };
+  }
+
+  private async fetchYoutubeOembedMeta(videoUrl: string): Promise<YoutubeVideoMeta | null> {
+    let oembedUrl: string;
+    try {
+      const encoded = encodeURIComponent(videoUrl);
+      oembedUrl = `https://www.youtube.com/oembed?url=${encoded}&format=json`;
+    } catch {
+      return null;
+    }
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), YOUTUBE_OEMBED_TIMEOUT_MS);
+    try {
+      const res = await fetch(oembedUrl, { signal: controller.signal });
+      if (!res.ok) {
+        this.logger.warn(`YouTube oEmbed request failed: ${res.status}`);
+        return null;
+      }
+      const json = (await res.json()) as Record<string, unknown>;
+      const title = typeof json.title === 'string' ? json.title.trim() : '';
+      const author = typeof json.author_name === 'string' ? json.author_name.trim() : '';
+      const thumbnailUrl = typeof json.thumbnail_url === 'string' ? json.thumbnail_url.trim() : '';
+      if (!title && !author && !thumbnailUrl) {
+        return null;
+      }
+      return {
+        title: title || undefined,
+        author: author || undefined,
+        thumbnailUrl: thumbnailUrl || undefined,
+        source: 'oembed',
+      };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      this.logger.warn(`YouTube oEmbed fetch failed: ${msg}`);
+      return null;
+    } finally {
+      clearTimeout(timeout);
+    }
   }
 
   private bufferToDataUrl(contentType: string, buffer: Buffer): string {

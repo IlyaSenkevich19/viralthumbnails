@@ -57,7 +57,8 @@ export class ProjectGenerationService {
       }
 
       const results = [];
-      for (const variantId of createdIds) {
+      for (let i = 0; i < createdIds.length; i++) {
+        const variantId = createdIds[i];
         const result = await this.projectVariantImage.generateThumbnailForProject({
           projectId,
           userId,
@@ -65,6 +66,8 @@ export class ProjectGenerationService {
           templateId,
           avatarId,
           prioritizeFace,
+          styleVariantIndex: i,
+          totalVariants: createdIds.length,
         });
         results.push(result);
       }

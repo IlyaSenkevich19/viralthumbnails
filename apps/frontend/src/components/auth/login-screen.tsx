@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AppRoutes } from '@/config/routes';
+import { AuthThumbnailMarquee } from '@/components/auth/auth-thumbnail-marquee';
 
 export function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -153,15 +154,18 @@ export function LoginScreen() {
       <div className="relative hidden w-1/2 items-center justify-center overflow-hidden border-l border-border bg-card text-foreground lg:flex">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(255,59,59,0.08),_transparent_55%),_radial-gradient(ellipse_at_bottom_left,_rgba(255,255,255,0.04),_transparent_55%)]" />
         <div className="absolute inset-0 bg-[linear-gradient(to_bottom,_transparent_60%,_rgba(0,0,0,0.15))]" />
-        <div className="relative max-w-xl space-y-6 px-10">
-          <h2 className="text-3xl font-semibold leading-tight">
-            Ship faster
-            <br />
-            on a clean stack.
-          </h2>
-          <p className="text-sm leading-relaxed text-muted-foreground">
-            Next.js, Supabase Auth, and NestJS in one monorepo — add your product logic on top.
-          </p>
+        <div className="relative z-[2] w-full space-y-12 px-10">
+          <div className="mx-auto max-w-xl space-y-6">
+            <h2 className="text-3xl font-semibold leading-tight">
+              Ship faster
+              <br />
+              on a clean stack.
+            </h2>
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              Next.js, Supabase Auth, and NestJS in one monorepo — add your product logic on top.
+            </p>
+          </div>
+          <AuthThumbnailMarquee />
         </div>
       </div>
     </div>

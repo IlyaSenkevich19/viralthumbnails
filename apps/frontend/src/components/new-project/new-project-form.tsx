@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { useCreateProjectAndGenerateMutation, useFromVideoThumbnailsMutation } from '@/lib/hooks';
+import { thumbnailsApi } from '@/lib/api';
+import { isLikelyYoutubeUrl } from '@/lib/format';
 import type { ProjectSourceType } from '@/lib/types/project';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,10 +19,18 @@ import { tabFromSearchParams } from './utils';
 import type { FromVideoResponse } from '@/lib/types/from-video';
 import { VIDEO_ANALYSIS_MAX_SECONDS } from '@/lib/video/clip-limits';
 import { maybeTrimVideoForThumbnails, TrimVideoError } from '@/lib/video/trim-video-for-thumbnails';
+import { pickThumbnailStyles } from '@/lib/thumbnail-style-matrix';
 
 export type NewProjectFormProps = {
   initialQuery?: Record<string, string>;
   onRequestClose?: () => void;
+};
+
+type YoutubeMetaPreview = {
+  normalizedUrl: string;
+  title?: string | null;
+  author?: string | null;
+  thumbnail?: string | null;
 };
 
 export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormProps) {
@@ -44,6 +54,9 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
   const [videoPrompt, setVideoPrompt] = useState('');
   const [videoResult, setVideoResult] = useState<FromVideoResponse | null>(null);
   const [videoPreparing, setVideoPreparing] = useState(false);
+  const [youtubeMetaPreview, setYoutubeMetaPreview] = useState<YoutubeMetaPreview | null>(null);
+  const plannedStyleCount = tab === 'video' ? Math.min(12, Math.max(1, Math.floor(videoCount) || 4)) : 3;
+  const plannedStyles = pickThumbnailStyles(plannedStyleCount);
 
   useEffect(() => {
     setTab(tabFromSearchParams(sp));
@@ -54,6 +67,27 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
   useEffect(() => {
     if (tab !== 'video') setVideoResult(null);
   }, [tab]);
+
+  async function enrichYoutubeUrl(raw: string): Promise<{
+    finalUrl: string;
+    videoMeta?: Record<string, unknown>;
+  } | null> {
+    const parsed = await thumbnailsApi.parseVideoUrl(accessToken, raw);
+    if (!parsed.ok || !parsed.normalizedUrl) {
+      toast.error(parsed.reason || 'Could not parse YouTube URL');
+      return null;
+    }
+    const finalUrl = parsed.normalizedUrl;
+    const metaRes = await thumbnailsApi.getVideoMeta(accessToken, finalUrl);
+    const videoMeta = metaRes.code === '0' && metaRes.data ? metaRes.data : undefined;
+    setYoutubeMetaPreview({
+      normalizedUrl: finalUrl,
+      title: metaRes.data?.title,
+      author: metaRes.data?.author,
+      thumbnail: metaRes.data?.thumbnail,
+    });
+    return { finalUrl, videoMeta };
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -139,8 +173,27 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
           toast.error('Paste a YouTube URL');
           return;
         }
+        if (!isLikelyYoutubeUrl(youtubeUrl.trim())) {
+          toast.error('Use a full youtube.com or youtu.be link.');
+          return;
+        }
+        let finalUrl = youtubeUrl.trim();
+        let videoMeta: Record<string, unknown> | undefined;
+        try {
+          const enriched = await enrichYoutubeUrl(finalUrl);
+          if (!enriched) {
+            return;
+          }
+          finalUrl = enriched.finalUrl;
+          videoMeta = enriched.videoMeta;
+        } catch {
+          // non-blocking; continue with URL-only context
+        }
         source_type = 'youtube_url';
-        source_data = { url: youtubeUrl.trim() };
+        source_data = {
+          url: finalUrl,
+          ...(videoMeta ? { video_meta: videoMeta } : {}),
+        };
         break;
       case 'script':
         if (!script.trim()) {
@@ -252,10 +305,40 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
                   id="youtube-url"
                   placeholder="https://www.youtube.com/watch?v=…"
                   value={youtubeUrl}
-                  onChange={(e) => setYoutubeUrl(e.target.value)}
+                  onChange={(e) => {
+                    setYoutubeUrl(e.target.value);
+                    setYoutubeMetaPreview(null);
+                  }}
+                  onBlur={() => {
+                    const value = youtubeUrl.trim();
+                    if (!value || !isLikelyYoutubeUrl(value) || !accessToken) return;
+                    void enrichYoutubeUrl(value).catch(() => {
+                      /* non-blocking preview */
+                    });
+                  }}
                   inputMode="url"
                   autoComplete="url"
                 />
+                {youtubeMetaPreview ? (
+                  <div className="surface mt-2 flex items-center gap-3 p-2.5">
+                    {youtubeMetaPreview.thumbnail ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={youtubeMetaPreview.thumbnail}
+                        alt=""
+                        className="h-12 w-20 shrink-0 rounded-md object-cover"
+                      />
+                    ) : null}
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-foreground">
+                        {youtubeMetaPreview.title || 'YouTube video'}
+                      </p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {youtubeMetaPreview.author || 'Unknown channel'}
+                      </p>
+                    </div>
+                  </div>
+                ) : null}
               </div>
             )}
 
@@ -372,6 +455,22 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
                 />
               </div>
             )}
+
+            <div className="space-y-2">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Planned styles ({plannedStyleCount})
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {plannedStyles.map((style, i) => (
+                  <span
+                    key={`${style}-${i}`}
+                    className="rounded-full border border-border bg-background/70 px-2.5 py-1 text-xs text-foreground/90"
+                  >
+                    {style}
+                  </span>
+                ))}
+              </div>
+            </div>
 
             <Button
               type="submit"

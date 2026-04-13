@@ -10,6 +10,7 @@ import { VideoIngestionService } from './services/video-ingestion.service';
 import { VideoAnalysisService } from './services/video-analysis.service';
 import { ThumbnailGenerationService } from './services/thumbnail-generation.service';
 import { ThumbnailRankingService } from './services/thumbnail-ranking.service';
+import { YoutubeVideoMetaService } from './services/youtube-video-meta.service';
 
 @Module({
   imports: [AuthModule, BillingModule, StorageModule, OpenRouterModule, ProjectThumbnailGenerationModule],
@@ -19,6 +20,7 @@ import { ThumbnailRankingService } from './services/thumbnail-ranking.service';
     VideoAnalysisService,
     ThumbnailGenerationService,
     ThumbnailRankingService,
+    YoutubeVideoMetaService,
     FromVideoThumbnailsService,
   ],
   exports: [FromVideoThumbnailsService],

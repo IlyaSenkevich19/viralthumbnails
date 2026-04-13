@@ -17,6 +17,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { useNewProject } from '@/contexts/new-project-context';
 import { AppRoutes, projectVariantsPath, projectVariantsSearchParams } from '@/config/routes';
 import { isLikelyYoutubeUrl } from '@/lib/format';
+import { thumbnailsApi } from '@/lib/api';
 import {
   NICHE_ALL,
   useAvatarsList,
@@ -27,6 +28,7 @@ import {
 import type { FromVideoResponse } from '@/lib/types/from-video';
 import { VIDEO_ANALYSIS_MAX_SECONDS } from '@/lib/video/clip-limits';
 import { maybeTrimVideoForThumbnails, TrimVideoError } from '@/lib/video/trim-video-for-thumbnails';
+import { pickThumbnailStyles } from '@/lib/thumbnail-style-matrix';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -45,6 +47,12 @@ const DEFAULT_VARIANT_COUNT = 3;
 const DEFAULT_VIDEO_THUMBNAIL_COUNT = 4;
 
 type HubMode = 'prompt' | 'youtube' | 'video';
+type YoutubeMetaPreview = {
+  normalizedUrl: string;
+  title?: string | null;
+  author?: string | null;
+  thumbnail?: string | null;
+};
 
 const modes: { id: HubMode; label: string; icon: typeof PenLine }[] = [
   { id: 'prompt', label: 'Prompt', icon: PenLine },
@@ -97,6 +105,7 @@ export function DashboardCreateHub() {
   const [describeError, setDescribeError] = useState('');
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
   const [selectedAvatarId, setSelectedAvatarId] = useState('');
+  const [youtubeMetaPreview, setYoutubeMetaPreview] = useState<YoutubeMetaPreview | null>(null);
 
   const { data: templatesData, isPending: templatesPending } = useTemplatesList(
     NICHE_ALL,
@@ -126,10 +135,35 @@ export function DashboardCreateHub() {
     mode === 'prompt' || mode === 'youtube' ? createAndGenerate.isPending : false;
   const busyVideo = mode === 'video' && (fromVideo.isPending || videoPreparing);
   const primaryBusy = busyProject || busyVideo;
+  const plannedStyleCount = mode === 'video'
+    ? Math.min(12, Math.max(1, Math.floor(videoCount) || DEFAULT_VIDEO_THUMBNAIL_COUNT))
+    : DEFAULT_VARIANT_COUNT;
+  const plannedStyles = pickThumbnailStyles(plannedStyleCount);
 
   function clearModeErrors() {
     setUrlError('');
     setDescribeError('');
+  }
+
+  async function enrichYoutubeUrl(raw: string): Promise<{
+    finalUrl: string;
+    videoMeta?: Record<string, unknown>;
+  } | null> {
+    const parsed = await thumbnailsApi.parseVideoUrl(accessToken, raw);
+    if (!parsed.ok || !parsed.normalizedUrl) {
+      setUrlError(parsed.reason || 'Could not parse YouTube URL.');
+      return null;
+    }
+    const finalUrl = parsed.normalizedUrl;
+    const metaRes = await thumbnailsApi.getVideoMeta(accessToken, finalUrl);
+    const videoMeta = metaRes.code === '0' && metaRes.data ? metaRes.data : undefined;
+    setYoutubeMetaPreview({
+      normalizedUrl: finalUrl,
+      title: metaRes.data?.title,
+      author: metaRes.data?.author,
+      thumbnail: metaRes.data?.thumbnail,
+    });
+    return { finalUrl, videoMeta };
   }
 
   async function handleGenerate() {
@@ -207,11 +241,27 @@ export function DashboardCreateHub() {
         return;
       }
 
+      let finalUrl = trimmed;
+      let videoMeta: Record<string, unknown> | undefined;
+      try {
+        const enriched = await enrichYoutubeUrl(trimmed);
+        if (!enriched) {
+          return;
+        }
+        finalUrl = enriched.finalUrl;
+        videoMeta = enriched.videoMeta;
+      } catch {
+        // Non-blocking fallback: generation can continue even if metadata enrichment failed.
+      }
+
       createAndGenerate.mutate(
         {
           platform: 'youtube',
           source_type: 'youtube_url',
-          source_data: { url: trimmed },
+          source_data: {
+            url: finalUrl,
+            ...(videoMeta ? { video_meta: videoMeta } : {}),
+          },
           generate: {
             template_id: templateId,
             count: DEFAULT_VARIANT_COUNT,
@@ -335,12 +385,40 @@ export function DashboardCreateHub() {
               value={youtubeUrl}
               onChange={(e) => {
                 setYoutubeUrl(e.target.value);
+                setYoutubeMetaPreview(null);
                 if (urlError) setUrlError('');
+              }}
+              onBlur={() => {
+                const value = youtubeUrl.trim();
+                if (!value || !isLikelyYoutubeUrl(value) || !accessToken) return;
+                void enrichYoutubeUrl(value).catch(() => {
+                  /* keep non-blocking */
+                });
               }}
               inputMode="url"
               autoComplete="url"
               aria-invalid={Boolean(urlError)}
             />
+            {youtubeMetaPreview ? (
+              <div className="surface mt-2 flex items-center gap-3 p-2.5">
+                {youtubeMetaPreview.thumbnail ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={youtubeMetaPreview.thumbnail}
+                    alt=""
+                    className="h-12 w-20 shrink-0 rounded-md object-cover"
+                  />
+                ) : null}
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-foreground">
+                    {youtubeMetaPreview.title || 'YouTube video'}
+                  </p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {youtubeMetaPreview.author || 'Unknown channel'}
+                  </p>
+                </div>
+              </div>
+            ) : null}
             {urlError ? (
               <p className="text-sm text-destructive" role="alert">
                 {urlError}
@@ -567,6 +645,22 @@ export function DashboardCreateHub() {
           </ul>
         </div>
       )}
+
+      <div className="mt-5 space-y-2">
+        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          Planned styles ({plannedStyleCount})
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {plannedStyles.map((style, i) => (
+            <span
+              key={`${style}-${i}`}
+              className="rounded-full border border-border bg-background/70 px-2.5 py-1 text-xs text-foreground/90"
+            >
+              {style}
+            </span>
+          ))}
+        </div>
+      </div>
 
       <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">

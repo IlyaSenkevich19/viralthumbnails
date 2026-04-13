@@ -42,6 +42,7 @@ import {
 } from '@/components/ui/select';
 import { TemplatesGridSkeleton } from '@/components/templates/templates-grid-skeleton';
 import { TemplatesPagination } from '@/components/templates/templates-pagination';
+import { pickThumbnailStyles } from '@/lib/thumbnail-style-matrix';
 
 const GENERATE_COUNT = 1;
 
@@ -139,6 +140,13 @@ export function ProjectVariantsWorkspace({
     () => variants.find((v) => v.id === selectedVariantId) ?? null,
     [variants, selectedVariantId],
   );
+  const styleByVariantId = useMemo(() => {
+    const labels = pickThumbnailStyles(variants.length);
+    const map = new Map<string, string>();
+    variants.forEach((v, i) => map.set(v.id, labels[i]));
+    return map;
+  }, [variants]);
+  const selectedStyleLabel = selectedVariant ? styleByVariantId.get(selectedVariant.id) : null;
 
   const handleGenerate = useCallback(() => {
     if (!accessToken) {
@@ -416,6 +424,11 @@ export function ProjectVariantsWorkspace({
                   ) : null}
                 </div>
                 <div className="flex flex-wrap gap-2 border-t border-border p-3">
+                  {selectedStyleLabel ? (
+                    <span className="rounded-full border border-border bg-background px-2.5 py-1 text-xs text-foreground/90">
+                      {selectedStyleLabel}
+                    </span>
+                  ) : null}
                   <Button
                     type="button"
                     variant="outline"
@@ -472,6 +485,7 @@ export function ProjectVariantsWorkspace({
                       enterIndex={i}
                       variant={v}
                       projectTitle={project.title}
+                      styleLabel={styleByVariantId.get(v.id)}
                       selected={v.id === selectedVariantId}
                       onSelect={() => setSelectedVariantId(v.id)}
                     />
@@ -489,12 +503,14 @@ export function ProjectVariantsWorkspace({
 function VariantStripThumb({
   variant,
   projectTitle,
+  styleLabel,
   selected,
   onSelect,
   enterIndex,
 }: {
   variant: ThumbnailVariantRow;
   projectTitle: string;
+  styleLabel?: string;
   selected: boolean;
   onSelect: () => void;
   enterIndex: number;
@@ -529,6 +545,11 @@ function VariantStripThumb({
       >
         {variant.status}
       </Badge>
+      {styleLabel ? (
+        <span className="absolute left-1 top-1 rounded bg-black/55 px-1.5 py-0.5 text-[10px] text-white/95">
+          {styleLabel}
+        </span>
+      ) : null}
       <span className="sr-only">Select variant for {projectTitle}</span>
     </button>
   );

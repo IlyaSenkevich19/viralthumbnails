@@ -9,6 +9,7 @@ import { VideoIngestionService } from './services/video-ingestion.service';
 import { VideoAnalysisService } from './services/video-analysis.service';
 import { ThumbnailGenerationService } from './services/thumbnail-generation.service';
 import { ThumbnailRankingService } from './services/thumbnail-ranking.service';
+import { YoutubeVideoMetaService } from './services/youtube-video-meta.service';
 import type { VideoAnalysis } from './schemas/video-analysis.schema';
 import type { RankedThumbnail } from './services/thumbnail-ranking.service';
 
@@ -36,6 +37,7 @@ export class FromVideoThumbnailsService {
     private readonly analysis: VideoAnalysisService,
     private readonly generation: ThumbnailGenerationService,
     private readonly ranking: ThumbnailRankingService,
+    private readonly youtubeMeta: YoutubeVideoMetaService,
     private readonly storage: StorageService,
     private readonly billing: BillingService,
     private readonly supabase: SupabaseService,
@@ -135,6 +137,10 @@ export class FromVideoThumbnailsService {
         templateId: params.template_id,
         avatarId: params.avatar_id,
         prioritizeFace: params.prioritize_face,
+        videoMeta:
+          params.videoUrl && !params.file
+            ? (await this.youtubeMeta.getVideoMeta(params.videoUrl)).data ?? undefined
+            : undefined,
       });
 
       return {
@@ -170,6 +176,7 @@ export class FromVideoThumbnailsService {
     templateId?: string;
     avatarId?: string;
     prioritizeFace?: boolean;
+    videoMeta?: Record<string, unknown>;
   }): Promise<string> {
     const client = this.supabase.getAdminClient();
     const rawTitle = params.analysis.summary.replace(/\s+/g, ' ').trim();
@@ -189,6 +196,7 @@ export class FromVideoThumbnailsService {
           source: params.sourceLabel,
           style: params.style ?? undefined,
           prompt: params.prompt ?? undefined,
+          video_meta: params.videoMeta ?? undefined,
           template_id: params.templateId ?? undefined,
           avatar_id: params.avatarId ?? undefined,
           prioritize_face: params.prioritizeFace ?? undefined,

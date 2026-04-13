@@ -10,7 +10,7 @@ import {
   BUCKET_THUMBNAIL_TEMPLATES,
   StorageService,
 } from '../storage/storage.service';
-import { decodeBase64Image } from '@/common/images/decode-base64-image';
+import { decodeBase64Image } from '../../common/images/decode-base64-image';
 import { CreateTemplateDto } from './dto/create-template.dto';
 import { TEMPLATE_NICHE_CODE_LIST } from './constants/template-niches';
 import { inferNicheFromTemplatePath } from './lib/infer-niche-from-path';

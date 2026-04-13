@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { BUCKET_USER_AVATARS, StorageService } from '../storage/storage.service';
-import { decodeBase64Image } from '@/common/images/decode-base64-image';
+import { decodeBase64Image } from '../../common/images/decode-base64-image';
 import { CreateAvatarDto } from './dto/create-avatar.dto';
 
 const ALLOWED_AVATAR_MIMES = new Set(['image/png', 'image/jpeg', 'image/jpg', 'image/webp']);

@@ -1,6 +1,33 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "globalDependencies": ["**/.env.*local"],
+  "globalPassThroughEnv": [
+    "ADMIN_USER_IDS",
+    "FRONTEND_URL",
+    "LEAD_INTAKE_DEBUG",
+    "LEAD_INTAKE_WEBHOOK_URL",
+    "NEXT_PUBLIC_APP_NAME",
+    "NEXT_PUBLIC_BACKEND_URL",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    "NEXT_PUBLIC_SUPABASE_URL",
+    "NODE_ENV",
+    "OPENROUTER_API_KEY",
+    "OPENROUTER_APP_TITLE",
+    "OPENROUTER_BASE_URL",
+    "OPENROUTER_HTTP_REFERER",
+    "OPENROUTER_IMAGE_MODEL",
+    "OPENROUTER_PROJECT_GEN_TIMEOUT_MS",
+    "OPENROUTER_RANKING_MODEL",
+    "OPENROUTER_USE_FREE_MODELS",
+    "OPENROUTER_VIDEO_MODEL",
+    "PORT",
+    "SUPABASE_ANON_KEY",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "SUPABASE_STORAGE_SIGN_EXPIRES_SEC",
+    "SUPABASE_URL",
+    "VERCEL",
+    "YOUTUBE_DATA_API_KEY"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],

@@ -6,6 +6,7 @@ import { useNewProject } from '@/contexts/new-project-context';
 import { AppRoutes, AppSearchParams } from '@/config/routes';
 import { DashboardCreateHub } from '@/components/dashboard/dashboard-create-hub';
 import { SetPageFrame } from '@/components/layout/set-page-frame';
+import { TrialPaywallSurfaces } from '@/components/paywall/trial-paywall-surfaces';
 
 function DashboardOpenNewProjectFromUrl() {
   const searchParams = useSearchParams();
@@ -32,6 +33,8 @@ export function DashboardClient() {
       <Suspense fallback={null}>
         <DashboardOpenNewProjectFromUrl />
       </Suspense>
+
+      <TrialPaywallSurfaces />
 
       <DashboardCreateHub />
     </div>

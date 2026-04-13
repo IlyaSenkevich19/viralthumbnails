@@ -6,6 +6,8 @@ import { projectsApi } from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
 import type { ProjectRow, ProjectSourceType, ProjectWithVariants } from '@/lib/types/project';
 import { toast } from 'sonner';
+import { DEFAULT_NEW_PROJECT_VARIANT_COUNT } from '@/config/credits';
+import { handleBillingMutationError } from '@/lib/paywall-notify';
 
 export const createProjectAndGenerateMutationKey = ['projects', 'create-and-generate'] as const;
 
@@ -61,7 +63,7 @@ export function useCreateProjectAndGenerateMutation() {
       const { generate, ...body } = input;
       const project = await projectsApi.createProject(accessToken, body);
       const gen = await projectsApi.generateThumbnails(accessToken, project.id, {
-        count: generate?.count ?? 3,
+        count: generate?.count ?? DEFAULT_NEW_PROJECT_VARIANT_COUNT,
         template_id: generate?.template_id,
         avatar_id: generate?.avatar_id,
         prioritize_face: generate?.prioritize_face,
@@ -98,6 +100,10 @@ export function useCreateProjectAndGenerateMutation() {
         } else {
           queryClient.setQueryData(context.listKey, context.previous);
         }
+      }
+      if (handleBillingMutationError(err)) {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
+        return;
       }
       toast.error(err instanceof Error ? err.message : 'Could not create project');
     },
@@ -175,6 +181,7 @@ export function useGenerateThumbnailsMutation(projectId: string) {
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
     },
     onError: (err) => {
+      if (handleBillingMutationError(err)) return;
       toast.error(err instanceof Error ? err.message : 'Generation failed');
     },
     onSettled: () => {

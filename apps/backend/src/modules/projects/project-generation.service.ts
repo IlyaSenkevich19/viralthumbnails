@@ -27,7 +27,10 @@ export class ProjectGenerationService {
     avatarId?: string,
     prioritizeFace?: boolean,
   ) {
-    await this.billing.reserveGenerationCredits(userId, count, {
+    const n = Math.floor(Number(count));
+    const safeCount = Math.min(5, Math.max(1, Number.isFinite(n) ? n : 1));
+
+    await this.billing.reserveGenerationCredits(userId, safeCount, {
       referenceType: 'project',
       referenceId: projectId,
     });
@@ -70,7 +73,7 @@ export class ProjectGenerationService {
           avatarId,
           prioritizeFace,
           styleVariantIndex: i,
-          totalVariants: createdIds.length,
+          totalVariants: safeCount,
         });
         results.push(result);
       }
@@ -106,7 +109,7 @@ export class ProjectGenerationService {
 
       const doneCount = results.filter((r) => r.status === 'done').length;
       try {
-        await this.billing.refundGenerationCredits(userId, count - doneCount, {
+        await this.billing.refundGenerationCredits(userId, safeCount - doneCount, {
           referenceType: 'project',
           referenceId: projectId,
         });
@@ -116,7 +119,7 @@ export class ProjectGenerationService {
 
       return { variant_ids: createdIds, results };
     } catch (e) {
-      await this.billing.refundGenerationCredits(userId, count, {
+      await this.billing.refundGenerationCredits(userId, safeCount, {
         referenceType: 'project',
         referenceId: projectId,
       });

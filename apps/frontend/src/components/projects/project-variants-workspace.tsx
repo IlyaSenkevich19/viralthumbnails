@@ -20,9 +20,11 @@ import {
   useAvatarsList,
   useDeleteVariantMutation,
   useGenerateThumbnailsMutation,
+  useGenerationCredits,
   useTemplateNiches,
   useTemplatesList,
 } from '@/lib/hooks';
+import { assertSufficientCredits } from '@/lib/paywall-notify';
 import { statusToneClass } from '@/lib/status-tone';
 import type { ProjectWithVariants, ThumbnailVariantRow } from '@/lib/types/project';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -65,6 +67,7 @@ export function ProjectVariantsWorkspace({
   initialAvatarId = null,
 }: ProjectVariantsWorkspaceProps) {
   const { accessToken } = useAuth();
+  const { data: credits } = useGenerationCredits();
   const variants = useMemo(
     () => project.thumbnail_variants ?? [],
     [project.thumbnail_variants],
@@ -153,13 +156,14 @@ export function ProjectVariantsWorkspace({
       toast.error('Not signed in');
       return;
     }
+    if (!assertSufficientCredits({ balance: credits?.balance, cost: GENERATE_COUNT })) return;
     generate.mutate({
       count: GENERATE_COUNT,
       template_id: selectedTemplateId ?? undefined,
       avatar_id: selectedAvatarId.trim() || undefined,
       prioritize_face: prioritizeFace,
     });
-  }, [accessToken, generate, prioritizeFace, selectedAvatarId, selectedTemplateId]);
+  }, [accessToken, credits?.balance, generate, prioritizeFace, selectedAvatarId, selectedTemplateId]);
 
   const previewUrl = selectedVariant?.generated_image_url ?? null;
 
@@ -350,7 +354,11 @@ export function ProjectVariantsWorkspace({
               type="button"
               className="relative h-12 w-full gap-2 text-base font-semibold"
               onClick={handleGenerate}
-              disabled={generate.isPending || !accessToken}
+              disabled={
+                generate.isPending ||
+                !accessToken ||
+                (credits != null && credits.balance < GENERATE_COUNT)
+              }
             >
               <Sparkles className="h-4 w-4" aria-hidden />
               {generate.isPending ? 'Generating…' : 'Generate thumbnails'}

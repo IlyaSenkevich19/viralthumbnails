@@ -7,6 +7,7 @@ import { queryKeys } from '@/lib/query-keys';
 import type { FromVideoRequest } from '@/lib/api/thumbnails';
 import { toast } from 'sonner';
 import { isApiError } from '@/lib/api/api-error';
+import { handleBillingMutationError } from '@/lib/paywall-notify';
 
 export function useFromVideoThumbnailsMutation() {
   const queryClient = useQueryClient();
@@ -19,16 +20,11 @@ export function useFromVideoThumbnailsMutation() {
       return thumbnailsApi.fromVideoThumbnails(accessToken, params);
     },
     onError: (err) => {
-      if (isApiError(err)) {
-        if (err.statusCode === 429) {
-          toast.error('Too many video runs. Try again in a little while.');
-          return;
-        }
-        if (err.code === 'INSUFFICIENT_CREDITS') {
-          toast.error(err.message);
-          return;
-        }
+      if (isApiError(err) && err.statusCode === 429) {
+        toast.error('Too many video runs. Try again in a little while.');
+        return;
       }
+      if (handleBillingMutationError(err)) return;
       toast.error(err instanceof Error ? err.message : 'Video pipeline failed');
     },
     onSettled: () => {

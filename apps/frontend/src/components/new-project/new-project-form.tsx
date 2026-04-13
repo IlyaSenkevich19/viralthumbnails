@@ -2,8 +2,15 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { DEFAULT_NEW_PROJECT_VARIANT_COUNT } from '@/config/credits';
 import { useAuth } from '@/contexts/auth-context';
-import { useCreateProjectAndGenerateMutation, useFromVideoThumbnailsMutation } from '@/lib/hooks';
+import {
+  useCreateProjectAndGenerateMutation,
+  useFromVideoThumbnailsMutation,
+  useGenerationCredits,
+} from '@/lib/hooks';
+import { creditsForVideoPipeline } from '@/lib/credit-costs';
+import { assertSufficientCredits } from '@/lib/paywall-notify';
 import { thumbnailsApi } from '@/lib/api';
 import { isLikelyYoutubeUrl } from '@/lib/format';
 import type { ProjectSourceType } from '@/lib/types/project';
@@ -38,6 +45,7 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
   const { accessToken } = useAuth();
   const createAndGenerate = useCreateProjectAndGenerateMutation();
   const fromVideoThumbnails = useFromVideoThumbnailsMutation();
+  const { data: credits } = useGenerationCredits();
   const submitLock = useRef(false);
 
   const sp = useMemo(() => new URLSearchParams(initialQuery ?? {}), [initialQuery]);
@@ -55,8 +63,19 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
   const [videoResult, setVideoResult] = useState<FromVideoResponse | null>(null);
   const [videoPreparing, setVideoPreparing] = useState(false);
   const [youtubeMetaPreview, setYoutubeMetaPreview] = useState<YoutubeMetaPreview | null>(null);
-  const plannedStyleCount = tab === 'video' ? Math.min(12, Math.max(1, Math.floor(videoCount) || 4)) : 3;
+  const plannedStyleCount =
+    tab === 'video'
+      ? Math.min(12, Math.max(1, Math.floor(videoCount) || 4))
+      : DEFAULT_NEW_PROJECT_VARIANT_COUNT;
   const plannedStyles = pickThumbnailStyles(plannedStyleCount);
+
+  const videoN = Math.min(12, Math.max(1, Math.floor(videoCount) || 4));
+  const cannotAffordVideo =
+    tab === 'video' && credits?.balance != null && credits.balance < creditsForVideoPipeline(videoN);
+  const cannotAffordInitialBatch =
+    tab !== 'video' &&
+    credits?.balance != null &&
+    credits.balance < DEFAULT_NEW_PROJECT_VARIANT_COUNT;
 
   useEffect(() => {
     setTab(tabFromSearchParams(sp));
@@ -105,6 +124,8 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
         return;
       }
       const n = Math.min(12, Math.max(1, Math.floor(videoCount) || 4));
+      if (!assertSufficientCredits({ balance: credits?.balance, cost: creditsForVideoPipeline(n) }))
+        return;
 
       let fileToSend: File | undefined;
       if (videoFile) {
@@ -213,11 +234,18 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
         break;
     }
 
-    submitLock.current = true;
-    onRequestClose?.();
-
     const templateId = sp.get('template_id') || undefined;
     const avatarId = sp.get('avatar_id') || undefined;
+
+    if (
+      !assertSufficientCredits({
+        balance: credits?.balance,
+        cost: DEFAULT_NEW_PROJECT_VARIANT_COUNT,
+      })
+    )
+      return;
+
+    submitLock.current = true;
 
     createAndGenerate.mutate(
       {
@@ -225,10 +253,15 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
         platform: 'youtube',
         source_type,
         source_data,
-        generate: { template_id: templateId, count: 3, avatar_id: avatarId },
+        generate: {
+          template_id: templateId,
+          count: DEFAULT_NEW_PROJECT_VARIANT_COUNT,
+          avatar_id: avatarId,
+        },
       },
       {
         onSuccess: ({ project, gen }) => {
+          onRequestClose?.();
           const ok = gen.results.filter((r) => r.status === 'done').length;
           const total = gen.results.length;
           if (ok === 0) {
@@ -477,8 +510,8 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
               className="w-full sm:w-auto"
               disabled={
                 tab === 'video'
-                  ? fromVideoThumbnails.isPending || videoPreparing
-                  : createAndGenerate.isPending
+                  ? fromVideoThumbnails.isPending || videoPreparing || cannotAffordVideo
+                  : createAndGenerate.isPending || cannotAffordInitialBatch
               }
             >
               {tab === 'video'

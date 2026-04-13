@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import { useNewProject } from '@/contexts/new-project-context';
+import { DEFAULT_NEW_PROJECT_VARIANT_COUNT } from '@/config/credits';
 import { AppRoutes, projectVariantsPath, projectVariantsSearchParams } from '@/config/routes';
 import { isLikelyYoutubeUrl } from '@/lib/format';
 import { thumbnailsApi } from '@/lib/api';
@@ -23,8 +24,11 @@ import {
   useAvatarsList,
   useCreateProjectAndGenerateMutation,
   useFromVideoThumbnailsMutation,
+  useGenerationCredits,
   useTemplatesList,
 } from '@/lib/hooks';
+import { creditsForVideoPipeline } from '@/lib/credit-costs';
+import { assertSufficientCredits } from '@/lib/paywall-notify';
 import type { FromVideoResponse } from '@/lib/types/from-video';
 import { VIDEO_ANALYSIS_MAX_SECONDS } from '@/lib/video/clip-limits';
 import { maybeTrimVideoForThumbnails, TrimVideoError } from '@/lib/video/trim-video-for-thumbnails';
@@ -43,7 +47,6 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
 const DASHBOARD_TEMPLATES_LIMIT = 100;
-const DEFAULT_VARIANT_COUNT = 3;
 const DEFAULT_VIDEO_THUMBNAIL_COUNT = 4;
 
 type HubMode = 'prompt' | 'youtube' | 'video';
@@ -114,6 +117,7 @@ export function DashboardCreateHub() {
   );
   const templates = templatesData?.items ?? [];
   const { data: avatars = [], isPending: avatarsPending } = useAvatarsList();
+  const { data: credits } = useGenerationCredits();
   const assetsBusy = !canLoadAssets || templatesPending || avatarsPending;
 
   const templateId = selectedTemplateId || undefined;
@@ -135,9 +139,17 @@ export function DashboardCreateHub() {
     mode === 'prompt' || mode === 'youtube' ? createAndGenerate.isPending : false;
   const busyVideo = mode === 'video' && (fromVideo.isPending || videoPreparing);
   const primaryBusy = busyProject || busyVideo;
+  const cannotAffordGenerate =
+    credits?.balance != null &&
+    (mode === 'video'
+      ? credits.balance <
+        creditsForVideoPipeline(
+          Math.min(12, Math.max(1, Math.floor(videoCount) || DEFAULT_VIDEO_THUMBNAIL_COUNT)),
+        )
+      : credits.balance < DEFAULT_NEW_PROJECT_VARIANT_COUNT);
   const plannedStyleCount = mode === 'video'
     ? Math.min(12, Math.max(1, Math.floor(videoCount) || DEFAULT_VIDEO_THUMBNAIL_COUNT))
-    : DEFAULT_VARIANT_COUNT;
+    : DEFAULT_NEW_PROJECT_VARIANT_COUNT;
   const plannedStyles = pickThumbnailStyles(plannedStyleCount);
 
   function clearModeErrors() {
@@ -181,6 +193,10 @@ export function DashboardCreateHub() {
         return;
       }
 
+      const n = Math.min(12, Math.max(1, Math.floor(videoCount) || DEFAULT_VIDEO_THUMBNAIL_COUNT));
+      if (!assertSufficientCredits({ balance: credits?.balance, cost: creditsForVideoPipeline(n) }))
+        return;
+
       let fileToSend: File | undefined;
       if (videoFile) {
         setVideoPreparing(true);
@@ -204,7 +220,6 @@ export function DashboardCreateHub() {
         }
       }
 
-      const n = Math.min(12, Math.max(1, Math.floor(videoCount) || DEFAULT_VIDEO_THUMBNAIL_COUNT));
       fromVideo.mutate(
         {
           file: fileToSend,
@@ -254,6 +269,14 @@ export function DashboardCreateHub() {
         // Non-blocking fallback: generation can continue even if metadata enrichment failed.
       }
 
+      if (
+        !assertSufficientCredits({
+          balance: credits?.balance,
+          cost: DEFAULT_NEW_PROJECT_VARIANT_COUNT,
+        })
+      )
+        return;
+
       createAndGenerate.mutate(
         {
           platform: 'youtube',
@@ -264,7 +287,7 @@ export function DashboardCreateHub() {
           },
           generate: {
             template_id: templateId,
-            count: DEFAULT_VARIANT_COUNT,
+            count: DEFAULT_NEW_PROJECT_VARIANT_COUNT,
             avatar_id: avatarId || undefined,
           },
         },
@@ -282,6 +305,14 @@ export function DashboardCreateHub() {
       return;
     }
 
+    if (
+      !assertSufficientCredits({
+        balance: credits?.balance,
+        cost: DEFAULT_NEW_PROJECT_VARIANT_COUNT,
+      })
+    )
+      return;
+
     createAndGenerate.mutate(
       {
         platform: 'youtube',
@@ -289,7 +320,7 @@ export function DashboardCreateHub() {
         source_data: { text: hint },
         generate: {
           template_id: templateId,
-          count: DEFAULT_VARIANT_COUNT,
+          count: DEFAULT_NEW_PROJECT_VARIANT_COUNT,
           avatar_id: avatarId || undefined,
         },
       },
@@ -683,7 +714,7 @@ export function DashboardCreateHub() {
         <Button
           type="button"
           size="lg"
-          disabled={!canLoadAssets || primaryBusy}
+          disabled={!canLoadAssets || primaryBusy || cannotAffordGenerate}
           className="w-full sm:w-auto sm:min-w-[200px]"
           onClick={() => void handleGenerate()}
         >

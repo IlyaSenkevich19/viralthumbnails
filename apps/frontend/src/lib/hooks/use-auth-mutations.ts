@@ -13,8 +13,15 @@ export function useSignInMutation() {
 
 export function useSignUpMutation() {
   return useMutation({
-    mutationFn: ({ email, password }: { email: string; password: string }) =>
-      authApi.signUp(email, password),
+    mutationFn: ({
+      email,
+      password,
+      metadata,
+    }: {
+      email: string;
+      password: string;
+      metadata?: authApi.SignUpLeadMetadata;
+    }) => authApi.signUp(email, password, metadata),
   });
 }
 

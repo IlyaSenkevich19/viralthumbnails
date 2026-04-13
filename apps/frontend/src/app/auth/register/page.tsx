@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { Clock, DollarSign, FlaskConical, MousePointerClick, Paintbrush } from 'lucide-react';
 import { siteName } from '@/config/site';
 import { useSignUpMutation } from '@/lib/hooks';
 import { Button } from '@/components/ui/button';
@@ -10,22 +11,141 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { AppRoutes } from '@/config/routes';
 import { AuthThumbnailMarquee } from '@/components/auth/auth-thumbnail-marquee';
+import { collectLeadAttribution, type LeadAttribution } from '@/lib/lead-attribution';
+import { cn } from '@/lib/utils';
+import { LeadCustomSelect } from '@/components/ui/lead-custom-select';
+import { submitLeadIntake } from '@/lib/api/lead-intake';
+import { isLikelyYoutubeUrl, normalizeHttpUrl } from '@/lib/youtube-channel-url';
+
+const PROBLEM_OPTIONS = [
+  { value: 'time', label: 'Takes too long', icon: Clock },
+  { value: 'cost', label: 'Designers cost too much', icon: DollarSign },
+  { value: 'ctr', label: 'My CTR is low', icon: MousePointerClick },
+  { value: 'design', label: "I can't design", icon: Paintbrush },
+  { value: 'testing', label: "Can't A/B test", icon: FlaskConical },
+] as const;
+
+const SUBSCRIBER_OPTIONS = [
+  'Under 1,000',
+  '1,000 – 5,000',
+  '5,000 – 15,000',
+  '15,000 – 30,000',
+  '30,000+',
+] as const;
+
+const VIDEOS_PER_WEEK_OPTIONS = ['1–2 videos', '3–4 videos', '5+ videos'] as const;
 
 export default function RegisterPage() {
+  const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
+  const [biggestProblem, setBiggestProblem] = useState('');
+  const [subscriberCount, setSubscriberCount] = useState('');
+  const [videosPerWeek, setVideosPerWeek] = useState('');
   const [email, setEmail] = useState('');
+  const [channelUrl, setChannelUrl] = useState('');
   const [password, setPassword] = useState('');
+  const [attribution, setAttribution] = useState<LeadAttribution>({});
   const [error, setError] = useState('');
+  const [channelStepError, setChannelStepError] = useState('');
+  const [channelSubmitting, setChannelSubmitting] = useState(false);
   const [registered, setRegistered] = useState(false);
   const router = useRouter();
   const signUp = useSignUpMutation();
+  const advanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const leadSessionId = useMemo(() => {
+    if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+      return crypto.randomUUID();
+    }
+    return `lead_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  }, []);
+  const inputClassName =
+    'h-auto rounded-lg border border-border bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground transition-all duration-200 focus-visible:border-primary/70 focus-visible:ring-2 focus-visible:ring-primary/20';
+
+  useEffect(() => {
+    setAttribution(collectLeadAttribution());
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
+    };
+  }, []);
+
+  const totalSteps = 5;
+  const progressPercent = (step / totalSteps) * 100;
+
+  const nextStep = useCallback(() => {
+    setStep((prev) => (prev < totalSteps ? ((prev + 1) as typeof prev) : prev));
+  }, [totalSteps]);
+
+  const prevStep = useCallback(() => {
+    if (advanceTimerRef.current) {
+      clearTimeout(advanceTimerRef.current);
+      advanceTimerRef.current = null;
+    }
+    setStep((prev) => (prev > 1 ? ((prev - 1) as typeof prev) : prev));
+  }, []);
+
+  function scheduleNextStep(delayMs: number) {
+    if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
+    advanceTimerRef.current = setTimeout(() => {
+      advanceTimerRef.current = null;
+      nextStep();
+    }, delayMs);
+  }
+
+  async function completeChannelStep() {
+    const normalized = normalizeHttpUrl(channelUrl);
+    if (!isLikelyYoutubeUrl(normalized)) {
+      setChannelStepError('Paste a valid YouTube link (channel, @handle, or video URL).');
+      return;
+    }
+    setChannelStepError('');
+    setChannelUrl(normalized);
+    setChannelSubmitting(true);
+    const crm = await submitLeadIntake({
+      lead_session_id: leadSessionId,
+      funnel_stage: 'register_wizard_step_4',
+      channel_url: normalized,
+      biggest_thumbnail_problem: biggestProblem || undefined,
+      subscriber_count: subscriberCount || undefined,
+      videos_per_week: videosPerWeek || undefined,
+      ...attribution,
+    });
+    setChannelSubmitting(false);
+    if (!crm.ok) {
+      toast.warning(crm.message + ' You can still create your account.');
+    }
+    nextStep();
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
     signUp.mutate(
-      { email, password },
+      {
+        email,
+        password,
+        metadata: {
+          lead_session_id: leadSessionId,
+          biggest_thumbnail_problem: biggestProblem || undefined,
+          subscriber_count: subscriberCount || undefined,
+          videos_per_week: videosPerWeek || undefined,
+          channel_url: normalizeHttpUrl(channelUrl).trim() || undefined,
+          ...attribution,
+        },
+      },
       {
         onSuccess: () => {
+          void submitLeadIntake({
+            lead_session_id: leadSessionId,
+            funnel_stage: 'signup_completed',
+            email: email.trim() || undefined,
+            channel_url: normalizeHttpUrl(channelUrl).trim(),
+            biggest_thumbnail_problem: biggestProblem || undefined,
+            subscriber_count: subscriberCount || undefined,
+            videos_per_week: videosPerWeek || undefined,
+            ...attribution,
+          });
           setRegistered(true);
           toast.success('Confirm your email to activate account.');
         },
@@ -60,10 +180,20 @@ export default function RegisterPage() {
               <>
                 <div>
                   <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-                    Create your <span className="text-primary">account</span>
+                    {step < 5 ? (
+                      <>
+                        Quick <span className="text-primary">onboarding</span>
+                      </>
+                    ) : (
+                      <>
+                        Create your <span className="text-primary">account</span>
+                      </>
+                    )}
                   </h1>
                   <p className="text-sm text-muted-foreground mt-2">
-                    Sign up with email. You can wire OAuth in Supabase when you are ready.
+                    {step < 5
+                      ? 'Tap your answers — we move you forward automatically. No long forms.'
+                      : 'Last step: email and password.'}
                   </p>
                 </div>
 
@@ -71,37 +201,211 @@ export default function RegisterPage() {
                   onSubmit={handleSubmit}
                   className="surface space-y-4 p-6"
                 >
-                  <div className="space-y-1">
-                    <label htmlFor="register-email" className="text-sm font-medium text-foreground">
-                      Your email
-                    </label>
-                    <Input
-                      id="register-email"
-                      type="email"
-                      placeholder="you@example.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                    />
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>
+                        {step < 5 ? (
+                          <>
+                            {step === 4 ? 'Almost done' : `Question ${step} of ${totalSteps - 1}`}
+                          </>
+                        ) : (
+                          'Account'
+                        )}
+                      </span>
+                      <span>{Math.round(progressPercent)}%</span>
+                    </div>
+                    <div className="h-1.5 w-full rounded-full bg-muted">
+                      <div
+                        className="h-full rounded-full bg-primary transition-all duration-300"
+                        style={{ width: `${progressPercent}%` }}
+                      />
+                    </div>
                   </div>
-                  <div className="space-y-1">
-                    <label htmlFor="register-password" className="text-sm font-medium text-foreground">
-                      Password
-                    </label>
-                    <Input
-                      id="register-password"
-                      type="password"
-                      placeholder="At least 6 characters"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      minLength={6}
-                    />
-                  </div>
-                  {error && <p className="text-sm text-destructive">{error}</p>}
-                  <Button type="submit" className="w-full" disabled={signUp.isPending}>
-                    {signUp.isPending ? 'Creating account...' : 'Get started →'}
-                  </Button>
+
+                  {step === 1 ? (
+                    <>
+                      <div className="space-y-1">
+                        <label className="text-sm font-medium text-foreground">
+                          What&apos;s your biggest thumbnail problem?
+                        </label>
+                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                          {PROBLEM_OPTIONS.map((option) => (
+                            <button
+                              key={option.value}
+                              type="button"
+                              onClick={() => {
+                                setBiggestProblem(option.value);
+                                scheduleNextStep(200);
+                              }}
+                              className={cn(
+                                'flex items-center gap-2 rounded-lg border px-3 py-2.5 text-left text-xs font-medium transition-all duration-200',
+                                biggestProblem === option.value
+                                  ? 'border-primary bg-primary/10 text-primary shadow-sm shadow-primary/10'
+                                  : 'border-border bg-background text-muted-foreground hover:border-[color:var(--border-hover)] hover:text-foreground',
+                              )}
+                            >
+                              <option.icon className="h-4 w-4 shrink-0" />
+                              {option.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <p className="text-center text-xs text-muted-foreground">
+                        Pick one — next question opens right away.
+                      </p>
+                    </>
+                  ) : step === 2 ? (
+                    <>
+                      <div className="space-y-1">
+                        <label
+                          htmlFor="register-subscribers"
+                          className="text-sm font-medium text-foreground"
+                        >
+                          Subscriber count
+                        </label>
+                        <LeadCustomSelect
+                          id="register-subscribers"
+                          value={subscriberCount}
+                          onChange={(v) => {
+                            setSubscriberCount(v);
+                            scheduleNextStep(120);
+                          }}
+                          options={SUBSCRIBER_OPTIONS}
+                          placeholder="Select range"
+                        />
+                      </div>
+                      <p className="text-center text-xs text-muted-foreground">
+                        Choose a range — we continue automatically.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={prevStep}
+                        className="w-full text-center text-xs text-muted-foreground transition-colors hover:text-foreground"
+                      >
+                        ← Change previous answer
+                      </button>
+                    </>
+                  ) : step === 3 ? (
+                    <>
+                      <div className="space-y-1">
+                        <label htmlFor="register-uploads" className="text-sm font-medium text-foreground">
+                          How many videos per week?
+                        </label>
+                        <LeadCustomSelect
+                          id="register-uploads"
+                          value={videosPerWeek}
+                          onChange={(v) => {
+                            setVideosPerWeek(v);
+                            scheduleNextStep(120);
+                          }}
+                          options={VIDEOS_PER_WEEK_OPTIONS}
+                          placeholder="Select frequency"
+                        />
+                      </div>
+                      <p className="text-center text-xs text-muted-foreground">
+                        Pick frequency — next screen loads on its own.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={prevStep}
+                        className="w-full text-center text-xs text-muted-foreground transition-colors hover:text-foreground"
+                      >
+                        ← Change previous answer
+                      </button>
+                    </>
+                  ) : step === 4 ? (
+                    <>
+                      <div className="space-y-1">
+                        <label htmlFor="register-channel-url" className="text-sm font-medium text-foreground">
+                          YouTube link <span className="text-primary">*</span>
+                        </label>
+                        <Input
+                          id="register-channel-url"
+                          type="url"
+                          inputMode="url"
+                          autoComplete="url"
+                          placeholder="https://www.youtube.com/@yourchannel or …/watch?v=…"
+                          value={channelUrl}
+                          onChange={(e) => {
+                            setChannelUrl(e.target.value);
+                            if (channelStepError) setChannelStepError('');
+                          }}
+                          className={inputClassName}
+                        />
+                        {channelStepError ? (
+                          <p className="text-sm text-destructive">{channelStepError}</p>
+                        ) : null}
+                      </div>
+                      <p className="text-center text-xs text-muted-foreground">
+                        Channel, @handle, or video URL — we use it to personalize your workspace.
+                      </p>
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <button
+                          type="button"
+                          onClick={prevStep}
+                          className="order-2 text-center text-xs text-muted-foreground transition-colors hover:text-foreground sm:order-1 sm:text-left"
+                        >
+                          ← Back
+                        </button>
+                        <Button
+                          type="button"
+                          className="order-1 w-full sm:order-2 sm:w-auto sm:min-w-[11rem]"
+                          disabled={channelSubmitting}
+                          onClick={() => void completeChannelStep()}
+                        >
+                          {channelSubmitting ? 'Saving…' : 'Continue →'}
+                        </Button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="rounded-lg border border-primary/20 bg-primary/[0.08] px-3 py-2 text-xs text-foreground/90">
+                        You&apos;re set — add email and password to finish.
+                      </div>
+                      <div className="space-y-1">
+                        <label htmlFor="register-email" className="text-sm font-medium text-foreground">
+                          Your email
+                        </label>
+                        <Input
+                          id="register-email"
+                          type="email"
+                          placeholder="you@example.com"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          required
+                          className={inputClassName}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label htmlFor="register-password" className="text-sm font-medium text-foreground">
+                          Password
+                        </label>
+                        <Input
+                          id="register-password"
+                          type="password"
+                          placeholder="At least 6 characters"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          required
+                          minLength={6}
+                          className={inputClassName}
+                        />
+                      </div>
+                      {error ? <p className="text-sm text-destructive">{error}</p> : null}
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-2">
+                        <button
+                          type="button"
+                          onClick={prevStep}
+                          className="text-center text-xs text-muted-foreground transition-colors hover:text-foreground sm:text-left"
+                        >
+                          ← Edit onboarding answers
+                        </button>
+                        <Button type="submit" className="w-full sm:ml-auto sm:w-auto sm:min-w-[12rem]" disabled={signUp.isPending}>
+                          {signUp.isPending ? 'Creating account...' : 'Create account →'}
+                        </Button>
+                      </div>
+                    </>
+                  )}
                 </form>
               </>
             ) : (

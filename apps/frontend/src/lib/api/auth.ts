@@ -7,9 +7,31 @@ export async function signIn(email: string, password: string) {
   if (error) throw error;
 }
 
-export async function signUp(email: string, password: string) {
+export type SignUpLeadMetadata = {
+  lead_session_id?: string;
+  biggest_thumbnail_problem?: string;
+  subscriber_count?: string;
+  videos_per_week?: string;
+  channel_url?: string;
+  utm_source?: string;
+  utm_medium?: string;
+  utm_campaign?: string;
+  utm_content?: string;
+  utm_term?: string;
+  gclid?: string;
+  fbclid?: string;
+  referrer?: string;
+  page_path?: string;
+  source?: string;
+};
+
+export async function signUp(email: string, password: string, metadata?: SignUpLeadMetadata) {
   const supabase = createClient();
-  const { error } = await supabase.auth.signUp({ email, password });
+  const { error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: metadata ? { data: metadata } : undefined,
+  });
   if (error) throw error;
 }
 

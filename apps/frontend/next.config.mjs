@@ -11,6 +11,7 @@ if (process.env.VERCEL === '1') {
   }
 }
 
+// Vercel: set NEXT_PUBLIC_BACKEND_URL for production; otherwise rewrites fall back to localhost:3001.
 const backendBase = (process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001').replace(
   /\/$/,
   '',

@@ -15,6 +15,7 @@ import { AvatarsModule } from './modules/avatars/avatars.module';
 import { BillingModule } from './modules/billing/billing.module';
 import { OpenRouterModule } from './modules/openrouter/openrouter.module';
 import { VideoThumbnailsModule } from './modules/video-thumbnails/video-thumbnails.module';
+import { ThumbnailPipelineModule } from './modules/thumbnail-pipeline/thumbnail-pipeline.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { VideoThumbnailsModule } from './modules/video-thumbnails/video-thumbnai
     BillingModule,
     OpenRouterModule,
     VideoThumbnailsModule,
+    ThumbnailPipelineModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: HttpExceptionFilter },

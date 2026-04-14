@@ -80,6 +80,7 @@ JSON body size limit is **15MB** in `main.ts` (base64 image uploads). If the fro
 | Анализ видео (описание кадров, стиль) | `POST /api/thumbnails/from-video`, шаг analyze | `OPENROUTER_VIDEO_MODEL` | `google/gemini-2.0-flash-001` | `video-analysis.service.ts` |
 | Генерация N кандидатов превью по анализу | тот же пайплайн, шаг generate | `OPENROUTER_IMAGE_MODEL` | как выше | `thumbnail-generation.service.ts` |
 | Скоринг и ранжирование кандидатов | тот же пайплайн, шаг rank | `OPENROUTER_RANKING_MODEL` *(если пусто — берётся `OPENROUTER_VIDEO_MODEL`)* | fallback = video-модель | `thumbnail-ranking.service.ts` |
+| Модульный пайплайн | `POST /api/thumbnails/pipeline/run` | Все slug’и шагов в **`thumbnail-pipeline/config/pipeline-step-models.ts`** (VL: gemma free + nemotron fallback; image: `flux.2-flex` / edit: `flux.2-pro`) | `thumbnail-pipeline/*` | `thumbnail-pipeline-orchestrator.service.ts` |
 
 Без **`OPENROUTER_API_KEY`** генерация вариантов проекта всё равно отрабатывает, но сохраняет **placeholder**-URL картинки. Пайплайн **`from-video`** для реальных вызовов к моделям тоже ожидает ключ.
 
@@ -112,6 +113,8 @@ OPENROUTER_VIDEO_MODEL=google/gemini-2.0-flash-001
 
 `POST /api/thumbnails/from-video` (Bearer, `multipart/form-data`): field `file` **or** `videoUrl`, optional `count` (1–12), `style`. Temp uploads live under `{userId}/from-video/temp/…`, outputs under `{userId}/from-video/out/{runId}/…`.
 
+`POST /api/thumbnails/pipeline/run` (Bearer, JSON): модульный OpenRouter-пайплайн для MVP и тестов. Поля: `user_prompt` (обязательно), опционально `video_url` (уже разрешённый HTTPS URL после загрузки или прямая ссылка), `template_reference_data_urls`, `face_reference_data_urls` (`data:image/...;base64,...`), `variant_count`, `generate_images`, `prioritize_face`, `base_image_data_url` + `edit_instruction` для слоя редактирования. Ответ: структурированный `analysis`, `image_prompts_used`, `models_used`, при `generate_images: true` — `variants[].image_base64`. Модели шагов (VL, Flux gen/edit) задаются в **`src/modules/thumbnail-pipeline/config/pipeline-step-models.ts`** (не через env). **Кредиты пока не списываются** — перед публичным доступом подключите биллинг.
+
 **Кредиты для `from-video`:** списывается **`1 + 2×count`** (один вызов анализа видео + `count` генераций изображений + `count` ранжирований). При ошибке пайплайна после резерва баланс возвращается.
 
 **Rate limiting (по пользователю, после JWT):**
@@ -120,6 +123,7 @@ OPENROUTER_VIDEO_MODEL=google/gemini-2.0-flash-001
 |---------|------|--------|
 | `POST /api/projects/:id/generate` | 1 мин | 15 |
 | `POST /api/thumbnails/from-video` | 1 ч | 8 |
+| `POST /api/thumbnails/pipeline/run` | 1 ч | 8 |
 
 ### Optional — Storage signed URLs
 

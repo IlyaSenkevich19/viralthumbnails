@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { getOpenRouterConfig } from '../../../config/openrouter.config';
 import { OpenRouterClient } from '../../openrouter/openrouter.client';
-import { extractJsonObject } from '../lib/json-repair';
+import { extractJsonObject } from '@/common/json/extract-json-object';
 import {
   VideoAnalysis,
   VideoAnalysisJsonPrompt,

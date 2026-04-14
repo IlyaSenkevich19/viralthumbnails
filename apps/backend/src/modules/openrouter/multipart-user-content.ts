@@ -31,3 +31,23 @@ export function userContentTextThenReferenceImages(
   }
   return parts;
 }
+
+/**
+ * Multimodal context for pipeline analysis: optional video, then reference images
+ * (callers should document order in the instruction text, e.g. template then face).
+ */
+export function userContentTextVideoThenReferenceImages(
+  instruction: string,
+  videoUrl: string | undefined,
+  imageUrlOrDataUrls: string[],
+): OpenRouterContentPart[] {
+  const parts: OpenRouterContentPart[] = [{ type: 'text', text: instruction }];
+  if (videoUrl?.trim()) {
+    parts.push({ type: 'video_url', video_url: { url: videoUrl.trim() } });
+  }
+  for (const url of imageUrlOrDataUrls) {
+    const u = url?.trim();
+    if (u) parts.push({ type: 'image_url', image_url: { url: u } });
+  }
+  return parts;
+}

@@ -1,2 +1,4 @@
-/** Display name (logo text); override with `NEXT_PUBLIC_APP_NAME` in `.env`. */
-export const siteName = process.env.NEXT_PUBLIC_APP_NAME?.trim() || 'ViralThumblify';
+/** Product wordmark everywhere in the app chrome (sidebar, headers, auth, document title). */
+export const brandWordmarkPrefix = 'Viral';
+export const brandWordmarkSuffix = 'Thumblify';
+export const brandWordmark = `${brandWordmarkPrefix}${brandWordmarkSuffix}`;

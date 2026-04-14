@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Clock, DollarSign, FlaskConical, MousePointerClick, Paintbrush } from 'lucide-react';
-import { siteName } from '@/config/site';
+import { BrandWordmark } from '@/components/layout/brand-wordmark';
 import { useSignUpMutation } from '@/lib/hooks';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -162,10 +162,7 @@ export default function RegisterPage() {
     <div className="flex min-h-screen items-stretch bg-background">
       <div className="flex w-full flex-col px-6 py-8 sm:px-10 lg:w-1/2 lg:px-16">
         <header className="mb-10 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-xl bg-primary shadow-md shadow-primary/25" />
-            <span className="font-semibold tracking-tight text-foreground">{siteName}</span>
-          </div>
+          <BrandWordmark className="text-base" />
           <div className="text-sm text-muted-foreground">
             Already have an account?{' '}
             <Link href={AppRoutes.home} className="font-medium text-foreground hover:underline">

@@ -63,11 +63,10 @@ Use the **anon** (publishable) key in the browser only. The app expects this exa
 ### Recommended
 
 ```env
-NEXT_PUBLIC_APP_NAME=ViralThumblify
 NEXT_PUBLIC_BACKEND_URL=http://localhost:3001
 ```
 
-- **`NEXT_PUBLIC_APP_NAME`** — branding (`src/config/site.ts`: title, sidebar, etc.).
+- **Branding** — fixed wordmark in `src/config/site.ts` (`brandWordmark` → ViralThumblify).
 - **`NEXT_PUBLIC_BACKEND_URL`** — Nest API base for rewrites; in production, your Railway/Render/Fly/Cloud Run URL.
 
 ### Monorepo env sync
@@ -114,7 +113,7 @@ yarn lint
 
 ## Deployment (e.g. Vercel)
 
-- Set **`NEXT_PUBLIC_SUPABASE_URL`**, **`NEXT_PUBLIC_SUPABASE_ANON_KEY`**, **`NEXT_PUBLIC_BACKEND_URL`** (production API), and optional **`NEXT_PUBLIC_APP_NAME`** in the host’s environment.
+- Set **`NEXT_PUBLIC_SUPABASE_URL`**, **`NEXT_PUBLIC_SUPABASE_ANON_KEY`**, **`NEXT_PUBLIC_BACKEND_URL`** (production API) in the host’s environment.
 - **Analytics** (see `src/components/marketing/marketing-scripts.tsx`): prefer **`NEXT_PUBLIC_GTM_ID`** and configure GA4 + Google Ads in GTM; or set **`NEXT_PUBLIC_GA_MEASUREMENT_ID`** / **`NEXT_PUBLIC_GOOGLE_ADS_ID`** without GTM (not both paths — GTM wins). Redeploy after changing `NEXT_PUBLIC_*`.
 - Ensure the backend **`FRONTEND_URL`** (CORS) includes your Vercel domain.
 

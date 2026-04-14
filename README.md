@@ -67,7 +67,7 @@ yarn dev
 - **OpenRouter / модели**: какая модель для какого сценария (проект vs `from-video`) — в **`apps/backend/README.md`**, раздел *OpenRouter: модели и сценарии*.
 - **Backend**: register new modules in `apps/backend/src/app.module.ts`.
 - **Frontend**: add routes under `apps/frontend/src/app`, API clients under `src/lib/api`, React Query hooks under `src/lib/queries`.
-- **Branding**: default product name is **ViralThumblify** (`src/config/site.ts`). Set **`NEXT_PUBLIC_APP_NAME`** in `.env` to override (document title, sidebar, auth headers).
+- **Branding**: product wordmark **ViralThumblify** is set in `apps/frontend/src/config/site.ts` (`brandWordmark`) and used in layout title, sidebar, and auth headers.
 
 ## License
 

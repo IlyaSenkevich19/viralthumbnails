@@ -3,7 +3,8 @@
 import { useMemo } from 'react';
 import { usePathname } from 'next/navigation';
 import { Menu } from 'lucide-react';
-import { siteName } from '@/config/site';
+import { BrandWordmark } from '@/components/layout/brand-wordmark';
+import { AppRoutes } from '@/config/routes';
 import { usePageFrame } from '@/contexts/page-frame-context';
 import {
   isProjectVariantsPath,
@@ -71,11 +72,8 @@ export function HeaderShell({
               </h1>
             </div>
           ) : (
-            <div className="flex min-w-0 items-center gap-2.5 pt-0.5">
-              <div className="h-7 w-7 shrink-0 rounded-lg bg-primary/90 shadow-md shadow-primary/30 sm:h-8 sm:w-8" aria-hidden />
-              <span className="truncate text-sm font-semibold tracking-tight text-foreground sm:text-base">
-                {siteName}
-              </span>
+            <div className="flex min-w-0 items-center pt-0.5">
+              <BrandWordmark className="truncate text-sm sm:text-base" href={AppRoutes.dashboard} />
             </div>
           )}
         </div>

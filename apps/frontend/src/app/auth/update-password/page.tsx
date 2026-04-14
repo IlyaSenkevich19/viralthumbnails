@@ -1,9 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { siteName } from '@/config/site';
+import { BrandWordmark } from '@/components/layout/brand-wordmark';
 import { useUpdatePasswordMutation } from '@/lib/hooks';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,10 +42,7 @@ export default function UpdatePasswordPage() {
   return (
     <div className="flex min-h-screen flex-col bg-background px-6 py-10 sm:px-10">
       <header className="mx-auto mb-8 flex w-full max-w-md items-center justify-between">
-        <Link href={AppRoutes.home} className="flex items-center gap-2 text-foreground">
-          <div className="h-8 w-8 rounded-xl bg-primary shadow-md shadow-primary/25" />
-          <span className="font-semibold tracking-tight">{siteName}</span>
-        </Link>
+        <BrandWordmark className="text-base" />
       </header>
 
       <main className="mx-auto flex w-full max-w-md flex-1 flex-col">

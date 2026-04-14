@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
-import { siteName } from '@/config/site';
+import { brandWordmark } from '@/config/site';
 import { AuthProvider } from '@/contexts/auth-context';
 import { QueryProvider } from '@/components/providers/query-provider';
 import { ThemeProvider } from '@/components/providers/theme-provider';
@@ -14,7 +14,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: siteName,
+  title: brandWordmark,
   description: 'ViralThumblify — AI thumbnails for YouTube.',
 };
 

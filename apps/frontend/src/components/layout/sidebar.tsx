@@ -3,7 +3,8 @@
 import { useState, useRef, useEffect, type ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { siteName } from '@/config/site';
+import { brandWordmark } from '@/config/site';
+import { BrandWordmark } from '@/components/layout/brand-wordmark';
 import { useAuth } from '@/contexts/auth-context';
 import { cn } from '@/lib/utils';
 import {
@@ -257,23 +258,23 @@ export function Sidebar({
       )}
 
       <div className={cn('overflow-x-hidden p-4 pb-3', compact && 'px-2')}>
-        <CollapsedSidebarTooltip enabled={compact} label={siteName} className={cn(compact && 'flex w-full justify-center')}>
+        <CollapsedSidebarTooltip
+          enabled={compact}
+          label={brandWordmark}
+          className={cn(compact && 'flex w-full justify-center')}
+        >
           <Link
             href={AppRoutes.dashboard}
             onClick={() => {
               if (inDrawer && pathname === AppRoutes.dashboard) onClose?.();
             }}
-            className={cn('flex items-center gap-2', compact && 'justify-center')}
+            className={cn('flex min-w-0 items-center', compact && 'justify-center')}
           >
-            <div className="h-9 w-9 shrink-0 rounded-xl bg-primary shadow-md shadow-primary/25" />
-            {!compact && (
-              <SidebarSlidingLabel show maxWidthClass="max-w-[11rem]" className="text-left">
-                <span className="block truncate text-base font-semibold tracking-tight text-foreground">
-                  {siteName}
-                </span>
-              </SidebarSlidingLabel>
+            {!compact ? (
+              <BrandWordmark className="truncate text-base" linked={false} />
+            ) : (
+              <span className="sr-only">{brandWordmark}</span>
             )}
-            {compact && <span className="sr-only">{siteName}</span>}
           </Link>
         </CollapsedSidebarTooltip>
       </div>

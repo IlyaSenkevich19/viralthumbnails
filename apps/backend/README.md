@@ -1,6 +1,6 @@
 # Backend (NestJS)
 
-API for **ViralThumbnails**: Supabase-backed projects, thumbnail variants, template catalog, and **OpenRouter**-powered thumbnail generation.
+API for **ViralThumblify**: Supabase-backed projects, thumbnail variants, template catalog, and **OpenRouter**-powered thumbnail generation.
 
 - **Global prefix:** `/api` (e.g. health is `GET /api/health`)
 - **Root:** `GET /` returns a small JSON map (`health`, `docs`) so deploys don’t show “Cannot GET /”
@@ -103,7 +103,7 @@ OPENROUTER_API_KEY=
 # OPENROUTER_USE_FREE_MODELS=1
 # OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
 # OPENROUTER_HTTP_REFERER=https://your-frontend.example
-# OPENROUTER_APP_TITLE=ViralThumbnails
+# OPENROUTER_APP_TITLE=ViralThumblify
 OPENROUTER_IMAGE_MODEL=google/gemini-2.5-flash-image-preview
 OPENROUTER_PROJECT_GEN_TIMEOUT_MS=120000
 OPENROUTER_VIDEO_MODEL=google/gemini-2.0-flash-001

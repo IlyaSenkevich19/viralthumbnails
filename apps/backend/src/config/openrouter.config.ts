@@ -6,7 +6,7 @@ export const OPENROUTER_CONFIG_KEY = 'openrouter' as const;
 const DEFAULT_BASE_URL = 'https://openrouter.ai/api/v1';
 const DEFAULT_IMAGE_MODEL = 'google/gemini-2.5-flash-image-preview';
 const DEFAULT_VIDEO_MODEL = 'google/gemini-2.0-flash-001';
-const DEFAULT_APP_TITLE = 'ViralThumbnails';
+const DEFAULT_APP_TITLE = 'ViralThumblify';
 const DEFAULT_PROJECT_GEN_TIMEOUT_MS = 120_000;
 
 /**

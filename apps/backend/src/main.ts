@@ -20,7 +20,7 @@ async function bootstrap() {
   app.getHttpAdapter().get('/', (_req: Request, res: Response) => {
     res.status(200).json({
       ok: true,
-      service: 'ViralThumbnails API',
+      service: 'ViralThumblify API',
       health: '/api/health',
       docs: '/api/docs',
     });
@@ -40,9 +40,9 @@ async function bootstrap() {
   });
 
   const config = new DocumentBuilder()
-    .setTitle('API')
+    .setTitle('ViralThumblify API')
     .setDescription(
-      'NestJS API: auth, health, projects, templates, user avatars, thumbnail generation, video→thumbnails (OpenRouter)',
+      'ViralThumblify — auth, health, projects, templates, avatars, thumbnail generation, video→thumbnails (OpenRouter)',
     )
     .setVersion('1.0')
     .addBearerAuth()

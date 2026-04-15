@@ -1,11 +1,23 @@
 import { z } from 'zod';
 
+const NonNegativeNumberWithDefaultZero = z.preprocess((v) => {
+  if (v === null || v === undefined || v === '') return 0;
+  return v;
+}, z.coerce.number().nonnegative());
+
 /** Single best-moment pick for thumbnail framing (may align with a key frame). */
 export const BestThumbnailMomentSchema = z.object({
-  startSec: z.number().nonnegative(),
-  endSec: z.number().nonnegative().optional(),
+  startSec: NonNegativeNumberWithDefaultZero,
+  endSec: z.preprocess(
+    (v) => (v === null || v === undefined || v === '' ? undefined : v),
+    z.coerce.number().nonnegative().optional(),
+  ),
   label: z.string().min(1),
-  why: z.string(),
+  why: z
+    .string()
+    .trim()
+    .optional()
+    .transform((v) => (v && v.length > 0 ? v : 'Model did not provide a reason.')),
 });
 
 export type BestThumbnailMoment = z.infer<typeof BestThumbnailMomentSchema>;

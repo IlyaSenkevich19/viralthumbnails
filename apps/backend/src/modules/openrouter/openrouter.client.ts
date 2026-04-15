@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { getOpenRouterConfig } from '../../config/openrouter.config';
 import { extractImagesFromOpenRouterParts } from './extract-images-from-parts';
+import { OpenRouterApiError } from './openrouter-api.error';
 import type {
   OpenRouterChatResult,
   OpenRouterDecodedImage,
@@ -85,9 +86,12 @@ export class OpenRouterClient {
     }
 
     if (!res.ok) {
-      const msg = json.error?.message || rawText.slice(0, 400);
-      this.logger.warn(`OpenRouter error ${res.status} model=${params.model} latencyMs=${latencyMs} ${msg}`);
-      throw new Error(`OpenRouter: ${res.status} ${msg}`);
+      const providerMessage = (json.error?.message || rawText.slice(0, 400)).trim();
+      const mapped = this.mapOpenRouterError(res.status, providerMessage);
+      this.logger.warn(
+        `OpenRouter error ${res.status} code=${mapped.code} model=${params.model} latencyMs=${latencyMs} ${providerMessage}`,
+      );
+      throw new OpenRouterApiError(res.status, mapped.code, mapped.message);
     }
 
     const choice = json.choices?.[0];
@@ -120,5 +124,40 @@ export class OpenRouterClient {
 
   extractImagesFromParts(parts: unknown[]): OpenRouterDecodedImage[] {
     return extractImagesFromOpenRouterParts(parts);
+  }
+
+  private mapOpenRouterError(status: number, providerMessage: string): { code: string; message: string } {
+    if (
+      status === 402 &&
+      /at least\s*\$?1(\.0+)?\s+in balance.*video/i.test(providerMessage)
+    ) {
+      return {
+        code: 'OPENROUTER_VIDEO_BALANCE_REQUIRED',
+        message:
+          'OpenRouter requires at least $1 balance for video analysis requests. Top up your OpenRouter account or run without video_url.',
+      };
+    }
+    if (status === 402) {
+      return {
+        code: 'OPENROUTER_BILLING_REQUIRED',
+        message: 'OpenRouter billing requirement not met. Please check your account balance and billing status.',
+      };
+    }
+    if (status === 429) {
+      return {
+        code: 'OPENROUTER_RATE_LIMIT',
+        message: 'OpenRouter rate limit reached. Please retry in a moment.',
+      };
+    }
+    if (status >= 500) {
+      return {
+        code: 'OPENROUTER_UPSTREAM_ERROR',
+        message: 'OpenRouter upstream error. Please retry shortly.',
+      };
+    }
+    return {
+      code: 'OPENROUTER_REQUEST_FAILED',
+      message: `OpenRouter request failed (${status}).`,
+    };
   }
 }

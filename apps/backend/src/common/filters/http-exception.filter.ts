@@ -9,6 +9,7 @@ import {
 import { Request, Response } from 'express';
 import { defaultErrorCodeForStatus } from '../http/error-codes';
 import { normalizeExceptionMessage } from '../http/normalize-exception-message';
+import { OpenRouterApiError } from '../../modules/openrouter/openrouter-api.error';
 
 export type ApiErrorJsonBody = {
   statusCode: number;
@@ -72,6 +73,26 @@ export class HttpExceptionFilter implements ExceptionFilter {
         path: req.url,
         message,
         code,
+      };
+      res.status(status).json(body);
+      return;
+    }
+
+    if (exception instanceof OpenRouterApiError) {
+      const status = exception.statusCode;
+      const logLine = `${req.method} ${req.url} - ${status}: ${exception.message}`;
+      if (status >= 500) {
+        this.logger.error(logLine);
+      } else {
+        this.logger.warn(logLine);
+      }
+
+      const body: ApiErrorJsonBody = {
+        statusCode: status,
+        timestamp: new Date().toISOString(),
+        path: req.url,
+        message: exception.message,
+        code: exception.code,
       };
       res.status(status).json(body);
       return;

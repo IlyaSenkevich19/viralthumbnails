@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { PIPELINE_STEP_MODELS } from '@/config/openrouter-models';
-import { extractJsonObject } from '@/common/json/extract-json-object';
+import { PIPELINE_STEP_MODELS } from '../../../config/openrouter-models';
+import { extractJsonObject } from '../../../common/json/extract-json-object';
 import { approximateOpenRouterMessagesPayloadChars } from '../../openrouter/approximate-message-payload-chars';
 import { OpenRouterClient } from '../../openrouter/openrouter.client';
 import { userContentTextVideoThenReferenceImages } from '../../openrouter/multipart-user-content';

@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { getOpenRouterConfig } from '../../../config/openrouter.config';
-import { PIPELINE_STEP_MODELS } from '@/config/openrouter-models';
+import { PIPELINE_STEP_MODELS } from '../../../config/openrouter-models';
 import { OpenRouterClient } from '../../openrouter/openrouter.client';
 import { requestOpenRouterSingleThumbnailImage } from '../../openrouter/request-openrouter-thumbnail-image';
 import { userContentTextThenReferenceImages } from '../../openrouter/multipart-user-content';

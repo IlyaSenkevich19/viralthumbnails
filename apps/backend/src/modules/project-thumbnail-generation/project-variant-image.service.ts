@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { getOpenRouterConfig } from '../../config/openrouter.config';
 import { userContentTextThenReferenceImages } from '../openrouter/multipart-user-content';
 import { OpenRouterClient } from '../openrouter/openrouter.client';
+import { requestOpenRouterSingleThumbnailImage } from '../openrouter/request-openrouter-thumbnail-image';
 import type { OpenRouterMessage } from '../openrouter/openrouter.types';
 import { SupabaseService } from '../supabase/supabase.service';
 import { TemplatesService } from '../templates/templates.service';
@@ -460,41 +461,19 @@ export class ProjectVariantImageService {
     const messages: OpenRouterMessage[] = [{ role: 'user', content }];
 
     const timeoutMs = or.projectGenTimeoutMs;
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), timeoutMs);
-
-    let result;
-    try {
-      result = await this.openRouter.chatCompletions({
-        model,
-        messages,
-        modalities: ['image', 'text'],
-        temperature: 0.5,
-        maxTokens: 8192,
-        signal: controller.signal,
-      });
-    } catch (err) {
-      if (err instanceof Error && err.name === 'AbortError') {
-        throw new Error(`OpenRouter image gen: request timed out after ${timeoutMs}ms`);
-      }
-      throw err;
-    } finally {
-      clearTimeout(timeout);
-    }
-
-    const imgs = this.openRouter.extractImagesFromParts(result.contentParts);
-    if (imgs.length === 0) {
+    const img = await requestOpenRouterSingleThumbnailImage({
+      openRouter: this.openRouter,
+      model,
+      messages,
+      timeoutMs,
+      logger: this.logger,
+      logContext: `project variant ${opts.variantId}`,
+    });
+    if (!img) {
       this.logger.warn(`OpenRouter: no image in response for variant ${opts.variantId}`);
       throw new Error('OpenRouter: no image bytes in response');
     }
-
-    const first = imgs[0];
-    const buffer = Buffer.from(first.base64, 'base64');
-    if (!buffer.length) {
-      throw new Error('OpenRouter: empty image buffer');
-    }
-    const contentType = first.mime.includes('jpeg') ? 'image/jpeg' : 'image/png';
-    return { kind: 'bytes', buffer, contentType };
+    return { kind: 'bytes', buffer: img.buffer, contentType: img.contentType };
   }
 
   private placeholderThumbnailUrl(variantId: string): string {

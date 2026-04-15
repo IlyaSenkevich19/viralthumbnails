@@ -1,4 +1,6 @@
 import { Injectable } from '@nestjs/common';
+import { randomUUID } from 'crypto';
+import { BillingService } from '../../billing/billing.service';
 import type { ThumbnailPipelineRunInput, ThumbnailPipelineRunResult } from '../types/thumbnail-pipeline-run.types';
 import { PipelinePromptBuilderService } from './pipeline-prompt-builder.service';
 import { PipelinePromptRefinementService } from './pipeline-prompt-refinement.service';
@@ -8,11 +10,13 @@ import { PipelineVideoUnderstandingService } from './pipeline-video-understandin
 
 /**
  * Coordinates ingest-shaped inputs → understanding → prompt building →
- * optional generation and optional editing. OpenRouter access stays in step services.
+ * optional generation and optional editing. Credits are reserved up-front
+ * and refunded on any failure (same pattern as `from-video`).
  */
 @Injectable()
 export class ThumbnailPipelineOrchestratorService {
   constructor(
+    private readonly billing: BillingService,
     private readonly refinement: PipelinePromptRefinementService,
     private readonly videoUnderstanding: PipelineVideoUnderstandingService,
     private readonly promptBuilder: PipelinePromptBuilderService,
@@ -21,72 +25,104 @@ export class ThumbnailPipelineOrchestratorService {
   ) {}
 
   async run(input: ThumbnailPipelineRunInput): Promise<ThumbnailPipelineRunResult> {
-    const refined = await this.refinement.refineIfConfigured(input.userPrompt);
-
-    const { analysis, modelUsed } = await this.videoUnderstanding.analyze({
-      userPrompt: refined.text,
-      style: input.style,
-      videoUrl: input.videoUrl,
-      templateReferenceDataUrls: input.templateReferenceDataUrls,
-      faceReferenceDataUrls: input.faceReferenceDataUrls,
-    });
-
+    const runId = randomUUID();
     const count = Math.min(12, Math.max(1, input.variantCount ?? 4));
-    const basePrompts = this.promptBuilder.buildFinalImagePrompts({
-      analysis,
-      userPrompt: refined.text,
-      style: input.style,
-      count,
+    const includeImageEdit = Boolean(input.baseImageDataUrl?.trim() && input.editInstruction?.trim());
+    const generateImages = Boolean(input.generateImages);
+
+    const creditCost = this.billing.thumbnailPipelineCreditCost({
+      variantCount: count,
+      generateImages,
+      includeImageEdit,
     });
 
-    const templateUrls = input.templateReferenceDataUrls ?? [];
-    const faceUrls = input.faceReferenceDataUrls ?? [];
-    const refBundle =
-      templateUrls.length || faceUrls.length
-        ? {
-            dataUrls: [...templateUrls, ...faceUrls],
-            hasTemplateImage: templateUrls.length > 0,
-            hasFaceImage: faceUrls.length > 0,
-            prioritizeFace: Boolean(input.prioritizeFace) && faceUrls.length > 0,
-          }
-        : undefined;
+    await this.billing.reserveGenerationCredits(input.userId, creditCost, {
+      referenceType: 'thumbnail_pipeline_run',
+      referenceId: runId,
+    });
 
-    const refLine = this.promptBuilder.referenceInstructionLine(refBundle);
-    const imagePromptsUsed = refLine
-      ? basePrompts.map((p) => `${p} ${refLine}`.slice(0, 2800))
-      : basePrompts;
+    try {
+      const refined = await this.refinement.refineIfConfigured(input.userPrompt);
 
-    const modelsUsed: ThumbnailPipelineRunResult['modelsUsed'] = {
-      videoUnderstanding: modelUsed,
-      textRefinement: refined.model,
-    };
-
-    let variants: ThumbnailPipelineRunResult['variants'];
-    if (input.generateImages) {
-      modelsUsed.imageGeneration = this.thumbnailGen.imageModel();
-      variants = await this.thumbnailGen.generateVariants({
-        prompts: imagePromptsUsed,
-        reference: refBundle,
+      const { analysis, modelUsed } = await this.videoUnderstanding.analyze({
+        userPrompt: refined.text,
+        style: input.style,
+        videoUrl: input.videoUrl,
+        templateReferenceDataUrls: input.templateReferenceDataUrls,
+        faceReferenceDataUrls: input.faceReferenceDataUrls,
       });
-    }
 
-    let edited: ThumbnailPipelineRunResult['edited'];
-    if (input.baseImageDataUrl?.trim() && input.editInstruction?.trim()) {
-      modelsUsed.imageEdit = this.thumbnailEdit.editModel();
-      edited = await this.thumbnailEdit.editThumbnail({
-        baseImageDataUrl: input.baseImageDataUrl.trim(),
-        instruction: input.editInstruction.trim(),
-        templateReferenceDataUrls: templateUrls,
-        faceReferenceDataUrls: faceUrls,
+      const basePrompts = this.promptBuilder.buildFinalImagePrompts({
+        analysis,
+        userPrompt: refined.text,
+        style: input.style,
+        count,
       });
-    }
 
-    return {
-      analysis,
-      imagePromptsUsed,
-      variants,
-      edited,
-      modelsUsed,
-    };
+      const templateUrls = input.templateReferenceDataUrls ?? [];
+      const faceUrls = input.faceReferenceDataUrls ?? [];
+      const refBundle =
+        templateUrls.length || faceUrls.length
+          ? {
+              dataUrls: [...templateUrls, ...faceUrls],
+              hasTemplateImage: templateUrls.length > 0,
+              hasFaceImage: faceUrls.length > 0,
+              prioritizeFace: Boolean(input.prioritizeFace) && faceUrls.length > 0,
+            }
+          : undefined;
+
+      const refLine = this.promptBuilder.referenceInstructionLine(refBundle);
+      const imagePromptsUsed = refLine
+        ? basePrompts.map((p) => `${p} ${refLine}`.slice(0, 2800))
+        : basePrompts;
+
+      const modelsUsed: ThumbnailPipelineRunResult['modelsUsed'] = {
+        videoUnderstanding: modelUsed,
+        textRefinement: refined.model,
+      };
+
+      let variants: ThumbnailPipelineRunResult['variants'];
+      if (generateImages) {
+        modelsUsed.imageGeneration = this.thumbnailGen.imageModel();
+        variants = await this.thumbnailGen.generateVariants({
+          prompts: imagePromptsUsed,
+          reference: refBundle,
+        });
+        if (!variants.length) {
+          throw new Error('No thumbnails were generated (pipeline image step returned no images)');
+        }
+      }
+
+      let edited: ThumbnailPipelineRunResult['edited'];
+      if (input.baseImageDataUrl?.trim() && input.editInstruction?.trim()) {
+        modelsUsed.imageEdit = this.thumbnailEdit.editModel();
+        edited = await this.thumbnailEdit.editThumbnail({
+          baseImageDataUrl: input.baseImageDataUrl.trim(),
+          instruction: input.editInstruction.trim(),
+          templateReferenceDataUrls: templateUrls,
+          faceReferenceDataUrls: faceUrls,
+        });
+      }
+
+      return {
+        runId,
+        creditsCharged: creditCost,
+        analysis,
+        imagePromptsUsed,
+        variants,
+        edited,
+        modelsUsed,
+      };
+    } catch (e) {
+      try {
+        await this.billing.refundGenerationCredits(input.userId, creditCost, {
+          referenceType: 'thumbnail_pipeline_run',
+          referenceId: runId,
+        });
+      } catch {
+        /* best-effort; BillingService logs */
+      }
+      throw e;
+    }
   }
 }

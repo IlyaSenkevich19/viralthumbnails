@@ -1,0 +1,134 @@
+import { Injectable } from '@nestjs/common';
+import { SupabaseService } from '../../supabase/supabase.service';
+import { BUCKET_PROJECT_THUMBNAILS, StorageService } from '../../storage/storage.service';
+import type { ThumbnailPipelineRunInput, ThumbnailPipelineRunResult } from '../types/thumbnail-pipeline-run.types';
+
+export type PersistedPipelineVariant = {
+  index: number;
+  prompt: string;
+  storagePath: string;
+  signedUrl: string;
+};
+
+export type PersistedPipelineProject = {
+  projectId: string;
+  variants: PersistedPipelineVariant[];
+};
+
+@Injectable()
+export class PipelineProjectPersistenceService {
+  constructor(
+    private readonly supabase: SupabaseService,
+    private readonly storage: StorageService,
+  ) {}
+
+  async persist(params: {
+    userId: string;
+    runInput: ThumbnailPipelineRunInput;
+    runResult: ThumbnailPipelineRunResult;
+  }): Promise<PersistedPipelineProject> {
+    const variants = params.runResult.variants ?? [];
+    if (variants.length === 0) {
+      throw new Error('Cannot persist pipeline run without generated variants');
+    }
+
+    const uploaded: PersistedPipelineVariant[] = [];
+    try {
+      for (const v of variants) {
+        const saved = await this.storage.uploadPipelineThumbnailOutput({
+          userId: params.userId,
+          runId: params.runResult.runId,
+          index: v.index,
+          body: v.buffer,
+          contentType: v.contentType,
+        });
+        uploaded.push({
+          index: v.index,
+          prompt: v.prompt,
+          storagePath: saved.path,
+          signedUrl: saved.signedUrl,
+        });
+      }
+
+      const projectId = await this.insertProject({
+        userId: params.userId,
+        runInput: params.runInput,
+        runResult: params.runResult,
+        coverThumbnailStoragePath: uploaded[0]?.storagePath ?? null,
+      });
+
+      await this.insertVariants(projectId, uploaded);
+
+      return { projectId, variants: uploaded };
+    } catch (error) {
+      await this.storage.removeObjectsIfPresent(
+        BUCKET_PROJECT_THUMBNAILS,
+        uploaded.map((v) => v.storagePath),
+      );
+      throw error;
+    }
+  }
+
+  private async insertProject(params: {
+    userId: string;
+    runInput: ThumbnailPipelineRunInput;
+    runResult: ThumbnailPipelineRunResult;
+    coverThumbnailStoragePath: string | null;
+  }): Promise<string> {
+    const client = this.supabase.getAdminClient();
+    const sceneSummary = params.runResult.analysis.sceneSummary.trim();
+    const titleBase = sceneSummary.length ? sceneSummary : params.runInput.userPrompt.trim();
+    const title = (titleBase || 'Pipeline thumbnails').slice(0, 200);
+    const sourceType = params.runInput.videoUrl?.trim() ? 'video' : 'text';
+
+    const sourceData = {
+      pipeline_run_id: params.runResult.runId,
+      user_prompt: params.runInput.userPrompt,
+      style: params.runInput.style ?? undefined,
+      video_url: params.runInput.videoUrl ?? undefined,
+      template_reference_data_urls: params.runInput.templateReferenceDataUrls ?? undefined,
+      face_reference_data_urls: params.runInput.faceReferenceDataUrls ?? undefined,
+      variant_count: params.runInput.variantCount ?? undefined,
+      prioritize_face: params.runInput.prioritizeFace ?? undefined,
+      generated_models: params.runResult.modelsUsed,
+      scene_summary_excerpt: sceneSummary.slice(0, 500),
+    };
+
+    const { data: project, error } = await client
+      .from('projects')
+      .insert({
+        user_id: params.userId,
+        title,
+        platform: 'youtube',
+        source_type: sourceType,
+        source_data: sourceData,
+        status: 'done',
+        cover_thumbnail_storage_path: params.coverThumbnailStoragePath,
+        cover_thumbnail_url: null,
+      })
+      .select('id')
+      .single();
+
+    if (error || !project?.id) {
+      throw new Error(error?.message ?? 'Failed to create project from pipeline run');
+    }
+    return project.id as string;
+  }
+
+  private async insertVariants(projectId: string, variants: PersistedPipelineVariant[]): Promise<void> {
+    const client = this.supabase.getAdminClient();
+    for (const v of variants) {
+      const { error } = await client.from('thumbnail_variants').insert({
+        project_id: projectId,
+        status: 'done',
+        template_id: null,
+        generated_image_storage_path: v.storagePath,
+        generated_image_url: null,
+        error_message: null,
+      });
+      if (error) {
+        throw new Error(error.message);
+      }
+    }
+  }
+}

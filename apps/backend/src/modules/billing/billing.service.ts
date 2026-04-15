@@ -10,13 +10,21 @@ import { SupabaseService } from '../supabase/supabase.service';
 const DEFAULT_CREDITS = { balance: 3, totalGranted: 3 };
 const RESERVE_RETRY = 8;
 
-/**
- * Credits for one `POST /thumbnails/from-video`: 1× video analysis + N× image gen + N× ranking.
- * Keeps spend in line with multiple OpenRouter calls per request.
- */
 export function creditsForVideoPipeline(requestedThumbnailCount: number): number {
   const n = Math.min(12, Math.max(1, Math.floor(requestedThumbnailCount)));
   return 1 + 2 * n;
+}
+
+export function creditsForThumbnailPipelineRun(params: {
+  variantCount: number;
+  generateImages: boolean;
+  includeImageEdit: boolean;
+}): number {
+  const n = Math.min(12, Math.max(1, Math.floor(params.variantCount)));
+  let cost = 1;
+  if (params.generateImages) cost += n;
+  if (params.includeImageEdit) cost += 1;
+  return Math.max(1, cost);
 }
 
 @Injectable()
@@ -54,10 +62,15 @@ export class BillingService {
     return creditsForVideoPipeline(requestedThumbnailCount);
   }
 
-  /**
-   * Migrations should add `007_profiles_auto_create.sql` (trigger on auth.users) so every user has a row.
-   * This upsert path covers older DBs and races before the trigger ran.
-   */
+  /** @see creditsForThumbnailPipelineRun */
+  thumbnailPipelineCreditCost(params: {
+    variantCount: number;
+    generateImages: boolean;
+    includeImageEdit: boolean;
+  }): number {
+    return creditsForThumbnailPipelineRun(params);
+  }
+
   private async ensureProfileRow(userId: string): Promise<void> {
     const client = this.supabase.getAdminClient();
     const { data: existing, error: selErr } = await client

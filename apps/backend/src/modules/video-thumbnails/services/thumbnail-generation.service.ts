@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { getOpenRouterConfig } from '../../../config/openrouter.config';
 import { OpenRouterClient } from '../../openrouter/openrouter.client';
+import { requestOpenRouterSingleThumbnailImage } from '../../openrouter/request-openrouter-thumbnail-image';
 import { userContentTextThenReferenceImages } from '../../openrouter/multipart-user-content';
 import type { VideoAnalysis } from '../schemas/video-analysis.schema';
 import type { OpenRouterMessage } from '../../openrouter/openrouter.types';
@@ -72,6 +73,7 @@ export class ThumbnailGenerationService {
 
     const refUrls = referenceImages?.dataUrls ?? [];
     const useMultimodal = refUrls.length > 0;
+    const timeoutMs = getOpenRouterConfig(this.config).projectGenTimeoutMs;
 
     const out: GeneratedThumbnailCandidate[] = [];
     for (let i = 0; i < targets.length; i++) {
@@ -81,31 +83,21 @@ export class ThumbnailGenerationService {
           ? userContentTextThenReferenceImages(`${MULTIMODAL_HEADER}\n\n${prompt.slice(0, 2500)}`, refUrls)
           : prompt;
 
-        const messages: OpenRouterMessage[] = [
-          {
-            role: 'user',
-            content,
-          },
-        ];
+        const messages: OpenRouterMessage[] = [{ role: 'user', content }];
 
-        const result = await this.openRouter.chatCompletions({
+        const img = await requestOpenRouterSingleThumbnailImage({
+          openRouter: this.openRouter,
           model,
           messages,
-          modalities: ['image', 'text'],
-          temperature: 0.5,
-          maxTokens: 8192,
+          timeoutMs,
+          logger: this.logger,
+          logContext: `from-video seed=${i}`,
         });
-
-        const imgs = this.openRouter.extractImagesFromParts(result.contentParts);
-        if (imgs.length === 0) {
+        if (!img) {
           this.logger.warn(`No image in OpenRouter response for seed ${i} model=${model}`);
           continue;
         }
-        const first = imgs[0];
-        const buffer = Buffer.from(first.base64, 'base64');
-        if (!buffer.length) continue;
-        const contentType = first.mime.includes('jpeg') ? 'image/jpeg' : 'image/png';
-        out.push({ prompt, buffer, contentType, seedIndex: i });
+        out.push({ prompt, buffer: img.buffer, contentType: img.contentType, seedIndex: i });
       } catch (e) {
         this.logger.warn(`Thumbnail gen failed seed ${i}: ${e instanceof Error ? e.message : e}`);
       }

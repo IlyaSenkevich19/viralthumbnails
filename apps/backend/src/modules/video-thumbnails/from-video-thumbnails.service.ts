@@ -102,7 +102,7 @@ export class FromVideoThumbnailsService {
       });
 
       if (candidates.length === 0) {
-        throw new Error('No thumbnails were generated (check OPENROUTER_IMAGE_MODEL and response format)');
+        throw new Error('No thumbnails were generated (check OPENROUTER_API_KEY, OPENROUTER_STACK.imageModel in openrouter-models.ts, and response format)');
       }
 
       const ranked = await this.ranking.rankCandidates(candidates);

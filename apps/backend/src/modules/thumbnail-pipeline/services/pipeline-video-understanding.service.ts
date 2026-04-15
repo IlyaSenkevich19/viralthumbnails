@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { PIPELINE_STEP_MODELS } from '../config/pipeline-step-models';
+import { PIPELINE_STEP_MODELS } from '@/config/openrouter-models';
 import { extractJsonObject } from '@/common/json/extract-json-object';
+import { approximateOpenRouterMessagesPayloadChars } from '../../openrouter/approximate-message-payload-chars';
 import { OpenRouterClient } from '../../openrouter/openrouter.client';
 import { userContentTextVideoThenReferenceImages } from '../../openrouter/multipart-user-content';
 import type { OpenRouterMessage } from '../../openrouter/openrouter.types';
@@ -118,7 +119,7 @@ ${ThumbnailPipelineAnalysisJsonPrompt}`;
         });
 
         this.logger.log(
-          `Pipeline video understanding model=${model} latencyMs=${result.latencyMs}`,
+          `Pipeline video understanding model=${model} latencyMs=${result.latencyMs} approxTextChars=${approximateOpenRouterMessagesPayloadChars(messages)}`,
         );
 
         const extracted = extractJsonObject(result.rawText);

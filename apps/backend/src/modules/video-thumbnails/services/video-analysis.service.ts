@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { getOpenRouterConfig } from '../../../config/openrouter.config';
 import { OpenRouterClient } from '../../openrouter/openrouter.client';
 import { extractJsonObject } from '@/common/json/extract-json-object';
+import { approximateOpenRouterMessagesPayloadChars } from '../../openrouter/approximate-message-payload-chars';
 import {
   VideoAnalysis,
   VideoAnalysisJsonPrompt,
@@ -73,7 +74,7 @@ ${VideoAnalysisJsonPrompt}`;
         });
 
         this.logger.log(
-          `video analysis model=${model} latencyMs=${result.latencyMs} promptChars=${JSON.stringify(msgs).length}`,
+          `video analysis model=${model} latencyMs=${result.latencyMs} approxTextChars=${approximateOpenRouterMessagesPayloadChars(msgs)}`,
         );
 
         const extracted = extractJsonObject(result.rawText);

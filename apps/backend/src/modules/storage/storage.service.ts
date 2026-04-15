@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { DEFAULT_SUPABASE_STORAGE_SIGN_EXPIRES_SEC } from '../../config/server-defaults';
 import { SupabaseService } from '../supabase/supabase.service';
 
 export const BUCKET_PROJECT_THUMBNAILS = 'project-thumbnails';
@@ -19,15 +19,10 @@ function guessMimeFromFilename(name: string): string {
 export class StorageService {
   private readonly logger = new Logger(StorageService.name);
 
-  constructor(
-    private readonly supabase: SupabaseService,
-    private readonly config: ConfigService,
-  ) {}
+  constructor(private readonly supabase: SupabaseService) {}
 
   signExpiresSeconds(): number {
-    const raw = this.config.get<string>('SUPABASE_STORAGE_SIGN_EXPIRES_SEC');
-    const n = raw ? parseInt(raw, 10) : 3600;
-    return Number.isFinite(n) && n > 60 ? n : 3600;
+    return DEFAULT_SUPABASE_STORAGE_SIGN_EXPIRES_SEC;
   }
 
   async uploadProjectVariantImage(params: {
@@ -113,6 +108,27 @@ export class StorageService {
     });
     if (error) {
       throw new Error(`from-video thumbnail upload: ${error.message}`);
+    }
+    const signedUrl = await this.createSignedUrl(BUCKET_PROJECT_THUMBNAILS, path);
+    return { path, signedUrl };
+  }
+
+  async uploadPipelineThumbnailOutput(params: {
+    userId: string;
+    runId: string;
+    index: number;
+    body: Buffer;
+    contentType: string;
+  }): Promise<{ path: string; signedUrl: string }> {
+    const ext = extensionForMime(params.contentType);
+    const path = `${params.userId}/pipeline/out/${params.runId}/${params.index}.${ext}`;
+    const client = this.supabase.getAdminClient();
+    const { error } = await client.storage.from(BUCKET_PROJECT_THUMBNAILS).upload(path, params.body, {
+      contentType: params.contentType,
+      upsert: true,
+    });
+    if (error) {
+      throw new Error(`pipeline thumbnail upload: ${error.message}`);
     }
     const signedUrl = await this.createSignedUrl(BUCKET_PROJECT_THUMBNAILS, path);
     return { path, signedUrl };

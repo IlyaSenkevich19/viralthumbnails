@@ -1,8 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { getOpenRouterConfig } from '../../../config/openrouter.config';
-import { PIPELINE_STEP_MODELS } from '../config/pipeline-step-models';
+import { PIPELINE_STEP_MODELS } from '@/config/openrouter-models';
 import { OpenRouterClient } from '../../openrouter/openrouter.client';
+import { requestOpenRouterSingleThumbnailImage } from '../../openrouter/request-openrouter-thumbnail-image';
 import { userContentTextThenReferenceImages } from '../../openrouter/multipart-user-content';
 import type { OpenRouterMessage } from '../../openrouter/openrouter.types';
 
@@ -45,35 +46,28 @@ export class PipelineThumbnailEditingService {
     const content: OpenRouterMessage['content'] = userContentTextThenReferenceImages(body, ordered);
 
     const or = getOpenRouterConfig(this.config);
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), or.projectGenTimeoutMs);
+    const timeoutMs = or.projectGenTimeoutMs;
 
     try {
-      const result = await this.openRouter.chatCompletions({
+      const img = await requestOpenRouterSingleThumbnailImage({
+        openRouter: this.openRouter,
         model,
         messages: [{ role: 'user', content }],
-        modalities: ['image', 'text'],
+        timeoutMs,
         temperature: 0.35,
-        maxTokens: 8192,
-        signal: controller.signal,
+        logger: this.logger,
+        logContext: 'pipeline edit',
       });
-
-      const imgs = this.openRouter.extractImagesFromParts(result.contentParts);
-      if (imgs.length === 0) {
+      if (!img) {
         throw new Error('Pipeline image edit: no image in model response');
       }
-      const first = imgs[0];
-      const buffer = Buffer.from(first.base64, 'base64');
-      if (!buffer.length) throw new Error('Pipeline image edit: empty buffer');
-      const contentType = first.mime.includes('jpeg') ? 'image/jpeg' : 'image/png';
-      return { buffer, contentType };
+      return { buffer: img.buffer, contentType: img.contentType };
     } catch (e) {
-      if (e instanceof Error && e.name === 'AbortError') {
-        this.logger.warn(`Pipeline image edit timed out after ${or.projectGenTimeoutMs}ms`);
+      const msg = e instanceof Error ? e.message : String(e);
+      if (msg.includes('timed out')) {
+        this.logger.warn(`Pipeline image edit timed out after ${timeoutMs}ms`);
       }
       throw e;
-    } finally {
-      clearTimeout(timeout);
     }
   }
 }

@@ -1,6 +1,7 @@
 import type { ThumbnailPipelineAnalysis } from '../schemas/thumbnail-pipeline-analysis.schema';
 
 export type ThumbnailPipelineRunInput = {
+  userId: string;
   userPrompt: string;
   style?: string;
   /** Public HTTPS or signed URL after ingestion. Omit for prompt-only (and optional reference images). */
@@ -24,6 +25,9 @@ export type ThumbnailPipelineVariant = {
 };
 
 export type ThumbnailPipelineRunResult = {
+  runId: string;
+  /** Same amount reserved up-front; refunded in full on failure. */
+  creditsCharged: number;
   analysis: ThumbnailPipelineAnalysis;
   imagePromptsUsed: string[];
   variants?: ThumbnailPipelineVariant[];

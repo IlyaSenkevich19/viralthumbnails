@@ -79,7 +79,8 @@ export class OpenRouterClient {
     try {
       json = JSON.parse(rawText) as ChatCompletionsResponse;
     } catch {
-      this.logger.warn(`OpenRouter non-JSON response (${res.status}): ${rawText.slice(0, 500)}`);
+      /** Truncate: error bodies may echo user prompts from some providers. */
+      this.logger.warn(`OpenRouter non-JSON response (${res.status}): ${rawText.slice(0, 200)}`);
       throw new Error(`OpenRouter: invalid JSON (${res.status})`);
     }
 

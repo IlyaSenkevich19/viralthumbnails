@@ -20,20 +20,46 @@ API for **ViralThumblify**: Supabase-backed projects, thumbnail variants, templa
 
 | Модуль / слой | За что отвечает |
 |---------------|-----------------|
-| **ConfigModule** (+ `src/config/openrouter.config.ts`) | Env; типизированный namespace `openrouter` (`OpenRouterEnvConfig`) с дефолтами для моделей и URL |
+| **ConfigModule** (+ `openrouter.config.ts`, `openrouter-models.ts`) | Env: в т.ч. `OPENROUTER_API_KEY`; slug’и и настройки OpenRouter — в **`openrouter-models.ts`** (`OPENROUTER_STACK`, `PIPELINE_STEP_MODELS`) |
 | **SupabaseModule** | Admin-клиент Supabase для БД и Storage с сервера |
 | **AuthModule** | Проверка JWT (`SupabaseGuard`), `GET /api/auth/me` |
 | **HealthModule** | Liveness |
 | **StorageModule** | Загрузки и signed URL: проекты, шаблоны, аватары, временное видео / выход `from-video` |
-| **BillingModule** | Резерв и возврат кредитов вокруг генерации вариантов и пайплайна `from-video` |
+| **BillingModule** | Резерв и возврат кредитов: варианты проекта, `from-video`, **`pipeline/run`** (`creditsForThumbnailPipelineRun`) |
 | **OpenRouterModule** (`@Global`) | Один экземпляр `OpenRouterClient` на всё приложение |
 | **ProjectThumbnailGenerationModule** | `ProjectVariantImageService` — картинка для одной строки `thumbnail_variants` (OpenRouter или placeholder) |
 | **ProjectsModule** | CRUD проектов; `ProjectGenerationService` — оркестрация N вариантов + биллинг + вызов `ProjectVariantImageService` |
 | **TemplatesModule** | Каталог шаблонов, ниши, загрузки в `thumbnail-templates` |
 | **AvatarsModule** | `GET/POST/DELETE /api/avatars` — лица в `user-avatars` |
 | **VideoThumbnailsModule** | Пайплайн `POST /api/thumbnails/from-video`: ingestion → анализ видео → генерация → ранжирование → Storage |
+| **ThumbnailPipelineModule** | `POST /api/thumbnails/pipeline/run`: JSON-пайплайн (VL + Flux в `openrouter-models.ts` → `PIPELINE_STEP_MODELS`), **резерв кредитов** как у `from-video`; в production по умолчанию выключен — `THUMBNAIL_PIPELINE_ENABLED` |
 
 Cross-cutting: **HttpExceptionFilter**, **shutdown hooks**.
+
+### Схема потоков (три входа к превью)
+
+```mermaid
+flowchart LR
+  subgraph proj["Проект"]
+    A["POST /projects/:id/generate"] --> B["ProjectVariantImageService"]
+    B --> C["OpenRouter imageModel env"]
+  end
+  subgraph fv["from-video"]
+    D["POST /thumbnails/from-video"] --> E["VideoAnalysis + ThumbnailGen + Ranking"]
+    E --> F["Billing + Storage + проект в БД"]
+  end
+  subgraph pipe["Модульный pipeline"]
+    G["POST /thumbnails/pipeline/run"] --> H["Orchestrator"]
+    H --> I["openrouter-models.ts"]
+    I --> J["Billing reserve/refund"]
+  end
+```
+
+**Модели OpenRouter** задаются в одном файле **`src/config/openrouter-models.ts`**: **`OPENROUTER_STACK`** (проект + `from-video`) и **`PIPELINE_STEP_MODELS`** (`pipeline/run`). Секрет — только **`OPENROUTER_API_KEY`** в env. Slug’и перепроверяйте на [openrouter.ai/models](https://openrouter.ai/models).
+
+**extractJsonObject:** один модуль **`src/common/json/extract-json-object.ts`**; `video-thumbnails/lib/json-repair.ts` только реэкспорт для совместимости.
+
+**Идеи по снижению дублирования (по ситуации):** общий helper `requestOpenRouterSingleThumbnailImage` (image+таймаут) уже используется в `from-video` gen, `pipeline/run` gen/edit и генерации варианта проекта; дальше — унифицировать VL (`VideoAnalysis` vs `ThumbnailPipelineAnalysis`) и опционально один оркестратор.
 
 ### HTTP: два контроллера на пути `projects`
 
@@ -62,58 +88,42 @@ SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 ### Server / CORS
 
 ```env
-PORT=3001
 FRONTEND_URL=http://localhost:3000
 ```
 
-`FRONTEND_URL` is passed to `enableCors` (production: set to your real frontend origin, e.g. Vercel URL).
+`FRONTEND_URL` is passed to `enableCors` (production: set to your real frontend origin, e.g. Vercel URL). **Listen port** defaults to **3001** in `src/config/server-defaults.ts`; PaaS may still inject **`PORT`** at runtime (not listed in `.env.example`).
 
 JSON body size limit is **15MB** in `main.ts` (base64 image uploads). If the frontend uses a **host proxy** (e.g. Next rewrites on Vercel), that platform may enforce a **smaller** max request size (~4.5MB on Vercel) — the frontend downscales avatar images before upload to stay under typical limits.
 
 ### OpenRouter: модели и сценарии
 
-Все slug’и моделей — это идентификаторы на [OpenRouter](https://openrouter.ai/models); в коде они читаются из env в **`src/config/openrouter.config.ts`** (`getOpenRouterConfig`).
+Slug’и — идентификаторы на [OpenRouter](https://openrouter.ai/models). **`src/config/openrouter-models.ts`:** **`OPENROUTER_STACK`** (проект + `from-video`: модели, `baseUrl`, `appTitle`, таймаут, флаг free-tier для видео/ранка) и **`PIPELINE_STEP_MODELS`** (модульный pipeline). **`getOpenRouterConfig`** отдаёт поля стека вместе с **`OPENROUTER_API_KEY`** из env.
 
-| Сценарий | Эндпоинт / этап | Переменная окружения | Дефолтная модель | Где в коде |
-|----------|-----------------|----------------------|------------------|------------|
-| Картинка для одного варианта проекта | `POST /api/projects/:id/generate` | `OPENROUTER_IMAGE_MODEL` | `google/gemini-2.5-flash-image-preview` | `project-variant-image.service.ts` |
-| Анализ видео (описание кадров, стиль) | `POST /api/thumbnails/from-video`, шаг analyze | `OPENROUTER_VIDEO_MODEL` | `google/gemini-2.0-flash-001` | `video-analysis.service.ts` |
-| Генерация N кандидатов превью по анализу | тот же пайплайн, шаг generate | `OPENROUTER_IMAGE_MODEL` | как выше | `thumbnail-generation.service.ts` |
-| Скоринг и ранжирование кандидатов | тот же пайплайн, шаг rank | `OPENROUTER_RANKING_MODEL` *(если пусто — берётся `OPENROUTER_VIDEO_MODEL`)* | fallback = video-модель | `thumbnail-ranking.service.ts` |
-| Модульный пайплайн | `POST /api/thumbnails/pipeline/run` | Все slug’и шагов в **`thumbnail-pipeline/config/pipeline-step-models.ts`** (VL: gemma free + nemotron fallback; image: `flux.2-flex` / edit: `flux.2-pro`) | `thumbnail-pipeline/*` | `thumbnail-pipeline-orchestrator.service.ts` |
+| Сценарий | Эндпоинт / этап | Где задаются модели |
+|----------|-----------------|---------------------|
+| Картинка варианта проекта | `POST /api/projects/:id/generate` | `openrouter-models.ts` → `OPENROUTER_STACK.imageModel` |
+| Анализ / генерация / rank в `from-video` | `POST /api/thumbnails/from-video` | `OPENROUTER_STACK`: `videoModel`, `imageModel`, `rankingModel?`, `useFreeTierForVideoAndRanking` |
+| Модульный пайплайн | `POST /api/thumbnails/pipeline/run` | `PIPELINE_STEP_MODELS` |
 
-Без **`OPENROUTER_API_KEY`** генерация вариантов проекта всё равно отрабатывает, но сохраняет **placeholder**-URL картинки. Пайплайн **`from-video`** для реальных вызовов к моделям тоже ожидает ключ.
+Без **`OPENROUTER_API_KEY`** генерация вариантов проекта отдаёт **placeholder**; `from-video` и реальные вызовы к OpenRouter требуют ключ.
 
-#### OpenRouter: остальные переменные
-
-Парсинг и дефолты — в **`openrouter.config.ts`**.
+#### OpenRouter: переменные окружения
 
 | Variable | Role |
 |----------|------|
-| `OPENROUTER_API_KEY` | Доступ к API OpenRouter |
-| `OPENROUTER_USE_FREE_MODELS` | `1` / `true`: дефолты для **анализа видео** и **ранжирования** → `openrouter/free` (если не заданы `OPENROUTER_VIDEO_MODEL` / `OPENROUTER_RANKING_MODEL`). Генерация **картинок** превью по-прежнему через платную image-модель. |
-| `OPENROUTER_IMAGE_MODEL` | См. таблицу выше (проект + картинки в `from-video`) |
-| `OPENROUTER_PROJECT_GEN_TIMEOUT_MS` | Таймаут HTTP для **одного** вызова картинки варианта проекта (мс) |
-| `OPENROUTER_VIDEO_MODEL` | См. таблицу выше (анализ видео; fallback для ранжирования) |
-| `OPENROUTER_RANKING_MODEL` | Отдельная модель для ранжирования (опционально) |
-| `OPENROUTER_BASE_URL` | База API (дефолт в конфиге) |
-| `OPENROUTER_HTTP_REFERER` / `OPENROUTER_APP_TITLE` | Заголовки запросов к OpenRouter |
+| `OPENROUTER_API_KEY` | Ключ API ([openrouter.ai/keys](https://openrouter.ai/keys)) |
+| `FRONTEND_URL` | Используется как `HTTP-Referer` для запросов к OpenRouter (см. `openrouter.config.ts`) |
+| `THUMBNAIL_PIPELINE_ENABLED` | `1` / `true` — включить `POST .../thumbnails/pipeline/run` в **production** (без переменной в prod → 503; в dev — разрешён). `0` / `false` — всегда выключен. |
 
 ```env
 OPENROUTER_API_KEY=
-# OPENROUTER_USE_FREE_MODELS=1
-# OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
-# OPENROUTER_HTTP_REFERER=https://your-frontend.example
-# OPENROUTER_APP_TITLE=ViralThumblify
-OPENROUTER_IMAGE_MODEL=google/gemini-2.5-flash-image-preview
-OPENROUTER_PROJECT_GEN_TIMEOUT_MS=120000
-OPENROUTER_VIDEO_MODEL=google/gemini-2.0-flash-001
-# OPENROUTER_RANKING_MODEL=google/gemini-2.0-flash-001
 ```
 
 `POST /api/thumbnails/from-video` (Bearer, `multipart/form-data`): field `file` **or** `videoUrl`, optional `count` (1–12), `style`. Temp uploads live under `{userId}/from-video/temp/…`, outputs under `{userId}/from-video/out/{runId}/…`.
 
-`POST /api/thumbnails/pipeline/run` (Bearer, JSON): модульный OpenRouter-пайплайн для MVP и тестов. Поля: `user_prompt` (обязательно), опционально `video_url` (уже разрешённый HTTPS URL после загрузки или прямая ссылка), `template_reference_data_urls`, `face_reference_data_urls` (`data:image/...;base64,...`), `variant_count`, `generate_images`, `prioritize_face`, `base_image_data_url` + `edit_instruction` для слоя редактирования. Ответ: структурированный `analysis`, `image_prompts_used`, `models_used`, при `generate_images: true` — `variants[].image_base64`. Модели шагов (VL, Flux gen/edit) задаются в **`src/modules/thumbnail-pipeline/config/pipeline-step-models.ts`** (не через env). **Кредиты пока не списываются** — перед публичным доступом подключите биллинг.
+`POST /api/thumbnails/pipeline/run` (Bearer, JSON): модульный OpenRouter-пайплайн. В **production** по умолчанию **выключен** (`503`), пока не задано **`THUMBNAIL_PIPELINE_ENABLED=1`**. Поля: `user_prompt` (обязательно), опционально `video_url`, `template_reference_data_urls`, `face_reference_data_urls`, `variant_count`, `generate_images`, `prioritize_face`, `base_image_data_url` + `edit_instruction`. Ответ включает `run_id`, **`credits_charged`**, `analysis`, `image_prompts_used`, `models_used`, при `generate_images: true` — `variants[].image_base64`. Модели шагов — **`src/config/openrouter-models.ts`** (`PIPELINE_STEP_MODELS`).
+
+**Кредиты для `pipeline/run`:** в начале запроса резервируется **`1 + (generate_images ? variant_count : 0) + (есть edit ? 1 : 0)`** (анализ VL + до N генераций + один шаг редактирования). При любой ошибке после резерва выполняется **полный возврат** (`refund`), как в `from-video`. Формула в коде: `creditsForThumbnailPipelineRun` в `billing.service.ts`.
 
 **Кредиты для `from-video`:** списывается **`1 + 2×count`** (один вызов анализа видео + `count` генераций изображений + `count` ранжирований). При ошибке пайплайна после резерва баланс возвращается.
 
@@ -125,11 +135,7 @@ OPENROUTER_VIDEO_MODEL=google/gemini-2.0-flash-001
 | `POST /api/thumbnails/from-video` | 1 ч | 8 |
 | `POST /api/thumbnails/pipeline/run` | 1 ч | 8 |
 
-### Optional — Storage signed URLs
-
-```env
-SUPABASE_STORAGE_SIGN_EXPIRES_SEC=3600
-```
+**Storage signed URL TTL** (seconds) is fixed in **`src/config/server-defaults.ts`** (`DEFAULT_SUPABASE_STORAGE_SIGN_EXPIRES_SEC`), not env.
 
 ## Database & Storage
 

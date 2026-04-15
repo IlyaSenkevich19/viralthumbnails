@@ -73,7 +73,7 @@ function generationToastThenNavigate(
   const ok = gen.results.filter((r) => r.status === 'done').length;
   const total = gen.results.length;
   if (ok === 0) {
-    toast.error('Generation failed for all variants. Check OPENROUTER_API_KEY and model settings.');
+    toast.error('Generation failed for all variants. Check backend OPENROUTER_API_KEY and openrouter-models.ts (OPENROUTER_STACK).');
   } else if (ok < total) {
     toast.warning(`${ok} of ${total} thumbnails ready; some failed.`);
   } else {

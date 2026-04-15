@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { PIPELINE_STEP_MODELS } from '../config/pipeline-step-models';
+import { PIPELINE_STEP_MODELS } from '@/config/openrouter-models';
 import { OpenRouterClient } from '../../openrouter/openrouter.client';
 import type { OpenRouterMessage } from '../../openrouter/openrouter.types';
 

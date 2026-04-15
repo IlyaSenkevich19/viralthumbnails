@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { PIPELINE_STEP_MODELS } from '../../../config/openrouter-models';
 import { getOpenRouterConfig } from '../../../config/openrouter.config';
 import { OpenRouterClient } from '../../openrouter/openrouter.client';
 import { requestOpenRouterSingleThumbnailImage } from '../../openrouter/request-openrouter-thumbnail-image';
@@ -34,7 +35,7 @@ export class ThumbnailGenerationService {
   ) {}
 
   imageModel(): string {
-    return getOpenRouterConfig(this.config).imageModel;
+    return PIPELINE_STEP_MODELS.imageGeneration;
   }
 
   /**

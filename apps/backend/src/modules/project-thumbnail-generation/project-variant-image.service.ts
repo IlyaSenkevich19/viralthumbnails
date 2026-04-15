@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { PIPELINE_STEP_MODELS } from '../../config/openrouter-models';
 import { getOpenRouterConfig } from '../../config/openrouter.config';
 import { userContentTextThenReferenceImages } from '../openrouter/multipart-user-content';
 import { OpenRouterClient } from '../openrouter/openrouter.client';
@@ -447,7 +448,7 @@ export class ProjectVariantImageService {
     }
 
     const or = getOpenRouterConfig(this.config);
-    const model = or.imageModel;
+    const model = PIPELINE_STEP_MODELS.imageGeneration;
 
     const header =
       'Generate a single 16:9 YouTube thumbnail image. After this paragraph, reference images appear in order (template first, then face if present).';

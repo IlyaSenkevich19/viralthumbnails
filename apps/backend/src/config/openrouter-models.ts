@@ -16,8 +16,9 @@ export const PIPELINE_STEP_MODELS: {
   imageGeneration: string;
   imageEdit: string;
 } = {
-  vlPrimary: 'google/gemma-4-26b-a4b-it:free',
-  vlFallback: 'nvidia/nemotron-nano-12b-v2-vl:free',
+  /** YouTube / `video_url` needs Gemini-class models; free Gemma often returns 400 on the same payload. */
+  vlPrimary: 'google/gemini-2.5-flash',
+  vlFallback: 'google/gemini-2.0-flash-001',
   textRefinement: undefined,
   imageGeneration: 'sourceful/riverflow-v2-fast',
   imageEdit: 'black-forest-labs/flux.2-pro',

@@ -163,6 +163,15 @@ export class OpenRouterClient {
         message: 'OpenRouter billing requirement not met. Please check your account balance and billing status.',
       };
     }
+    if (status === 400) {
+      return {
+        code: 'OPENROUTER_BAD_REQUEST',
+        message:
+          providerMessage.trim().length > 0
+            ? `OpenRouter: ${providerMessage}`
+            : 'OpenRouter rejected the request (400). Check that the model supports video_url / YouTube for this route.',
+      };
+    }
     if (status === 429) {
       return {
         code: 'OPENROUTER_RATE_LIMIT',
@@ -175,9 +184,10 @@ export class OpenRouterClient {
         message: 'OpenRouter upstream error. Please retry shortly.',
       };
     }
+    const hint = providerMessage.trim().length > 0 ? `: ${providerMessage}` : '';
     return {
       code: 'OPENROUTER_REQUEST_FAILED',
-      message: `OpenRouter request failed (${status}).`,
+      message: `OpenRouter request failed (${status})${hint}`,
     };
   }
 }

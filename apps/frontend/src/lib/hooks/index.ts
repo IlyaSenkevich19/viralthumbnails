@@ -29,5 +29,5 @@ export { useGenerationCredits } from './use-generation-credits';
 export { useCreditLedger } from './use-credit-ledger';
 export { useAdminStatus } from './use-admin-status';
 export { useYoutubeInspiration } from './use-youtube-inspiration';
-export { useFromVideoThumbnailsMutation } from './use-from-video-thumbnails';
+export { usePipelineVideoRunMutation } from './use-pipeline-video-run';
 export { useThumbnailPipelineMutation } from './use-thumbnail-pipeline';

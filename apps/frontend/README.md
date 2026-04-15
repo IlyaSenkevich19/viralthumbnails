@@ -42,7 +42,7 @@ No separate `NEXT_PUBLIC_API_URL` is required for the current codebase.
 | Templates, niches | `/templates`, `templatesApi` |
 | Avatars | `/avatars`, `avatarsApi` |
 | Billing credits | `/credits`, sidebar/header credits, `billingApi` |
-| **`POST /api/thumbnails/pipeline/run-video`** | **New project → tab “Upload video”**: multipart upload or `videoUrl`, optional count/style; pipeline persists a project and variants (`thumbnailsApi`, `useFromVideoThumbnailsMutation`) |
+| **`POST /api/thumbnails/pipeline/run-video`** | **New project → tab “Upload video”**: multipart upload or `videoUrl`, optional count/style; pipeline persists a project and variants (`thumbnailsApi`, `usePipelineVideoRunMutation`) |
 | Admin YouTube inspiration | `/admin/youtube-inspiration` (when `ADMIN_USER_IDS` matches) |
 
 Pipeline create flows are wired end-to-end for prompt/YouTube/video modes, including persisted `projects` + `thumbnail_variants`.

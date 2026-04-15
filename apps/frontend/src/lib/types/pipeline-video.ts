@@ -1,6 +1,6 @@
 /** UI response shape for video-mode create flow (`POST /api/thumbnails/pipeline/run-video`). */
 
-export type FromVideoThumbnailRow = {
+export type PipelineVideoThumbnailRow = {
   rank: number;
   storagePath: string;
   signedUrl: string;
@@ -9,10 +9,10 @@ export type FromVideoThumbnailRow = {
   scores: Record<string, unknown>;
 };
 
-export type FromVideoResponse = {
+export type PipelineVideoResponse = {
   runId: string;
   projectId: string;
   analysis: unknown;
   selectedShots: unknown;
-  thumbnails: FromVideoThumbnailRow[];
+  thumbnails: PipelineVideoThumbnailRow[];
 };

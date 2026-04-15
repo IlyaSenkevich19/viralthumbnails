@@ -10,11 +10,6 @@ import { SupabaseService } from '../supabase/supabase.service';
 const DEFAULT_CREDITS = { balance: 3, totalGranted: 3 };
 const RESERVE_RETRY = 8;
 
-export function creditsForVideoPipeline(requestedThumbnailCount: number): number {
-  const n = Math.min(12, Math.max(1, Math.floor(requestedThumbnailCount)));
-  return 1 + 2 * n;
-}
-
 export function creditsForThumbnailPipelineRun(params: {
   variantCount: number;
   generateImages: boolean;
@@ -55,11 +50,6 @@ export class BillingService {
     if (error) {
       this.logger.warn(`credit_ledger insert failed: ${error.message}`);
     }
-  }
-
-  /** @see creditsForVideoPipeline */
-  videoPipelineCreditCost(requestedThumbnailCount: number): number {
-    return creditsForVideoPipeline(requestedThumbnailCount);
   }
 
   /** @see creditsForThumbnailPipelineRun */

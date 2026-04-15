@@ -5,7 +5,7 @@ import { ThumbnailPipelineEnabledGuard } from './thumbnail-pipeline-feature';
 import { Throttle } from '@nestjs/throttler';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
 import { ApiControllerPaths } from '../../common/constants/api-controller-paths';
-import { THROTTLE_VIDEO_FROM } from '../../common/throttle/throttle-limits';
+import { THROTTLE_PIPELINE_RUN } from '../../common/throttle/throttle-limits';
 import { UserIdThrottlerGuard } from '../../common/throttle/user-id-throttler.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { SupabaseGuard } from '../auth/guards/supabase.guard';
@@ -39,7 +39,7 @@ export class ThumbnailPipelineController {
 
   @Post('pipeline/run')
   @UseGuards(ThumbnailPipelineEnabledGuard, UserIdThrottlerGuard)
-  @Throttle({ default: { ...THROTTLE_VIDEO_FROM } })
+  @Throttle({ default: { ...THROTTLE_PIPELINE_RUN } })
   async runPipeline(@CurrentUser() userId: string, @Body() body: ThumbnailPipelineRunDto) {
     return this.executePipeline(userId, body);
   }
@@ -62,7 +62,7 @@ export class ThumbnailPipelineController {
     },
   })
   @UseGuards(ThumbnailPipelineEnabledGuard, UserIdThrottlerGuard)
-  @Throttle({ default: { ...THROTTLE_VIDEO_FROM } })
+  @Throttle({ default: { ...THROTTLE_PIPELINE_RUN } })
   @UseInterceptors(
     FileInterceptor('file', {
       limits: { fileSize: VIDEO_UPLOAD_LIMIT_BYTES },

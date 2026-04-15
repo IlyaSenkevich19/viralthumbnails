@@ -123,7 +123,7 @@ Expect:
 
 ## 3) Throttling checks
 
-`THROTTLE_VIDEO_FROM` currently applies to pipeline run endpoints:
+`THROTTLE_PIPELINE_RUN` currently applies to pipeline run endpoints:
 
 - limit: `8`
 - window: `1h`

@@ -5,11 +5,11 @@ import { useRouter } from 'next/navigation';
 import { DEFAULT_NEW_PROJECT_VARIANT_COUNT } from '@/config/credits';
 import { useAuth } from '@/contexts/auth-context';
 import {
-  useFromVideoThumbnailsMutation,
   useGenerationCredits,
+  usePipelineVideoRunMutation,
   useThumbnailPipelineMutation,
 } from '@/lib/hooks';
-import { creditsForThumbnailPipelineRun, creditsForVideoPipeline } from '@/lib/credit-costs';
+import { creditsForThumbnailPipelineRun } from '@/lib/credit-costs';
 import { assertSufficientCredits } from '@/lib/paywall-notify';
 import { thumbnailsApi } from '@/lib/api';
 import { isLikelyYoutubeUrl } from '@/lib/format';
@@ -22,7 +22,7 @@ import { toast } from 'sonner';
 import { tabs } from './constants';
 import type { Tab } from './types';
 import { tabFromSearchParams } from './utils';
-import type { FromVideoResponse } from '@/lib/types/from-video';
+import type { PipelineVideoResponse } from '@/lib/types/pipeline-video';
 import { VIDEO_ANALYSIS_MAX_SECONDS } from '@/lib/video/clip-limits';
 import { maybeTrimVideoForThumbnails, TrimVideoError } from '@/lib/video/trim-video-for-thumbnails';
 import { pickThumbnailStyles } from '@/lib/thumbnail-style-matrix';
@@ -43,7 +43,7 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
   const router = useRouter();
   const { accessToken } = useAuth();
   const runPipeline = useThumbnailPipelineMutation();
-  const fromVideoThumbnails = useFromVideoThumbnailsMutation();
+  const pipelineVideoRun = usePipelineVideoRunMutation();
   const { data: credits } = useGenerationCredits();
   const submitLock = useRef(false);
 
@@ -59,7 +59,7 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
   const [videoCount, setVideoCount] = useState(4);
   const [videoStyle, setVideoStyle] = useState('');
   const [videoPrompt, setVideoPrompt] = useState('');
-  const [videoResult, setVideoResult] = useState<FromVideoResponse | null>(null);
+  const [videoResult, setVideoResult] = useState<PipelineVideoResponse | null>(null);
   const [videoPreparing, setVideoPreparing] = useState(false);
   const [youtubeMetaPreview, setYoutubeMetaPreview] = useState<YoutubeMetaPreview | null>(null);
   const plannedStyleCount =
@@ -70,7 +70,13 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
 
   const videoN = Math.min(12, Math.max(1, Math.floor(videoCount) || 4));
   const cannotAffordVideo =
-    tab === 'video' && credits?.balance != null && credits.balance < creditsForVideoPipeline(videoN);
+    tab === 'video' &&
+    credits?.balance != null &&
+    credits.balance <
+      creditsForThumbnailPipelineRun({
+        variantCount: videoN,
+        generateImages: true,
+      });
   const cannotAffordInitialBatch =
     tab !== 'video' &&
     credits?.balance != null &&
@@ -127,7 +133,15 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
         return;
       }
       const n = Math.min(12, Math.max(1, Math.floor(videoCount) || 4));
-      if (!assertSufficientCredits({ balance: credits?.balance, cost: creditsForVideoPipeline(n) }))
+      if (
+        !assertSufficientCredits({
+          balance: credits?.balance,
+          cost: creditsForThumbnailPipelineRun({
+            variantCount: n,
+            generateImages: true,
+          }),
+        })
+      )
         return;
 
       let fileToSend: File | undefined;
@@ -157,7 +171,7 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
       const avatarIdFromQuery = sp.get('avatar_id') || undefined;
 
       submitLock.current = true;
-      fromVideoThumbnails.mutate(
+      pipelineVideoRun.mutate(
         {
           file: fileToSend,
           videoUrl: hasFile ? undefined : url || undefined,
@@ -468,7 +482,7 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Template and face from the page URL (if opened with template_id / avatar_id) are passed to generation.
-                  Saves a project and opens variants when done. Credits: 1 analysis + 2×count generations; rate-limited.
+                  Saves a project and opens variants when done. Credits: 1 analysis + count generations; rate-limited.
                 </p>
               </div>
             )}
@@ -524,14 +538,14 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
               className="w-full sm:w-auto"
               disabled={
                 tab === 'video'
-                  ? fromVideoThumbnails.isPending || videoPreparing || cannotAffordVideo
+                  ? pipelineVideoRun.isPending || videoPreparing || cannotAffordVideo
                   : runPipeline.isPending || cannotAffordInitialBatch
               }
             >
               {tab === 'video'
                 ? videoPreparing
                   ? 'Preparing video…'
-                  : fromVideoThumbnails.isPending
+                  : pipelineVideoRun.isPending
                     ? 'Working…'
                     : 'Generate from video'
                 : runPipeline.isPending

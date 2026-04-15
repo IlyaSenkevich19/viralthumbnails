@@ -22,14 +22,14 @@ import { thumbnailsApi } from '@/lib/api';
 import {
   NICHE_ALL,
   useAvatarsList,
-  useFromVideoThumbnailsMutation,
   useGenerationCredits,
+  usePipelineVideoRunMutation,
   useThumbnailPipelineMutation,
   useTemplatesList,
 } from '@/lib/hooks';
-import { creditsForThumbnailPipelineRun, creditsForVideoPipeline } from '@/lib/credit-costs';
+import { creditsForThumbnailPipelineRun } from '@/lib/credit-costs';
 import { assertSufficientCredits } from '@/lib/paywall-notify';
-import type { FromVideoResponse } from '@/lib/types/from-video';
+import type { PipelineVideoResponse } from '@/lib/types/pipeline-video';
 import { VIDEO_ANALYSIS_MAX_SECONDS } from '@/lib/video/clip-limits';
 import { maybeTrimVideoForThumbnails, TrimVideoError } from '@/lib/video/trim-video-for-thumbnails';
 import { pickThumbnailStyles } from '@/lib/thumbnail-style-matrix';
@@ -89,7 +89,7 @@ export function DashboardCreateHub() {
   const canLoadAssets = !authLoading && Boolean(user?.id && accessToken);
   const { openNewProject } = useNewProject();
   const runPipeline = useThumbnailPipelineMutation();
-  const fromVideo = useFromVideoThumbnailsMutation();
+  const pipelineVideoRun = usePipelineVideoRunMutation();
 
   const [mode, setMode] = useState<HubMode>('prompt');
   const [creative, setCreative] = useState('');
@@ -100,7 +100,7 @@ export function DashboardCreateHub() {
   const [videoStyle, setVideoStyle] = useState('');
   const [videoPrompt, setVideoPrompt] = useState('');
   const [videoPrioritizeFace, setVideoPrioritizeFace] = useState(false);
-  const [videoResult, setVideoResult] = useState<FromVideoResponse | null>(null);
+  const [videoResult, setVideoResult] = useState<PipelineVideoResponse | null>(null);
   const [videoPreparing, setVideoPreparing] = useState(false);
   const [moreOptionsOpen, setMoreOptionsOpen] = useState(false);
   const [videoStylingOpen, setVideoStylingOpen] = useState(false);
@@ -138,15 +138,16 @@ export function DashboardCreateHub() {
 
   const busyProject =
     mode === 'prompt' || mode === 'youtube' ? runPipeline.isPending : false;
-  const busyVideo = mode === 'video' && (fromVideo.isPending || videoPreparing);
+  const busyVideo = mode === 'video' && (pipelineVideoRun.isPending || videoPreparing);
   const primaryBusy = busyProject || busyVideo;
   const cannotAffordGenerate =
     credits?.balance != null &&
     (mode === 'video'
       ? credits.balance <
-        creditsForVideoPipeline(
-          Math.min(12, Math.max(1, Math.floor(videoCount) || DEFAULT_VIDEO_THUMBNAIL_COUNT)),
-        )
+        creditsForThumbnailPipelineRun({
+          variantCount: Math.min(12, Math.max(1, Math.floor(videoCount) || DEFAULT_VIDEO_THUMBNAIL_COUNT)),
+          generateImages: true,
+        })
       : credits.balance <
         creditsForThumbnailPipelineRun({
           variantCount: DEFAULT_NEW_PROJECT_VARIANT_COUNT,
@@ -199,7 +200,15 @@ export function DashboardCreateHub() {
       }
 
       const n = Math.min(12, Math.max(1, Math.floor(videoCount) || DEFAULT_VIDEO_THUMBNAIL_COUNT));
-      if (!assertSufficientCredits({ balance: credits?.balance, cost: creditsForVideoPipeline(n) }))
+      if (
+        !assertSufficientCredits({
+          balance: credits?.balance,
+          cost: creditsForThumbnailPipelineRun({
+            variantCount: n,
+            generateImages: true,
+          }),
+        })
+      )
         return;
 
       let fileToSend: File | undefined;
@@ -225,7 +234,7 @@ export function DashboardCreateHub() {
         }
       }
 
-      fromVideo.mutate(
+      pipelineVideoRun.mutate(
         {
           file: fileToSend,
           videoUrl: hasFile ? undefined : url || undefined,

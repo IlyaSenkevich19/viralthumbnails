@@ -14,6 +14,7 @@ type ChatCompletionsResponse = {
   choices?: Array<{
     message?: {
       content?: string | unknown[];
+      images?: Array<{ image_url?: { url?: string } }>;
     };
   }>;
   usage?: OpenRouterUsage;
@@ -97,6 +98,14 @@ export class OpenRouterClient {
     const choice = json.choices?.[0];
     const content = choice?.message?.content;
     const parts = Array.isArray(content) ? content : [];
+    const messageImages = choice?.message?.images ?? [];
+    const imagePartsFromImages = messageImages
+      .map((img) => {
+        const url = img?.image_url?.url;
+        if (typeof url !== 'string' || !url.trim()) return null;
+        return { type: 'image_url', image_url: { url } };
+      })
+      .filter((p): p is { type: 'image_url'; image_url: { url: string } } => p !== null);
     const text =
       typeof content === 'string'
         ? content
@@ -115,7 +124,12 @@ export class OpenRouterClient {
 
     return {
       rawText: text,
-      contentParts: parts.length ? parts : typeof content === 'string' ? [{ type: 'text', text: content }] : [],
+      contentParts:
+        parts.length || imagePartsFromImages.length
+          ? [...parts, ...imagePartsFromImages]
+          : typeof content === 'string'
+            ? [{ type: 'text', text: content }]
+            : [],
       usage: json.usage ?? null,
       model: json.model ?? params.model,
       latencyMs,

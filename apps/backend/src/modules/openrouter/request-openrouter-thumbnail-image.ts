@@ -32,9 +32,9 @@ export async function requestOpenRouterSingleThumbnailImage(params: {
 
     const imgs = params.openRouter.extractImagesFromParts(result.contentParts);
     if (imgs.length === 0) {
-      params.logger.warn(
-        `OpenRouter thumbnail: no image context=${params.logContext} model=${params.model}`,
-      );
+      const remote = await tryFetchRemoteImageFromContentParts(result.contentParts, params.logger);
+      if (remote) return remote;
+      params.logger.warn(`OpenRouter thumbnail: no image context=${params.logContext} model=${params.model}`);
       return null;
     }
     const first = imgs[0];
@@ -53,4 +53,37 @@ export async function requestOpenRouterSingleThumbnailImage(params: {
   } finally {
     clearTimeout(timeout);
   }
+}
+
+async function tryFetchRemoteImageFromContentParts(
+  parts: unknown[],
+  logger: Logger,
+): Promise<{ buffer: Buffer; contentType: string } | null> {
+  for (const p of parts) {
+    if (!p || typeof p !== 'object') continue;
+    const o = p as { type?: unknown; image_url?: { url?: unknown } };
+    if (o.type !== 'image_url') continue;
+    const url = typeof o.image_url?.url === 'string' ? o.image_url.url.trim() : '';
+    if (!/^https?:\/\//i.test(url)) continue;
+
+    try {
+      const res = await fetch(url);
+      if (!res.ok) {
+        logger.warn(`OpenRouter thumbnail: image url fetch failed status=${res.status}`);
+        continue;
+      }
+      const contentTypeHeader = res.headers.get('content-type') || '';
+      const contentType = contentTypeHeader.toLowerCase().includes('jpeg') ? 'image/jpeg' : 'image/png';
+      const ab = await res.arrayBuffer();
+      const buffer = Buffer.from(ab);
+      if (!buffer.length) continue;
+      logger.log(`OpenRouter thumbnail: image fetched from remote URL (${contentType})`);
+      return { buffer, contentType };
+    } catch (e) {
+      logger.warn(
+        `OpenRouter thumbnail: image url fetch error: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
+  }
+  return null;
 }

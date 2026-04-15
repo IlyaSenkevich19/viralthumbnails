@@ -132,6 +132,13 @@ export class ThumbnailPipelineController {
       editInstruction: body.edit_instruction,
     };
     const result = await this.orchestrator.run(runInput);
+    const warnings: string[] = [];
+    if (body.template_id?.trim() && resolvedRefs && !resolvedRefs.hasTemplateImage) {
+      warnings.push(`Template reference not resolved: ${body.template_id.trim()}`);
+    }
+    if (body.avatar_id?.trim() && resolvedRefs && !resolvedRefs.hasAvatarImage) {
+      warnings.push(`Avatar reference not resolved: ${body.avatar_id.trim()}`);
+    }
 
     const persistedProject =
       body.persist_project && result.variants?.length
@@ -177,6 +184,7 @@ export class ThumbnailPipelineController {
             face_from_id: resolvedRefs.hasAvatarImage,
           }
         : undefined,
+      warnings: warnings.length ? warnings : undefined,
     };
   }
 }

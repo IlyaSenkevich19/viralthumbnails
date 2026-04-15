@@ -99,6 +99,7 @@ Done criteria:
   - OpenRouter/storage failure paths.
 - Validate throttling, payload size constraints, and operational observability.
 - Finalize architecture documentation diagram for the new unified flow.
+- Use `docs/pipeline-hardening-runbook.md` as the operational verification checklist for failure and limits.
 
 Done criteria:
 

@@ -62,6 +62,7 @@ export type PipelineRunResponse = {
     template_from_id: boolean;
     face_from_id: boolean;
   };
+  warnings?: string[];
 };
 
 export type ParseVideoUrlResponse = {

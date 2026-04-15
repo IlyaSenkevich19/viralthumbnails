@@ -3,17 +3,13 @@ import { ConfigService } from '@nestjs/config';
 import { getOpenRouterConfig } from '../../../config/openrouter.config';
 import { PIPELINE_STEP_MODELS } from '../../../config/openrouter-models';
 import { OpenRouterClient } from '../../openrouter/openrouter.client';
-import { requestOpenRouterSingleThumbnailImage } from '../../openrouter/request-openrouter-thumbnail-image';
+import { requestOpenRouterSingleThumbnailImage } from '../../openrouter/openrouter-requests';
 import { userContentTextThenReferenceImages } from '../../openrouter/multipart-user-content';
 import type { OpenRouterMessage } from '../../openrouter/openrouter.types';
 
 const EDIT_HEADER =
   'You are editing an existing 16:9 YouTube thumbnail. After this paragraph: first image is the current thumbnail; following images are template and/or face references in that order. Apply the edit instructions while preserving readability and contrast.';
 
-/**
- * Separate image-editing / remix layer (face insertion, template adaptation).
- * Model: {@link PIPELINE_STEP_MODELS.imageEdit}.
- */
 @Injectable()
 export class PipelineThumbnailEditingService {
   private readonly logger = new Logger(PipelineThumbnailEditingService.name);

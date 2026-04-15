@@ -8,7 +8,7 @@ import { queryKeys } from '@/lib/query-keys';
 import type { PipelineVideoRunRequest } from '@/lib/api/thumbnails';
 import { toast } from 'sonner';
 import { isApiError } from '@/lib/api/api-error';
-import { handleBillingMutationError } from '@/lib/paywall-notify';
+import { handleBillingMutationError, handleOpenRouterMutationError } from '@/lib/paywall-notify';
 
 export function usePipelineVideoRunMutation() {
   const queryClient = useQueryClient();
@@ -26,6 +26,7 @@ export function usePipelineVideoRunMutation() {
         toast.error('Too many video runs. Try again in a little while.');
         return;
       }
+      if (handleOpenRouterMutationError(err)) return;
       if (handleBillingMutationError(err)) return;
       toast.error(err instanceof Error ? err.message : 'Video pipeline failed');
     },

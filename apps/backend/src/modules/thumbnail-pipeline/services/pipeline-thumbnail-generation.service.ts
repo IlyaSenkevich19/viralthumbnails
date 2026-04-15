@@ -2,8 +2,9 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { getOpenRouterConfig } from '../../../config/openrouter.config';
 import { PIPELINE_STEP_MODELS } from '../../../config/openrouter-models';
+import { OpenRouterApiError } from '../../openrouter/openrouter-api.error';
 import { OpenRouterClient } from '../../openrouter/openrouter.client';
-import { requestOpenRouterSingleThumbnailImage } from '../../openrouter/request-openrouter-thumbnail-image';
+import { requestOpenRouterSingleThumbnailImage } from '../../openrouter/openrouter-requests';
 import { userContentTextThenReferenceImages } from '../../openrouter/multipart-user-content';
 import type { OpenRouterMessage } from '../../openrouter/openrouter.types';
 import type { ReferenceBundle } from './pipeline-prompt-builder.service';
@@ -18,9 +19,6 @@ export type GeneratedPipelineImage = {
   contentType: string;
 };
 
-/**
- * Image generation for the modular pipeline — model from {@link PIPELINE_STEP_MODELS.imageGeneration}.
- */
 @Injectable()
 export class PipelineThumbnailGenerationService {
   private readonly logger = new Logger(PipelineThumbnailGenerationService.name);
@@ -69,6 +67,10 @@ export class PipelineThumbnailGenerationService {
         }
         out.push({ index: i, prompt, buffer: img.buffer, contentType: img.contentType });
       } catch (e) {
+        if (e instanceof OpenRouterApiError) {
+          // Do not swallow billing / rate limits / upstream errors as "no images".
+          throw e;
+        }
         const msg = e instanceof Error ? e.message : String(e);
         if (msg.includes('timed out')) {
           this.logger.warn(`Pipeline image gen timed out index=${i} after ${timeoutMs}ms`);

@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { getOpenRouterConfig } from '../../config/openrouter.config';
-import { extractImagesFromOpenRouterParts } from './extract-images-from-parts';
+import { extractImagesFromOpenRouterParts, getOpenRouterPartImageUrl } from './extract-images-from-parts';
 import { OpenRouterApiError } from './openrouter-api.error';
 import type {
   OpenRouterChatResult,
@@ -14,13 +14,19 @@ type ChatCompletionsResponse = {
   choices?: Array<{
     message?: {
       content?: string | unknown[];
-      images?: Array<{ image_url?: { url?: string } }>;
+      images?: unknown[];
     };
   }>;
   usage?: OpenRouterUsage;
   model?: string;
   error?: { message?: string };
 };
+
+function urlFromAssistantImageEntry(img: unknown): string | null {
+  if (typeof img === 'string' && img.trim()) return img.trim();
+  if (img && typeof img === 'object') return getOpenRouterPartImageUrl(img as Record<string, unknown>);
+  return null;
+}
 
 @Injectable()
 export class OpenRouterClient {
@@ -98,12 +104,12 @@ export class OpenRouterClient {
     const choice = json.choices?.[0];
     const content = choice?.message?.content;
     const parts = Array.isArray(content) ? content : [];
-    const messageImages = choice?.message?.images ?? [];
+    const messageImages: unknown[] = choice?.message?.images ?? [];
     const imagePartsFromImages = messageImages
       .map((img) => {
-        const url = img?.image_url?.url;
-        if (typeof url !== 'string' || !url.trim()) return null;
-        return { type: 'image_url', image_url: { url } };
+        const url = urlFromAssistantImageEntry(img);
+        if (!url) return null;
+        return { type: 'image_url' as const, image_url: { url } };
       })
       .filter((p): p is { type: 'image_url'; image_url: { url: string } } => p !== null);
     const text =

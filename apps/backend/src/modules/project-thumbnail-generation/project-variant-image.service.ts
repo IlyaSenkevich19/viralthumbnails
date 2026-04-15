@@ -4,7 +4,7 @@ import { PIPELINE_STEP_MODELS } from '../../config/openrouter-models';
 import { getOpenRouterConfig } from '../../config/openrouter.config';
 import { userContentTextThenReferenceImages } from '../openrouter/multipart-user-content';
 import { OpenRouterClient } from '../openrouter/openrouter.client';
-import { requestOpenRouterSingleThumbnailImage } from '../openrouter/request-openrouter-thumbnail-image';
+import { requestOpenRouterSingleThumbnailImage } from '../openrouter/openrouter-requests';
 import type { OpenRouterMessage } from '../openrouter/openrouter.types';
 import { SupabaseService } from '../supabase/supabase.service';
 import { TemplatesService } from '../templates/templates.service';

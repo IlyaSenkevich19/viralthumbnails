@@ -3,6 +3,7 @@ import { PIPELINE_STEP_MODELS } from '../../../config/openrouter-models';
 import { extractJsonObject } from '../../../common/json/extract-json-object';
 import { approximateOpenRouterMessagesPayloadChars } from '../../openrouter/approximate-message-payload-chars';
 import { OpenRouterClient } from '../../openrouter/openrouter.client';
+import { requestPipelineVlAnalysis } from '../../openrouter/openrouter-requests';
 import { userContentTextVideoThenReferenceImages } from '../../openrouter/multipart-user-content';
 import type { OpenRouterMessage } from '../../openrouter/openrouter.types';
 import {
@@ -26,10 +27,6 @@ export type VideoUnderstandingResult = {
   modelUsed: string;
 };
 
-/**
- * Vision-language analysis for thumbnail strategy (video URL and/or reference images).
- * Uses {@link PIPELINE_STEP_MODELS} (code defaults), then optional fallback on total failure.
- */
 @Injectable()
 export class PipelineVideoUnderstandingService {
   private readonly logger = new Logger(PipelineVideoUnderstandingService.name);
@@ -157,7 +154,7 @@ ${ThumbnailPipelineAnalysisJsonPrompt}`;
             ];
 
       try {
-        const result = await this.openRouter.chatCompletions({
+        const result = await requestPipelineVlAnalysis(this.openRouter, {
           model,
           messages,
           temperature: attempt > 0 ? 0.1 : 0.3,

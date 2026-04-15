@@ -2,12 +2,22 @@ import type { OpenRouterDecodedImage } from './openrouter.types';
 
 const DATA_URL_RE = /^data:([^;]+);base64,(.+)$/i;
 
-function decodeFromImageUrlPart(o: Record<string, unknown>): OpenRouterDecodedImage | null {
-  if (o.type !== 'image_url' || !o.image_url || typeof o.image_url !== 'object') {
-    return null;
+/** OpenRouter may use `image_url` (API) or `imageUrl` (some SDKs) on the same part. */
+export function getOpenRouterPartImageUrl(o: Record<string, unknown>): string | null {
+  for (const key of ['image_url', 'imageUrl'] as const) {
+    const nested = o[key];
+    if (nested && typeof nested === 'object' && 'url' in nested) {
+      const u = (nested as { url?: unknown }).url;
+      if (typeof u === 'string' && u.trim()) return u.trim();
+    }
   }
-  const url = (o.image_url as { url?: string }).url;
-  if (typeof url !== 'string' || !url.startsWith('data:')) {
+  if (typeof o.url === 'string' && o.url.trim()) return o.url.trim();
+  return null;
+}
+
+function decodeFromImageUrlPart(o: Record<string, unknown>): OpenRouterDecodedImage | null {
+  const url = getOpenRouterPartImageUrl(o);
+  if (!url || !url.startsWith('data:')) {
     return null;
   }
   const m = DATA_URL_RE.exec(url);

@@ -1,12 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PIPELINE_STEP_MODELS } from '../../../config/openrouter-models';
 import { OpenRouterClient } from '../../openrouter/openrouter.client';
-import type { OpenRouterMessage } from '../../openrouter/openrouter.types';
+import { requestPipelineTextRefinement } from '../../openrouter/openrouter-requests';
 
-/**
- * Optional text-only step: tighten creator direction before VL / image steps.
- * Skipped when {@link PIPELINE_STEP_MODELS.textRefinement} is unset.
- */
 @Injectable()
 export class PipelinePromptRefinementService {
   private readonly logger = new Logger(PipelinePromptRefinementService.name);
@@ -22,21 +18,10 @@ export class PipelinePromptRefinementService {
       return { text: direction };
     }
 
-    const messages: OpenRouterMessage[] = [
-      {
-        role: 'system',
-        content:
-          'You are a YouTube thumbnail creative director. Rewrite the creator notes into 3-6 short imperative lines (angles, emotion, text on thumbnail, what to avoid). Plain text only, no JSON.',
-      },
-      { role: 'user', content: direction.slice(0, 8000) },
-    ];
-
     try {
-      const result = await this.openRouter.chatCompletions({
+      const result = await requestPipelineTextRefinement(this.openRouter, {
         model,
-        messages,
-        temperature: 0.35,
-        maxTokens: 1024,
+        userDirection: direction,
       });
       const refined = result.rawText.trim();
       if (!refined) return { text: direction };

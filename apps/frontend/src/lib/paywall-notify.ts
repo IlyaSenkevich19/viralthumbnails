@@ -57,3 +57,23 @@ export function handleBillingMutationError(err: unknown): boolean {
   }
   return false;
 }
+
+/** OpenRouter rejected the request (402) — separate from in-app Viral credits. */
+export function handleOpenRouterMutationError(err: unknown): boolean {
+  if (!isApiError(err) || err.statusCode !== 402) return false;
+  if (err.code === 'OPENROUTER_BILLING_REQUIRED') {
+    toast.error('OpenRouter: no API credits', {
+      description:
+        err.message ||
+        'Add credits at openrouter.ai/settings/credits for the API key configured as OPENROUTER_API_KEY.',
+    });
+    return true;
+  }
+  if (err.code === 'OPENROUTER_VIDEO_BALANCE_REQUIRED') {
+    toast.error('OpenRouter: video balance required', {
+      description: err.message,
+    });
+    return true;
+  }
+  return false;
+}

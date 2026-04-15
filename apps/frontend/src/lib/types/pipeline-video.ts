@@ -15,4 +15,5 @@ export type PipelineVideoResponse = {
   analysis: unknown;
   selectedShots: unknown;
   thumbnails: PipelineVideoThumbnailRow[];
+  warnings?: string[];
 };

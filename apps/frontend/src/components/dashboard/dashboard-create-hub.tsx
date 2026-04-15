@@ -23,7 +23,7 @@ import {
   NICHE_ALL,
   useAvatarsList,
   useGenerationCredits,
-  usePipelineVideoRunMutation,
+  usePipelineVideoCreateFlow,
   useThumbnailPipelineMutation,
   useTemplatesList,
 } from '@/lib/hooks';
@@ -89,7 +89,7 @@ export function DashboardCreateHub() {
   const canLoadAssets = !authLoading && Boolean(user?.id && accessToken);
   const { openNewProject } = useNewProject();
   const runPipeline = useThumbnailPipelineMutation();
-  const pipelineVideoRun = usePipelineVideoRunMutation();
+  const pipelineVideoCreate = usePipelineVideoCreateFlow();
 
   const [mode, setMode] = useState<HubMode>('prompt');
   const [creative, setCreative] = useState('');
@@ -138,7 +138,7 @@ export function DashboardCreateHub() {
 
   const busyProject =
     mode === 'prompt' || mode === 'youtube' ? runPipeline.isPending : false;
-  const busyVideo = mode === 'video' && (pipelineVideoRun.isPending || videoPreparing);
+  const busyVideo = mode === 'video' && (pipelineVideoCreate.isPending || videoPreparing);
   const primaryBusy = busyProject || busyVideo;
   const cannotAffordGenerate =
     credits?.balance != null &&
@@ -234,8 +234,8 @@ export function DashboardCreateHub() {
         }
       }
 
-      pipelineVideoRun.mutate(
-        {
+      try {
+        const data = await pipelineVideoCreate.submit({
           file: fileToSend,
           videoUrl: hasFile ? undefined : url || undefined,
           count: n,
@@ -244,18 +244,16 @@ export function DashboardCreateHub() {
           template_id: templateId,
           avatar_id: avatarId,
           prioritize_face: videoPrioritizeFace && Boolean(avatarId) ? true : undefined,
-        },
-        {
-          onSuccess: (data) => {
-            setVideoResult(data);
-            toast.success(`${data.thumbnails.length} thumbnail(s) ready. Opening project…`);
-            router.push(
-              projectVariantsPath(data.projectId) +
-                projectVariantsSearchParams({ templateId, avatarId }),
-            );
-          },
-        },
-      );
+        });
+        setVideoResult(data);
+        toast.success(`${data.thumbnails.length} thumbnail(s) ready. Opening project…`);
+        router.push(
+          projectVariantsPath(data.projectId) +
+            projectVariantsSearchParams({ templateId, avatarId }),
+        );
+      } catch {
+        // handled by mutation onError
+      }
       return;
     }
 
@@ -310,6 +308,9 @@ export function DashboardCreateHub() {
         },
         {
           onSuccess: (result) => {
+            if (result.warnings?.length) {
+              toast.warning(result.warnings.join('\n'));
+            }
             const persisted = result.persisted_project;
             if (!persisted?.project_id) {
               toast.error('Pipeline run finished but project was not persisted.');
@@ -355,6 +356,9 @@ export function DashboardCreateHub() {
       },
       {
         onSuccess: (result) => {
+          if (result.warnings?.length) {
+            toast.warning(result.warnings.join('\n'));
+          }
           const persisted = result.persisted_project;
           if (!persisted?.project_id) {
             toast.error('Pipeline run finished but project was not persisted.');

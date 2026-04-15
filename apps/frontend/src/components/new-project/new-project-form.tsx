@@ -6,7 +6,7 @@ import { DEFAULT_NEW_PROJECT_VARIANT_COUNT } from '@/config/credits';
 import { useAuth } from '@/contexts/auth-context';
 import {
   useGenerationCredits,
-  usePipelineVideoRunMutation,
+  usePipelineVideoCreateFlow,
   useThumbnailPipelineMutation,
 } from '@/lib/hooks';
 import { creditsForThumbnailPipelineRun } from '@/lib/credit-costs';
@@ -43,7 +43,7 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
   const router = useRouter();
   const { accessToken } = useAuth();
   const runPipeline = useThumbnailPipelineMutation();
-  const pipelineVideoRun = usePipelineVideoRunMutation();
+  const pipelineVideoCreate = usePipelineVideoCreateFlow();
   const { data: credits } = useGenerationCredits();
   const submitLock = useRef(false);
 
@@ -171,8 +171,8 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
       const avatarIdFromQuery = sp.get('avatar_id') || undefined;
 
       submitLock.current = true;
-      pipelineVideoRun.mutate(
-        {
+      try {
+        const data = await pipelineVideoCreate.submit({
           file: fileToSend,
           videoUrl: hasFile ? undefined : url || undefined,
           count: n,
@@ -180,25 +180,22 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
           prompt: videoPrompt.trim() || undefined,
           template_id: templateIdFromQuery,
           avatar_id: avatarIdFromQuery,
-        },
-        {
-          onSuccess: (data) => {
-            setVideoResult(data);
-            toast.success(`${data.thumbnails.length} thumbnail(s) ready — opening project…`);
-            onRequestClose?.();
-            router.push(
-              projectVariantsPath(data.projectId) +
-                projectVariantsSearchParams({
-                  templateId: templateIdFromQuery,
-                  avatarId: avatarIdFromQuery,
-                }),
-            );
-          },
-          onSettled: () => {
-            submitLock.current = false;
-          },
-        },
-      );
+        });
+        setVideoResult(data);
+        toast.success(`${data.thumbnails.length} thumbnail(s) ready — opening project…`);
+        onRequestClose?.();
+        router.push(
+          projectVariantsPath(data.projectId) +
+            projectVariantsSearchParams({
+              templateId: templateIdFromQuery,
+              avatarId: avatarIdFromQuery,
+            }),
+        );
+      } catch {
+        // handled by mutation onError
+      } finally {
+        submitLock.current = false;
+      }
       return;
     }
 
@@ -287,6 +284,9 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
       {
         onSuccess: (result) => {
           onRequestClose?.();
+          if (result.warnings?.length) {
+            toast.warning(result.warnings.join('\n'));
+          }
           const persisted = result.persisted_project;
           if (!persisted?.project_id) {
             toast.error('Pipeline run finished but project was not persisted.');
@@ -538,14 +538,14 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
               className="w-full sm:w-auto"
               disabled={
                 tab === 'video'
-                  ? pipelineVideoRun.isPending || videoPreparing || cannotAffordVideo
+                  ? pipelineVideoCreate.isPending || videoPreparing || cannotAffordVideo
                   : runPipeline.isPending || cannotAffordInitialBatch
               }
             >
               {tab === 'video'
                 ? videoPreparing
                   ? 'Preparing video…'
-                  : pipelineVideoRun.isPending
+                  : pipelineVideoCreate.isPending
                     ? 'Working…'
                     : 'Generate from video'
                 : runPipeline.isPending

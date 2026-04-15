@@ -27,5 +27,6 @@ export function toPipelineVideoResponse(res: PipelineRunResponse): PipelineVideo
     analysis: res.analysis,
     selectedShots,
     thumbnails,
+    warnings: res.warnings,
   };
 }

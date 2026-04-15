@@ -19,6 +19,6 @@ export const PIPELINE_STEP_MODELS: {
   vlPrimary: 'google/gemma-4-26b-a4b-it:free',
   vlFallback: 'nvidia/nemotron-nano-12b-v2-vl:free',
   textRefinement: undefined,
-  imageGeneration: 'black-forest-labs/flux.2-flex',
+  imageGeneration: 'sourceful/riverflow-v2-fast',
   imageEdit: 'black-forest-labs/flux.2-pro',
 };

@@ -42,10 +42,10 @@ No separate `NEXT_PUBLIC_API_URL` is required for the current codebase.
 | Templates, niches | `/templates`, `templatesApi` |
 | Avatars | `/avatars`, `avatarsApi` |
 | Billing credits | `/credits`, sidebar/header credits, `billingApi` |
-| **`POST /api/thumbnails/from-video`** | **New project → tab “Upload video”**: multipart upload or `videoUrl`, optional count/style; results shown in the same modal (`thumbnailsApi`, `useFromVideoThumbnailsMutation`) |
+| **`POST /api/thumbnails/pipeline/run-video`** | **New project → tab “Upload video”**: multipart upload or `videoUrl`, optional count/style; pipeline persists a project and variants (`thumbnailsApi`, `useFromVideoThumbnailsMutation`) |
 | Admin YouTube inspiration | `/admin/youtube-inspiration` (when `ADMIN_USER_IDS` matches) |
 
-Not wired end-to-end yet: attaching `from-video` outputs to a `projects` row as `thumbnail_variants` (would need new API or client flow). Script/text/YouTube tabs still create a project and run **`POST …/generate`** only (no backend script parser beyond stored `source_data`).
+Pipeline create flows are wired end-to-end for prompt/YouTube/video modes, including persisted `projects` + `thumbnail_variants`.
 
 ## Environment variables
 

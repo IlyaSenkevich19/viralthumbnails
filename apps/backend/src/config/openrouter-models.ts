@@ -1,13 +1,13 @@
 /**
  * Все slug’и OpenRouter для бэкенда в одном месте (без env).
  *
- * - **`OPENROUTER_STACK`** — проект (`POST …/generate`) и **`from-video`** (анализ, картинки, ранк).
- * - **`PIPELINE_STEP_MODELS`** — только **`POST /thumbnails/pipeline/run`** (VL + Flux + опциональный текст).
+ * - **`OPENROUTER_STACK`** — shared runtime settings (baseUrl/title/timeout/free-router flags).
+ * - **`PIPELINE_STEP_MODELS`** — pipeline image/VL/edit step slugs.
  *
  * Каталог моделей: https://openrouter.ai/models
  */
 
-/** Проект + `from-video`: общий baseUrl / title / таймаут и модели для legacy-потока. */
+/** Shared OpenRouter runtime settings (baseUrl/title/timeout/free-router flags). */
 export const OPENROUTER_STACK: {
   baseUrl: string;
   appTitle: string;

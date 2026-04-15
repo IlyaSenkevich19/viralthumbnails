@@ -1,4 +1,4 @@
-/** Response shape of `POST /api/thumbnails/from-video` (Nest `FromVideoThumbnailOutput`). */
+/** UI response shape for video-mode create flow (`POST /api/thumbnails/pipeline/run-video`). */
 
 export type FromVideoThumbnailRow = {
   rank: number;

@@ -64,7 +64,7 @@ yarn dev
 
 ## Where to extend
 
-- **OpenRouter / модели**: **`apps/backend/src/config/openrouter-models.ts`** (`OPENROUTER_STACK` — проект + `from-video`; `PIPELINE_STEP_MODELS` — `pipeline/run`), секрет **`OPENROUTER_API_KEY`** — см. **`apps/backend/README.md`**.
+- **OpenRouter / модели**: **`apps/backend/src/config/openrouter-models.ts`** (`OPENROUTER_STACK` — shared runtime OpenRouter settings; `PIPELINE_STEP_MODELS` — pipeline steps), секрет **`OPENROUTER_API_KEY`** — см. **`apps/backend/README.md`**.
 - **Backend**: register new modules in `apps/backend/src/app.module.ts`.
 - **Frontend**: add routes under `apps/frontend/src/app`, API clients under `src/lib/api`, React Query hooks under `src/lib/queries`.
 - **Branding**: product wordmark **ViralThumblify** is set in `apps/frontend/src/config/site.ts` (`brandWordmark`) and used in layout title, sidebar, and auth headers.

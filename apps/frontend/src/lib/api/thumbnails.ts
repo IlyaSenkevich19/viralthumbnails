@@ -1,5 +1,4 @@
 import { ApiRoutes } from '@/config/api-routes';
-import type { FromVideoResponse } from '@/lib/types/from-video';
 import { fetchJson, fetchMultipart } from './fetch-json';
 
 export type FromVideoRequest = {
@@ -88,10 +87,20 @@ export type VideoMetaResponse = {
   } | null;
 };
 
-export async function fromVideoThumbnails(
+export async function runThumbnailPipeline(
+  token: string | null,
+  body: PipelineRunRequest,
+): Promise<PipelineRunResponse> {
+  return fetchJson<PipelineRunResponse>(ApiRoutes.thumbnails.pipelineRun, token, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+export async function runThumbnailPipelineVideo(
   token: string | null,
   params: FromVideoRequest,
-): Promise<FromVideoResponse> {
+): Promise<PipelineRunResponse> {
   const { file, videoUrl, count, style, prompt, template_id, avatar_id, prioritize_face } = params;
   const form = new FormData();
   if (file) form.append('file', file);
@@ -102,18 +111,7 @@ export async function fromVideoThumbnails(
   if (template_id?.trim()) form.append('template_id', template_id.trim());
   if (avatar_id?.trim()) form.append('avatar_id', avatar_id.trim());
   if (prioritize_face === true) form.append('prioritize_face', 'true');
-
-  return fetchMultipart<FromVideoResponse>(ApiRoutes.thumbnails.fromVideo, token, form);
-}
-
-export async function runThumbnailPipeline(
-  token: string | null,
-  body: PipelineRunRequest,
-): Promise<PipelineRunResponse> {
-  return fetchJson<PipelineRunResponse>(ApiRoutes.thumbnails.pipelineRun, token, {
-    method: 'POST',
-    body: JSON.stringify(body),
-  });
+  return fetchMultipart<PipelineRunResponse>(ApiRoutes.thumbnails.pipelineRunVideo, token, form);
 }
 
 export async function parseVideoUrl(token: string | null, rawUrl: string): Promise<ParseVideoUrlResponse> {

@@ -3,6 +3,7 @@ import { AuthModule } from '../auth/auth.module';
 import { BillingModule } from '../billing/billing.module';
 import { ProjectThumbnailGenerationModule } from '../project-thumbnail-generation/project-thumbnail-generation.module';
 import { StorageModule } from '../storage/storage.module';
+import { VideoThumbnailsModule } from '../video-thumbnails/video-thumbnails.module';
 import { ThumbnailPipelineEnabledGuard } from './thumbnail-pipeline-feature';
 import { ThumbnailPipelineController } from './thumbnail-pipeline.controller';
 import { PipelinePromptBuilderService } from './services/pipeline-prompt-builder.service';
@@ -14,7 +15,7 @@ import { PipelineVideoUnderstandingService } from './services/pipeline-video-und
 import { ThumbnailPipelineOrchestratorService } from './services/thumbnail-pipeline-orchestrator.service';
 
 @Module({
-  imports: [AuthModule, BillingModule, StorageModule, ProjectThumbnailGenerationModule],
+  imports: [AuthModule, BillingModule, StorageModule, ProjectThumbnailGenerationModule, VideoThumbnailsModule],
   controllers: [ThumbnailPipelineController],
   providers: [
     ThumbnailPipelineEnabledGuard,

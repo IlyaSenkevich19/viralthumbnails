@@ -63,9 +63,7 @@ export class ProjectVariantImageService {
     private readonly templates: TemplatesService,
   ) {}
 
-  /**
-   * Loads template + avatar images as data URLs for multimodal image generation (e.g. from-video pipeline).
-   */
+  /** Loads template + avatar images as data URLs for multimodal image generation. */
   async resolveReferenceDataUrlsForUser(params: {
     userId: string;
     templateId?: string;

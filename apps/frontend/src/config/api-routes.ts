@@ -26,8 +26,8 @@ export const ApiRoutes = {
       `/projects/${projectId}/variants/${variantId}`,
   },
   thumbnails: {
-    fromVideo: '/thumbnails/from-video',
     pipelineRun: '/thumbnails/pipeline/run',
+    pipelineRunVideo: '/thumbnails/pipeline/run-video',
     parseUrl: '/thumbnails/parse-url',
     getVideoMeta: '/thumbnails/get-video-meta',
   },

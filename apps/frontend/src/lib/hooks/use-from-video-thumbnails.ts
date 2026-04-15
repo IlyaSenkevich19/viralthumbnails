@@ -8,6 +8,7 @@ import type { FromVideoRequest } from '@/lib/api/thumbnails';
 import { toast } from 'sonner';
 import { isApiError } from '@/lib/api/api-error';
 import { handleBillingMutationError } from '@/lib/paywall-notify';
+import type { FromVideoResponse } from '@/lib/types/from-video';
 
 export function useFromVideoThumbnailsMutation() {
   const queryClient = useQueryClient();
@@ -17,7 +18,29 @@ export function useFromVideoThumbnailsMutation() {
   return useMutation({
     mutationFn: async (params: FromVideoRequest) => {
       if (!accessToken) throw new Error('Not signed in');
-      return thumbnailsApi.fromVideoThumbnails(accessToken, params);
+      const res = await thumbnailsApi.runThumbnailPipelineVideo(accessToken, params);
+      const persisted = res.persisted_project;
+      if (!persisted?.project_id) {
+        throw new Error('Pipeline run finished but project was not persisted');
+      }
+      const thumbnails: FromVideoResponse['thumbnails'] = persisted.variants.map((v, index) => ({
+        rank: index + 1,
+        storagePath: v.storage_path,
+        signedUrl: v.signed_url,
+        prompt: v.prompt,
+        seedIndex: index,
+        scores: {},
+      }));
+      const selectedShots = Array.isArray((res.analysis as Record<string, unknown>)?.bestScenes)
+        ? ((res.analysis as Record<string, unknown>).bestScenes as unknown[])
+        : [];
+      return {
+        runId: res.run_id,
+        projectId: persisted.project_id,
+        analysis: res.analysis,
+        selectedShots,
+        thumbnails,
+      } as FromVideoResponse;
     },
     onError: (err) => {
       if (isApiError(err) && err.statusCode === 429) {

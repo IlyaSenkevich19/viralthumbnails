@@ -9,10 +9,10 @@
 - [x] Аккаунт: Supabase Auth, защищённые маршруты, `GET /api/auth/me`
 - [x] Проекты: CRUD, `source_type`, статусы
 - [x] Генерация вариантов: `POST …/generate`, OpenRouter image / placeholder, Storage, биллинг кредитов с refund при частичном фейле
-- [x] Кредиты: `profiles.generation_credits_*`, резерв на generate и `from-video`, профиль (триггер 007 + lazy insert)
+- [x] Кредиты: `profiles.generation_credits_*`, резерв на generate и pipeline (`run` / `run-video`), профиль (триггер 007 + lazy insert)
 - [x] Шаблоны и ниши: API + UI
 - [x] Аватары (faces): загрузка / список / удаление в Storage
-- [x] Видео → превью: `POST /api/thumbnails/from-video` + UI в модалке «другие источники»
+- [x] Видео → превью: `POST /api/thumbnails/pipeline/run-video` + UI в модалке «другие источники»
 - [x] Админ: YouTube inspiration (`ADMIN_USER_IDS`, API key)
 - [x] Rate limiting на тяжёлые эндпоинты
 
@@ -37,8 +37,8 @@
 
 ## 3. Связка video-пайплайна и проектов
 
-- [ ] Результаты `from-video` не создают строки `thumbnail_variants` и не привязаны к проекту
-- [ ] Нужен продуктовый сценарий + API/UX: «сохранить в проект» / импорт вариантов
+- [x] Video mode сохраняет `projects` + `thumbnail_variants` через pipeline persistence (`persist_project`)
+- [ ] Добавить явный UX для импорта/копирования отдельных вариантов между проектами
 
 ---
 

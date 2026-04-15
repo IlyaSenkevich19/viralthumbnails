@@ -11,7 +11,7 @@ import { PipelineVideoUnderstandingService } from './pipeline-video-understandin
 /**
  * Coordinates ingest-shaped inputs → understanding → prompt building →
  * optional generation and optional editing. Credits are reserved up-front
- * and refunded on any failure (same pattern as `from-video`).
+ * and refunded on any failure.
  */
 @Injectable()
 export class ThumbnailPipelineOrchestratorService {

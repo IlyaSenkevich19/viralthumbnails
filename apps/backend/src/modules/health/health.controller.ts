@@ -4,7 +4,6 @@ import { ApiTags } from '@nestjs/swagger';
 import { PIPELINE_STEP_MODELS } from '../../config/openrouter-models';
 import { getOpenRouterConfig } from '../../config/openrouter.config';
 import { ConfigService } from '@nestjs/config';
-import { isThumbnailPipelineEnabled } from '../thumbnail-pipeline/thumbnail-pipeline-feature';
 
 @ApiTags('health')
 @Controller(ApiControllerPaths.health)
@@ -26,7 +25,6 @@ export class HealthController {
         supabaseServiceRoleKey: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()),
         supabaseAnonKey: Boolean(process.env.SUPABASE_ANON_KEY?.trim()),
         openRouterApiKey: Boolean(or.apiKey),
-        pipelineEnabled: isThumbnailPipelineEnabled(),
       },
       openRouter: {
         baseUrl: or.baseUrl,

@@ -50,7 +50,6 @@ export function SetupHealthPanel() {
     { label: 'SUPABASE_ANON_KEY', ok: data.checks.supabaseAnonKey },
     { label: 'SUPABASE_SERVICE_ROLE_KEY', ok: data.checks.supabaseServiceRoleKey },
     { label: 'OPENROUTER_API_KEY', ok: data.checks.openRouterApiKey },
-    { label: 'Thumbnail pipeline feature', ok: data.checks.pipelineEnabled },
   ];
   const allReady = checks.every((c) => c.ok);
 

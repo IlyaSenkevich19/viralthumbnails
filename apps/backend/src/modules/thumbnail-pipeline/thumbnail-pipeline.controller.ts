@@ -1,7 +1,6 @@
 import { Body, Controller, Post, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ThumbnailPipelineEnabledGuard } from './thumbnail-pipeline-feature';
 import { Throttle } from '@nestjs/throttler';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
 import { ApiControllerPaths } from '../../common/constants/api-controller-paths';
@@ -21,8 +20,7 @@ import { PipelineProjectPersistenceService } from './services/pipeline-project-p
 const VIDEO_UPLOAD_LIMIT_BYTES = 80 * 1024 * 1024;
 
 /**
- * Modular OpenRouter thumbnail pipeline (MVP). Disabled in production by default
- * unless `THUMBNAIL_PIPELINE_ENABLED=1`. Reserves generation credits up-front (`BillingService`).
+ * Modular OpenRouter thumbnail pipeline (MVP). Reserves generation credits up-front (`BillingService`).
  */
 @ApiTags('thumbnails')
 @ApiBearerAuth()
@@ -38,7 +36,7 @@ export class ThumbnailPipelineController {
   ) {}
 
   @Post('pipeline/run')
-  @UseGuards(ThumbnailPipelineEnabledGuard, UserIdThrottlerGuard)
+  @UseGuards(UserIdThrottlerGuard)
   @Throttle({ default: { ...THROTTLE_PIPELINE_RUN } })
   async runPipeline(@CurrentUser() userId: string, @Body() body: ThumbnailPipelineRunDto) {
     return this.executePipeline(userId, body);
@@ -61,7 +59,7 @@ export class ThumbnailPipelineController {
       },
     },
   })
-  @UseGuards(ThumbnailPipelineEnabledGuard, UserIdThrottlerGuard)
+  @UseGuards(UserIdThrottlerGuard)
   @Throttle({ default: { ...THROTTLE_PIPELINE_RUN } })
   @UseInterceptors(
     FileInterceptor('file', {

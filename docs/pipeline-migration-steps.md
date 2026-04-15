@@ -13,7 +13,7 @@ Move product generation flows to one modular pipeline-first backend path while p
 
 - Finalize one canonical request/response contract for the new flow.
 - Decide if ranking remains required in the new pipeline path.
-- Decide how `THUMBNAIL_PIPELINE_ENABLED` is used after migration (emergency kill switch vs remove).
+- Remove legacy `THUMBNAIL_PIPELINE_ENABLED` gate after pipeline-first cutover.
 - Define required persistence result: project row, variant rows, storage files, signed URLs.
 
 Done criteria:

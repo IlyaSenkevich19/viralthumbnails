@@ -32,7 +32,7 @@ API for **ViralThumblify**: Supabase-backed projects, thumbnail variants, templa
 | **TemplatesModule** | Каталог шаблонов, ниши, загрузки в `thumbnail-templates` |
 | **AvatarsModule** | `GET/POST/DELETE /api/avatars` — лица в `user-avatars` |
 | **VideoThumbnailsModule** | Сервисные video endpoints: URL parse/meta + ingestion для `pipeline/run-video` |
-| **ThumbnailPipelineModule** | `POST /api/thumbnails/pipeline/run` и `POST /api/thumbnails/pipeline/run-video`: JSON/multipart-пайплайн (VL + Flux в `openrouter-models.ts` → `PIPELINE_STEP_MODELS`), в production по умолчанию выключен — `THUMBNAIL_PIPELINE_ENABLED` |
+| **ThumbnailPipelineModule** | `POST /api/thumbnails/pipeline/run` и `POST /api/thumbnails/pipeline/run-video`: JSON/multipart-пайплайн (VL + Flux в `openrouter-models.ts` → `PIPELINE_STEP_MODELS`) |
 
 Cross-cutting: **HttpExceptionFilter**, **shutdown hooks**.
 
@@ -109,7 +109,6 @@ Slug’и — идентификаторы на [OpenRouter](https://openrouter.
 |----------|------|
 | `OPENROUTER_API_KEY` | Ключ API ([openrouter.ai/keys](https://openrouter.ai/keys)) |
 | `FRONTEND_URL` | Используется как `HTTP-Referer` для запросов к OpenRouter (см. `openrouter.config.ts`) |
-| `THUMBNAIL_PIPELINE_ENABLED` | `1` / `true` — включить `POST .../thumbnails/pipeline/run` в **production** (без переменной в prod → 503; в dev — разрешён). `0` / `false` — всегда выключен. |
 
 ```env
 OPENROUTER_API_KEY=
@@ -117,7 +116,7 @@ OPENROUTER_API_KEY=
 
 `POST /api/thumbnails/pipeline/run-video` (Bearer, `multipart/form-data`): field `file` **or** `videoUrl`, optional `count` (1–12), `style`, `prompt`, `template_id`, `avatar_id`, `prioritize_face`. Внутри: ingest видео -> `pipeline/run` -> persist project.
 
-`POST /api/thumbnails/pipeline/run` (Bearer, JSON): модульный OpenRouter-пайплайн. В **production** по умолчанию **выключен** (`503`), пока не задано **`THUMBNAIL_PIPELINE_ENABLED=1`**. Поля: `user_prompt` (обязательно), опционально `video_url`, `template_reference_data_urls`, `face_reference_data_urls`, `variant_count`, `generate_images`, `prioritize_face`, `base_image_data_url` + `edit_instruction`, `persist_project`. Ответ включает `run_id`, **`credits_charged`**, `analysis`, `image_prompts_used`, `models_used`, `persisted_project`, при `generate_images: true` — `variants[].image_base64`. Модели шагов — **`src/config/openrouter-models.ts`** (`PIPELINE_STEP_MODELS`).
+`POST /api/thumbnails/pipeline/run` (Bearer, JSON): модульный OpenRouter-пайплайн (always-on). Поля: `user_prompt` (обязательно), опционально `video_url`, `template_reference_data_urls`, `face_reference_data_urls`, `variant_count`, `generate_images`, `prioritize_face`, `base_image_data_url` + `edit_instruction`, `persist_project`. Ответ включает `run_id`, **`credits_charged`**, `analysis`, `image_prompts_used`, `models_used`, `persisted_project`, при `generate_images: true` — `variants[].image_base64`. Модели шагов — **`src/config/openrouter-models.ts`** (`PIPELINE_STEP_MODELS`).
 
 **Кредиты для `pipeline/run*`:** в начале запроса резервируется **`1 + (generate_images ? variant_count : 0) + (есть edit ? 1 : 0)`** (анализ VL + до N генераций + один шаг редактирования). При любой ошибке после резерва выполняется **полный возврат** (`refund`). Формула в коде: `creditsForThumbnailPipelineRun` в `billing.service.ts`.
 

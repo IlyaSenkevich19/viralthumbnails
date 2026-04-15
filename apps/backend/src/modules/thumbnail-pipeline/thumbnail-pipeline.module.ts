@@ -4,7 +4,6 @@ import { BillingModule } from '../billing/billing.module';
 import { ProjectThumbnailGenerationModule } from '../project-thumbnail-generation/project-thumbnail-generation.module';
 import { StorageModule } from '../storage/storage.module';
 import { VideoThumbnailsModule } from '../video-thumbnails/video-thumbnails.module';
-import { ThumbnailPipelineEnabledGuard } from './thumbnail-pipeline-feature';
 import { ThumbnailPipelineController } from './thumbnail-pipeline.controller';
 import { PipelinePromptBuilderService } from './services/pipeline-prompt-builder.service';
 import { PipelinePromptRefinementService } from './services/pipeline-prompt-refinement.service';
@@ -18,7 +17,6 @@ import { ThumbnailPipelineOrchestratorService } from './services/thumbnail-pipel
   imports: [AuthModule, BillingModule, StorageModule, ProjectThumbnailGenerationModule, VideoThumbnailsModule],
   controllers: [ThumbnailPipelineController],
   providers: [
-    ThumbnailPipelineEnabledGuard,
     PipelineVideoUnderstandingService,
     PipelinePromptRefinementService,
     PipelinePromptBuilderService,

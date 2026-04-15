@@ -8,7 +8,6 @@ export type SetupHealthResponse = {
     supabaseServiceRoleKey: boolean;
     supabaseAnonKey: boolean;
     openRouterApiKey: boolean;
-    pipelineEnabled: boolean;
   };
   openRouter: {
     baseUrl: string;

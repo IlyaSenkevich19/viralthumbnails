@@ -33,4 +33,3 @@ Both endpoints run the same orchestrator and can persist generated variants into
 - `services/pipeline-project-persistence.service.ts` — DB + storage persistence
 - `dto/thumbnail-pipeline-run.dto.ts` — JSON contract
 - `dto/thumbnail-pipeline-run-video.dto.ts` — multipart video contract
-- `thumbnail-pipeline-feature.ts` — production feature gate

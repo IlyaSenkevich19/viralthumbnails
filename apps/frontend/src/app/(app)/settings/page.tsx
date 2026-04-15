@@ -1,13 +1,15 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BackendHealth } from '@/components/backend-health';
 import { SetPageFrame } from '@/components/layout/set-page-frame';
+import { SetupHealthPanel } from '@/components/settings/setup-health-panel';
 
 export default function SettingsPage() {
   return (
     <div className="space-y-8">
       <SetPageFrame title="Settings" />
 
-      <Card>
+      <Card className="relative overflow-hidden">
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Account</CardTitle>
           <p className="text-sm text-muted-foreground">
@@ -20,7 +22,8 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="relative overflow-hidden">
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
         <CardHeader className="pb-2">
           <CardTitle className="text-base">App connection</CardTitle>
           <p className="text-sm text-muted-foreground">Whether the app can reach the API server.</p>
@@ -33,6 +36,8 @@ export default function SettingsPage() {
           </p>
         </CardContent>
       </Card>
+
+      <SetupHealthPanel />
     </div>
   );
 }

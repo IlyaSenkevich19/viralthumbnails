@@ -1,7 +1,7 @@
 import { ApiRoutes } from '@/config/api-routes';
 import { fetchJson, fetchMultipart } from './fetch-json';
 
-export type FromVideoRequest = {
+export type PipelineVideoRunRequest = {
   file?: File;
   videoUrl?: string;
   count?: number;
@@ -11,6 +11,9 @@ export type FromVideoRequest = {
   avatar_id?: string;
   prioritize_face?: boolean;
 };
+
+/** @deprecated use `PipelineVideoRunRequest` */
+export type FromVideoRequest = PipelineVideoRunRequest;
 
 export type PipelineRunRequest = {
   user_prompt: string;
@@ -100,7 +103,7 @@ export async function runThumbnailPipeline(
 
 export async function runThumbnailPipelineVideo(
   token: string | null,
-  params: FromVideoRequest,
+  params: PipelineVideoRunRequest,
 ): Promise<PipelineRunResponse> {
   const { file, videoUrl, count, style, prompt, template_id, avatar_id, prioritize_face } = params;
   const form = new FormData();

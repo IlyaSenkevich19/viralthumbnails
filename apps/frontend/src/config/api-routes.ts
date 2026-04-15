@@ -5,6 +5,7 @@
  */
 export const ApiRoutes = {
   health: '/health',
+  healthSetup: '/health/setup',
   billing: {
     credits: '/billing/credits',
     creditsLedger: '/billing/credits/ledger',

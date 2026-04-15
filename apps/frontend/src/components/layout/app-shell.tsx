@@ -56,14 +56,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <div className="flex min-h-screen flex-col bg-[var(--background)]">
-      <div className="flex flex-1 min-h-0 overflow-visible">
+    <div className="flex h-screen flex-col overflow-hidden bg-[var(--background)]">
+      <div className="flex min-h-0 flex-1 overflow-hidden">
         <Sidebar
           collapsed={hydrated && sidebarCollapsed}
           onToggleCollapsed={toggleSidebarCollapsed}
         />
         <PageFrameProvider>
-          <div className="relative z-0 flex min-h-0 min-w-0 flex-1 flex-col">
+          <div className="relative z-0 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
             <HeaderShell onMobileMenuClick={openMobileSidebar} />
             <main className="min-h-0 flex-1 overflow-auto">
               <div className="mx-auto w-full max-w-7xl px-4 pb-10 pt-6 sm:px-6 sm:pb-12 sm:pt-8 lg:px-10 lg:pb-14 lg:pt-10">

@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { thumbnailsApi } from '@/lib/api';
 import { toPipelineVideoResponse } from '@/lib/adapters/pipeline-video-response';
 import { queryKeys } from '@/lib/query-keys';
-import type { FromVideoRequest } from '@/lib/api/thumbnails';
+import type { PipelineVideoRunRequest } from '@/lib/api/thumbnails';
 import { toast } from 'sonner';
 import { isApiError } from '@/lib/api/api-error';
 import { handleBillingMutationError } from '@/lib/paywall-notify';
@@ -16,7 +16,7 @@ export function usePipelineVideoRunMutation() {
   const userId = user?.id;
 
   return useMutation({
-    mutationFn: async (params: FromVideoRequest) => {
+    mutationFn: async (params: PipelineVideoRunRequest) => {
       if (!accessToken) throw new Error('Not signed in');
       const res = await thumbnailsApi.runThumbnailPipelineVideo(accessToken, params);
       return toPipelineVideoResponse(res);

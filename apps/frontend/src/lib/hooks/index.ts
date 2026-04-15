@@ -1,4 +1,5 @@
 export { useBackendHealth } from './use-backend-health';
+export { useBackendSetupHealth } from './use-backend-setup-health';
 export {
   createProjectAndGenerateMutationKey,
   useProjectsList,

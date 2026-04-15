@@ -22,6 +22,8 @@ export function LoginScreen() {
 
   const loading = signIn.isPending;
   const googleLoading = googleSignIn.isPending;
+  const inputClassName =
+    'h-auto rounded-lg border border-border bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground transition-all duration-200 focus-visible:border-primary/70 focus-visible:ring-2 focus-visible:ring-primary/20';
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -70,15 +72,19 @@ export function LoginScreen() {
         <main className="flex flex-1 items-center">
           <div className="w-full max-w-md space-y-8">
             <div>
+              <p className="mb-2 inline-flex rounded-full border border-primary/25 bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+                Pipeline-first workspace
+              </p>
               <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-                Sign in to <span className="text-primary">your account</span>
+                Welcome <span className="text-primary">back</span>
               </h1>
               <p className="mt-2 text-sm text-muted-foreground">
-                Use the email and password you registered with.
+                Sign in to keep generating and iterating thumbnail variants.
               </p>
             </div>
 
-            <form onSubmit={handleSubmit} className="surface space-y-4 p-6">
+            <form onSubmit={handleSubmit} className="surface relative overflow-hidden space-y-4 p-6">
+              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
               <div className="space-y-1">
                 <label htmlFor="login-email" className="text-sm font-medium text-foreground">
                   Your email
@@ -90,6 +96,7 @@ export function LoginScreen() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
+                  className={inputClassName}
                 />
               </div>
               <div className="space-y-1">
@@ -111,11 +118,12 @@ export function LoginScreen() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  className={inputClassName}
                 />
               </div>
               {error && <p className="text-sm text-destructive">{error}</p>}
               <Button type="submit" className="w-full" disabled={loading || googleLoading}>
-                {loading ? 'Signing in...' : 'Login →'}
+                {loading ? 'Signing in...' : 'Sign in →'}
               </Button>
             </form>
 
@@ -154,12 +162,12 @@ export function LoginScreen() {
         <div className="relative z-[2] w-full space-y-12 px-10">
           <div className="mx-auto max-w-xl space-y-6">
             <h2 className="text-3xl font-semibold leading-tight">
-              Ship faster
+              Analyze video.
               <br />
-              on a clean stack.
+              Generate and iterate fast.
             </h2>
             <p className="text-sm leading-relaxed text-muted-foreground">
-              Next.js, Supabase Auth, and NestJS in one monorepo — add your product logic on top.
+              One flow for prompt, URL, and upload. Pipeline models do the heavy lifting while you focus on CTR.
             </p>
           </div>
           <AuthThumbnailMarquee />

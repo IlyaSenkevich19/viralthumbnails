@@ -1,7 +1,7 @@
 'use client';
 
 import { toast } from 'sonner';
-import type { FromVideoRequest } from '@/lib/api/thumbnails';
+import type { PipelineVideoRunRequest } from '@/lib/api/thumbnails';
 import type { PipelineVideoResponse } from '@/lib/types/pipeline-video';
 import { usePipelineVideoRunMutation } from './use-pipeline-video-run';
 
@@ -13,7 +13,7 @@ import { usePipelineVideoRunMutation } from './use-pipeline-video-run';
 export function usePipelineVideoCreateFlow() {
   const mutation = usePipelineVideoRunMutation();
 
-  const submit = async (params: FromVideoRequest): Promise<PipelineVideoResponse> => {
+  const submit = async (params: PipelineVideoRunRequest): Promise<PipelineVideoResponse> => {
     const result = await mutation.mutateAsync(params);
     if (result.warnings?.length) {
       toast.warning(result.warnings.join('\n'));

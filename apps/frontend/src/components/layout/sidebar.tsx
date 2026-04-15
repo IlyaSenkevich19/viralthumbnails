@@ -204,7 +204,7 @@ export function Sidebar({
   return (
     <aside
       className={cn(
-        'relative flex h-full min-h-screen shrink-0 flex-col overflow-visible border-r border-border bg-sidebar',
+        'relative flex h-full shrink-0 flex-col overflow-visible border-r border-border bg-sidebar',
         'transition-[width] duration-300 ease-[var(--ease-standard)]',
         /* Above HeaderShell (z-30) so the collapse control on the edge isn’t clipped; below mobile drawer (z-40). */
         inDrawer ? 'w-full min-h-0 border-0' : 'z-[35] hidden lg:flex',
@@ -273,7 +273,16 @@ export function Sidebar({
             {!compact ? (
               <BrandWordmark className="truncate text-base" linked={false} />
             ) : (
-              <span className="sr-only">{brandWordmark}</span>
+              <>
+                <span
+                  className="inline-flex items-center rounded-md px-1 text-base font-semibold tracking-tight"
+                  aria-hidden
+                >
+                  <span className="text-foreground">V</span>
+                  <span className="text-primary">T</span>
+                </span>
+                <span className="sr-only">{brandWordmark}</span>
+              </>
             )}
           </Link>
         </CollapsedSidebarTooltip>

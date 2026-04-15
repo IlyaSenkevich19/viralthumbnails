@@ -22,12 +22,12 @@ import { thumbnailsApi } from '@/lib/api';
 import {
   NICHE_ALL,
   useAvatarsList,
-  useCreateProjectAndGenerateMutation,
   useFromVideoThumbnailsMutation,
   useGenerationCredits,
+  useThumbnailPipelineMutation,
   useTemplatesList,
 } from '@/lib/hooks';
-import { creditsForVideoPipeline } from '@/lib/credit-costs';
+import { creditsForThumbnailPipelineRun, creditsForVideoPipeline } from '@/lib/credit-costs';
 import { assertSufficientCredits } from '@/lib/paywall-notify';
 import type { FromVideoResponse } from '@/lib/types/from-video';
 import { VIDEO_ANALYSIS_MAX_SECONDS } from '@/lib/video/clip-limits';
@@ -63,17 +63,18 @@ const modes: { id: HubMode; label: string; icon: typeof PenLine }[] = [
   { id: 'video', label: 'Video', icon: Clapperboard },
 ];
 
-function generationToastThenNavigate(
+function pipelineToastThenNavigate(
   router: ReturnType<typeof useRouter>,
   projectId: string,
   templateId: string | undefined,
   avatarId: string | undefined,
-  gen: { results: { status: string }[] },
+  generatedCount: number,
+  expectedCount: number,
 ) {
-  const ok = gen.results.filter((r) => r.status === 'done').length;
-  const total = gen.results.length;
+  const ok = generatedCount;
+  const total = expectedCount;
   if (ok === 0) {
-    toast.error('Generation failed for all variants. Check backend OPENROUTER_API_KEY and openrouter-models.ts (OPENROUTER_STACK).');
+    toast.error('Generation failed for all variants in pipeline run.');
   } else if (ok < total) {
     toast.warning(`${ok} of ${total} thumbnails ready; some failed.`);
   } else {
@@ -87,7 +88,7 @@ export function DashboardCreateHub() {
   const { user, accessToken, isLoading: authLoading } = useAuth();
   const canLoadAssets = !authLoading && Boolean(user?.id && accessToken);
   const { openNewProject } = useNewProject();
-  const createAndGenerate = useCreateProjectAndGenerateMutation();
+  const runPipeline = useThumbnailPipelineMutation();
   const fromVideo = useFromVideoThumbnailsMutation();
 
   const [mode, setMode] = useState<HubMode>('prompt');
@@ -136,7 +137,7 @@ export function DashboardCreateHub() {
   }, [videoStyle, videoPrompt]);
 
   const busyProject =
-    mode === 'prompt' || mode === 'youtube' ? createAndGenerate.isPending : false;
+    mode === 'prompt' || mode === 'youtube' ? runPipeline.isPending : false;
   const busyVideo = mode === 'video' && (fromVideo.isPending || videoPreparing);
   const primaryBusy = busyProject || busyVideo;
   const cannotAffordGenerate =
@@ -146,7 +147,11 @@ export function DashboardCreateHub() {
         creditsForVideoPipeline(
           Math.min(12, Math.max(1, Math.floor(videoCount) || DEFAULT_VIDEO_THUMBNAIL_COUNT)),
         )
-      : credits.balance < DEFAULT_NEW_PROJECT_VARIANT_COUNT);
+      : credits.balance <
+        creditsForThumbnailPipelineRun({
+          variantCount: DEFAULT_NEW_PROJECT_VARIANT_COUNT,
+          generateImages: true,
+        }));
   const plannedStyleCount = mode === 'video'
     ? Math.min(12, Math.max(1, Math.floor(videoCount) || DEFAULT_VIDEO_THUMBNAIL_COUNT))
     : DEFAULT_NEW_PROJECT_VARIANT_COUNT;
@@ -277,23 +282,39 @@ export function DashboardCreateHub() {
       )
         return;
 
-      createAndGenerate.mutate(
+      runPipeline.mutate(
         {
-          platform: 'youtube',
-          source_type: 'youtube_url',
-          source_data: {
-            url: finalUrl,
-            ...(videoMeta ? { video_meta: videoMeta } : {}),
-          },
-          generate: {
-            template_id: templateId,
-            count: DEFAULT_NEW_PROJECT_VARIANT_COUNT,
-            avatar_id: avatarId || undefined,
-          },
+          user_prompt: [
+            `Create YouTube thumbnail concepts for this video URL: ${finalUrl}`,
+            videoMeta?.title ? `Video title: ${String(videoMeta.title)}` : '',
+            videoMeta?.author ? `Channel: ${String(videoMeta.author)}` : '',
+          ]
+            .filter(Boolean)
+            .join('\n'),
+          style: 'YouTube URL context',
+          video_url: finalUrl,
+          template_id: templateId,
+          avatar_id: avatarId || undefined,
+          variant_count: DEFAULT_NEW_PROJECT_VARIANT_COUNT,
+          generate_images: true,
+          persist_project: true,
         },
         {
-          onSuccess: ({ project, gen }) =>
-            generationToastThenNavigate(router, project.id, templateId, avatarId, gen),
+          onSuccess: (result) => {
+            const persisted = result.persisted_project;
+            if (!persisted?.project_id) {
+              toast.error('Pipeline run finished but project was not persisted.');
+              return;
+            }
+            pipelineToastThenNavigate(
+              router,
+              persisted.project_id,
+              templateId,
+              avatarId,
+              persisted.variants.length,
+              DEFAULT_NEW_PROJECT_VARIANT_COUNT,
+            );
+          },
         },
       );
       return;
@@ -313,20 +334,32 @@ export function DashboardCreateHub() {
     )
       return;
 
-    createAndGenerate.mutate(
+    runPipeline.mutate(
       {
-        platform: 'youtube',
-        source_type: 'text',
-        source_data: { text: hint },
-        generate: {
-          template_id: templateId,
-          count: DEFAULT_NEW_PROJECT_VARIANT_COUNT,
-          avatar_id: avatarId || undefined,
-        },
+        user_prompt: hint,
+        style: 'Prompt-only ideation',
+        template_id: templateId,
+        avatar_id: avatarId || undefined,
+        variant_count: DEFAULT_NEW_PROJECT_VARIANT_COUNT,
+        generate_images: true,
+        persist_project: true,
       },
       {
-        onSuccess: ({ project, gen }) =>
-          generationToastThenNavigate(router, project.id, templateId, avatarId, gen),
+        onSuccess: (result) => {
+          const persisted = result.persisted_project;
+          if (!persisted?.project_id) {
+            toast.error('Pipeline run finished but project was not persisted.');
+            return;
+          }
+          pipelineToastThenNavigate(
+            router,
+            persisted.project_id,
+            templateId,
+            avatarId,
+            persisted.variants.length,
+            DEFAULT_NEW_PROJECT_VARIANT_COUNT,
+          );
+        },
       },
     );
   }

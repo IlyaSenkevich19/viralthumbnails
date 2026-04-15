@@ -13,6 +13,58 @@ export type FromVideoRequest = {
   prioritize_face?: boolean;
 };
 
+export type PipelineRunRequest = {
+  user_prompt: string;
+  style?: string;
+  video_url?: string;
+  template_reference_data_urls?: string[];
+  template_id?: string;
+  face_reference_data_urls?: string[];
+  avatar_id?: string;
+  variant_count?: number;
+  generate_images?: boolean;
+  prioritize_face?: boolean;
+  base_image_data_url?: string;
+  edit_instruction?: string;
+  persist_project?: boolean;
+};
+
+export type PipelineRunResponse = {
+  run_id: string;
+  credits_charged: number;
+  analysis: Record<string, unknown>;
+  image_prompts_used: string[];
+  models_used: {
+    videoUnderstanding: string;
+    textRefinement?: string;
+    imageGeneration?: string;
+    imageEdit?: string;
+  };
+  variants?: Array<{
+    index: number;
+    prompt: string;
+    content_type: string;
+    image_base64: string;
+  }>;
+  edited?: {
+    content_type: string;
+    image_base64: string;
+  };
+  persisted_project?: {
+    project_id: string;
+    variants: Array<{
+      index: number;
+      prompt: string;
+      storage_path: string;
+      signed_url: string;
+    }>;
+  };
+  resolved_references?: {
+    template_from_id: boolean;
+    face_from_id: boolean;
+  };
+};
+
 export type ParseVideoUrlResponse = {
   ok: boolean;
   platform: 'youtube' | 'unknown';
@@ -52,6 +104,16 @@ export async function fromVideoThumbnails(
   if (prioritize_face === true) form.append('prioritize_face', 'true');
 
   return fetchMultipart<FromVideoResponse>(ApiRoutes.thumbnails.fromVideo, token, form);
+}
+
+export async function runThumbnailPipeline(
+  token: string | null,
+  body: PipelineRunRequest,
+): Promise<PipelineRunResponse> {
+  return fetchJson<PipelineRunResponse>(ApiRoutes.thumbnails.pipelineRun, token, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
 }
 
 export async function parseVideoUrl(token: string | null, rawUrl: string): Promise<ParseVideoUrlResponse> {

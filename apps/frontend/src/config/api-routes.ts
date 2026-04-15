@@ -27,6 +27,7 @@ export const ApiRoutes = {
   },
   thumbnails: {
     fromVideo: '/thumbnails/from-video',
+    pipelineRun: '/thumbnails/pipeline/run',
     parseUrl: '/thumbnails/parse-url',
     getVideoMeta: '/thumbnails/get-video-meta',
   },

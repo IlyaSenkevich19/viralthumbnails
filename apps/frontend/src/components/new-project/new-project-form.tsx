@@ -5,15 +5,14 @@ import { useRouter } from 'next/navigation';
 import { DEFAULT_NEW_PROJECT_VARIANT_COUNT } from '@/config/credits';
 import { useAuth } from '@/contexts/auth-context';
 import {
-  useCreateProjectAndGenerateMutation,
   useFromVideoThumbnailsMutation,
   useGenerationCredits,
+  useThumbnailPipelineMutation,
 } from '@/lib/hooks';
-import { creditsForVideoPipeline } from '@/lib/credit-costs';
+import { creditsForThumbnailPipelineRun, creditsForVideoPipeline } from '@/lib/credit-costs';
 import { assertSufficientCredits } from '@/lib/paywall-notify';
 import { thumbnailsApi } from '@/lib/api';
 import { isLikelyYoutubeUrl } from '@/lib/format';
-import type { ProjectSourceType } from '@/lib/types/project';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -43,7 +42,7 @@ type YoutubeMetaPreview = {
 export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormProps) {
   const router = useRouter();
   const { accessToken } = useAuth();
-  const createAndGenerate = useCreateProjectAndGenerateMutation();
+  const runPipeline = useThumbnailPipelineMutation();
   const fromVideoThumbnails = useFromVideoThumbnailsMutation();
   const { data: credits } = useGenerationCredits();
   const submitLock = useRef(false);
@@ -75,7 +74,11 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
   const cannotAffordInitialBatch =
     tab !== 'video' &&
     credits?.balance != null &&
-    credits.balance < DEFAULT_NEW_PROJECT_VARIANT_COUNT;
+    credits.balance <
+      creditsForThumbnailPipelineRun({
+        variantCount: DEFAULT_NEW_PROJECT_VARIANT_COUNT,
+        generateImages: true,
+      });
 
   useEffect(() => {
     setTab(tabFromSearchParams(sp));
@@ -185,8 +188,9 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
       return;
     }
 
-    let source_type: ProjectSourceType;
-    let source_data: Record<string, unknown>;
+    let userPrompt: string;
+    let pipelineVideoUrl: string | undefined;
+    let styleHint: string | undefined;
 
     switch (tab) {
       case 'youtube':
@@ -210,27 +214,32 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
         } catch {
           // non-blocking; continue with URL-only context
         }
-        source_type = 'youtube_url';
-        source_data = {
-          url: finalUrl,
-          ...(videoMeta ? { video_meta: videoMeta } : {}),
-        };
+        pipelineVideoUrl = finalUrl;
+        styleHint = 'YouTube URL context';
+        userPrompt = [
+          `Create YouTube thumbnail concepts for this video URL: ${finalUrl}`,
+          videoMeta?.title ? `Video title: ${String(videoMeta.title)}` : '',
+          videoMeta?.author ? `Channel: ${String(videoMeta.author)}` : '',
+          title.trim() ? `Project title hint: ${title.trim()}` : '',
+        ]
+          .filter(Boolean)
+          .join('\n');
         break;
       case 'script':
         if (!script.trim()) {
           toast.error('Paste or write your script');
           return;
         }
-        source_type = 'script';
-        source_data = { script: script.trim() };
+        userPrompt = script.trim();
+        styleHint = 'Script-driven thumbnail ideation';
         break;
       case 'text':
         if (!text.trim()) {
           toast.error('Describe the thumbnail you want');
           return;
         }
-        source_type = 'text';
-        source_data = { text: text.trim() };
+        userPrompt = text.trim();
+        styleHint = title.trim() ? `Project title: ${title.trim()}` : undefined;
         break;
     }
 
@@ -240,39 +249,44 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
     if (
       !assertSufficientCredits({
         balance: credits?.balance,
-        cost: DEFAULT_NEW_PROJECT_VARIANT_COUNT,
+        cost: creditsForThumbnailPipelineRun({
+          variantCount: DEFAULT_NEW_PROJECT_VARIANT_COUNT,
+          generateImages: true,
+        }),
       })
     )
       return;
 
     submitLock.current = true;
 
-    createAndGenerate.mutate(
+    runPipeline.mutate(
       {
-        title: title.trim() || undefined,
-        platform: 'youtube',
-        source_type,
-        source_data,
-        generate: {
-          template_id: templateId,
-          count: DEFAULT_NEW_PROJECT_VARIANT_COUNT,
-          avatar_id: avatarId,
-        },
+        user_prompt: userPrompt,
+        style: styleHint,
+        video_url: pipelineVideoUrl,
+        template_id: templateId,
+        avatar_id: avatarId,
+        variant_count: DEFAULT_NEW_PROJECT_VARIANT_COUNT,
+        generate_images: true,
+        persist_project: true,
       },
       {
-        onSuccess: ({ project, gen }) => {
+        onSuccess: (result) => {
           onRequestClose?.();
-          const ok = gen.results.filter((r) => r.status === 'done').length;
-          const total = gen.results.length;
+          const persisted = result.persisted_project;
+          if (!persisted?.project_id) {
+            toast.error('Pipeline run finished but project was not persisted.');
+            return;
+          }
+          const ok = persisted.variants.length;
+          const total = DEFAULT_NEW_PROJECT_VARIANT_COUNT;
           if (ok === 0) {
-            toast.error(
-              'Generation failed for all variants. Check backend OPENROUTER_API_KEY and openrouter-models.ts (OPENROUTER_STACK).',
-            );
+            toast.error('Generation failed for all variants in pipeline run.');
           } else if (ok < total) {
             toast.warning(`${ok} of ${total} thumbnails ready; some failed.`);
           }
           router.push(
-            projectVariantsPath(project.id) +
+            projectVariantsPath(persisted.project_id) +
               projectVariantsSearchParams({ templateId, avatarId }),
           );
         },
@@ -511,7 +525,7 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
               disabled={
                 tab === 'video'
                   ? fromVideoThumbnails.isPending || videoPreparing || cannotAffordVideo
-                  : createAndGenerate.isPending || cannotAffordInitialBatch
+                  : runPipeline.isPending || cannotAffordInitialBatch
               }
             >
               {tab === 'video'
@@ -520,7 +534,7 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
                   : fromVideoThumbnails.isPending
                     ? 'Working…'
                     : 'Generate from video'
-                : createAndGenerate.isPending
+                : runPipeline.isPending
                   ? 'Working…'
                   : 'Create & generate'}
             </Button>

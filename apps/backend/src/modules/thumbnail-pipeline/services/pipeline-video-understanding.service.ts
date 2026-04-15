@@ -37,6 +37,19 @@ export class PipelineVideoUnderstandingService {
   constructor(private readonly openRouter: OpenRouterClient) {}
 
   async analyze(params: VideoUnderstandingParams): Promise<VideoUnderstandingResult> {
+    const hasVideo = Boolean(params.videoUrl?.trim());
+    const hasTemplateRefs = Boolean(params.templateReferenceDataUrls?.length);
+    const hasFaceRefs = Boolean(params.faceReferenceDataUrls?.length);
+    const hasAnyRefs = hasTemplateRefs || hasFaceRefs;
+
+    // Text-only flow should not spend VL tokens.
+    if (!hasVideo && !hasAnyRefs) {
+      return {
+        analysis: this.buildTextOnlyAnalysis(params.userPrompt, params.style),
+        modelUsed: 'local/text-only-heuristic',
+      };
+    }
+
     if (!this.openRouter.getApiKey()) {
       throw new Error('OPENROUTER_API_KEY is not set');
     }
@@ -57,6 +70,39 @@ export class PipelineVideoUnderstandingService {
     }
 
     throw lastErr ?? new Error('Video understanding failed');
+  }
+
+  private buildTextOnlyAnalysis(userPrompt: string, style?: string): ThumbnailPipelineAnalysis {
+    const base = userPrompt.trim().slice(0, 500) || 'YouTube topic';
+    const styleText = style?.trim() ? ` in ${style.trim()} style` : '';
+    const shortSubject = base.length > 90 ? `${base.slice(0, 90)}...` : base;
+    return {
+      mainSubject: shortSubject,
+      sceneSummary: `Text-only concept derived from creator prompt${styleText}.`,
+      visualHooks: [
+        'High-contrast focal subject',
+        'Clear emotional expression',
+        'Strong before/after or conflict cue',
+      ],
+      emotion: 'Curiosity and urgency',
+      bestThumbnailMoment: {
+        startSec: 0,
+        label: 'Text-driven key concept',
+        why: 'No video was provided; use the strongest concept from prompt text.',
+      },
+      compositionSuggestions: [
+        'Place subject on one side, text on the opposite third',
+        'Keep title to 2-5 words with thick readable font',
+        'Use one dominant accent color with dark/light contrast',
+      ],
+      thumbnailTextIdeas: ['WATCH THIS', 'YOU MISSED THIS', 'MUST SEE'],
+      negativeCues: ['Tiny text', 'Cluttered background', 'Low contrast elements'],
+      imageGenerationPromptSuggestions: [
+        `YouTube thumbnail 16:9, bold readable text, high contrast, subject: ${shortSubject}.`,
+        `Cinematic YouTube thumbnail${styleText}, expressive face, clean composition, 16:9.`,
+        `Viral-style YouTube thumbnail, dramatic lighting, strong focal point, 16:9.`,
+      ],
+    };
   }
 
   private buildMessages(params: VideoUnderstandingParams, fixHint: string): OpenRouterMessage[] {

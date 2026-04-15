@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadGatewayException, Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { BillingService } from '../../billing/billing.service';
 import type { ThumbnailPipelineRunInput, ThumbnailPipelineRunResult } from '../types/thumbnail-pipeline-run.types';
@@ -89,7 +89,11 @@ export class ThumbnailPipelineOrchestratorService {
           reference: refBundle,
         });
         if (!variants.length) {
-          throw new Error('No thumbnails were generated (pipeline image step returned no images)');
+          throw new BadGatewayException({
+            code: 'PIPELINE_NO_IMAGES_GENERATED',
+            message:
+              'Image generation returned no images for this request. Try another prompt/style, reduce variant_count, or switch to a different image model.',
+          });
         }
       }
 

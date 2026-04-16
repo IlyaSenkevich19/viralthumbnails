@@ -19,7 +19,7 @@ Full-length uploads (e.g. hour-long videos) are a poor fit for “send the whole
 
 | Area | Behavior |
 |------|----------|
-| **Endpoints** | `POST /api/thumbnails/pipeline/run` (JSON with optional `video_url`), `POST /api/thumbnails/pipeline/run-video` (multipart file or `videoUrl`). |
+| **Endpoints** | `POST /api/thumbnails/pipeline/run` (JSON, async job enqueue) and `POST /api/thumbnails/pipeline/run-video` (multipart, async job enqueue); poll `GET /api/thumbnails/pipeline/jobs/:jobId` for status and final `result`. |
 | **Ingest** | File → temporary Supabase upload → signed URL passed as `video_url`; YouTube/public URL passed through when valid. |
 | **VL step** | Single OpenRouter chat completion: text + optional **`video_url`** *or* **Phase 2:** up to **K** JPEG stills (`image_url`, data URLs) sampled via **ffmpeg** from the analyzed window when extraction succeeds, else fallback to `video_url` (`PipelineVideoUnderstandingService`, `VideoFrameSampleService`, `multipart-user-content`). |
 | **Models** | Configured in `apps/backend/src/config/openrouter-models.ts` (Gemini-class VL for YouTube/video compatibility). |
@@ -27,7 +27,7 @@ Full-length uploads (e.g. hour-long videos) are a poor fit for “send the whole
 | **Downstream** | Prompt builder → image generation → optional persistence. |
 | **Client** | YouTube flow may enrich prompt with title/channel; `trim-video-for-thumbnails` exists for **client-side** file trimming — not wired as a server-side analysis pipeline. |
 
-**Gaps vs target:** **transcript extraction**, **dedup/blur filtering**, async worker queue; **frame sampling** for VL is partially implemented (Phase 2 — see §4).
+**Gaps vs target:** non-YouTube ASR transcript path; stronger perceptual dedup; distributed shared cache (Redis/KV); dedicated worker fleet beyond in-process runner.
 
 ---
 
@@ -121,8 +121,7 @@ Types: `apps/backend/src/modules/video-thumbnails/types/video-pipeline-video-con
 ### Phase 4 — Polish & scale
 
 - **Implemented (backend, partial):** in-memory TTL cache for sampled frames (`VideoFrameSampleService`) and YouTube transcript snippets (`YoutubeTranscriptService`) to speed repeated runs on the same source/policy.
-- **Implemented (async, partial):** DB-backed async jobs for `pipeline/run` with persistent statuses (`queued` → `running` → `succeeded|failed`), polling endpoint, and lease-expiration safety for stuck jobs.
-- **Current rollout:** `pipeline/run` is async; `pipeline/run-video` remains sync for now.
+- **Implemented (async):** DB-backed async jobs for `pipeline/run` and `pipeline/run-video` with persistent statuses (`queued` → `running` → `succeeded|failed`), `GET /thumbnails/pipeline/jobs/:jobId` polling, lease-expiration for stuck jobs, and capped transient retries in the runner.
 - Caching, async queue UI, face/contrast heuristics if metrics show lift.
 - Tune sampling for vertical/long-form niches.
 
@@ -143,7 +142,7 @@ Transcripts (Phase 3) can parallelize after Phase 1 if captions are a product pr
 
 ## 6. Related code (for implementers)
 
-- Pipeline orchestration: `apps/backend/src/modules/thumbnail-pipeline/`
+- Pipeline orchestration: `apps/backend/src/modules/thumbnail-pipeline/` (async jobs: `services/thumbnail-pipeline-jobs.service.ts`, `services/thumbnail-pipeline-jobs-runner.service.ts`)
 - VL messages: `apps/backend/src/modules/openrouter/multipart-user-content.ts`
 - Analysis schema: `apps/backend/src/modules/thumbnail-pipeline/schemas/thumbnail-pipeline-analysis.schema.ts`
 - Video ingest: `apps/backend/src/modules/video-thumbnails/services/video-ingestion.service.ts`
@@ -162,4 +161,4 @@ Transcripts (Phase 3) can parallelize after Phase 1 if captions are a product pr
 - **2026-04-16** — Phase 2.2: blur proxy (`edgeEnergy`) + coverage-aware extra candidate timestamps and tolerant extraction failures.
 - **2026-04-16** — Phase 3 (YouTube MVP): optional captions snippet fetched from YouTube timedtext and injected into VL context.
 - **2026-04-16** — Phase 4 (partial): in-memory cache for frame sampling/transcript snippets with TTL + max-entry cap.
-- **2026-04-16** — Phase 4 (partial): DB-backed async jobs for `pipeline/run` (`POST /thumbnails/pipeline/jobs`, `GET /thumbnails/pipeline/jobs/:jobId`) with runner lease timeout handling.
+- **2026-04-16** — Phase 4 (partial): DB-backed async jobs for `pipeline/run` and `pipeline/run-video` (enqueue on POST, poll `GET /thumbnails/pipeline/jobs/:jobId`) with runner lease timeout and capped transient retries.

@@ -24,5 +24,6 @@ export function usePipelineVideoCreateFlow() {
   return {
     submit,
     isPending: mutation.isPending,
+    jobStatusLabel: mutation.jobStatusLabel,
   };
 }

@@ -4,8 +4,10 @@ import type { ThumbnailPipelineRunDto } from '../dto/thumbnail-pipeline-run.dto'
 export type ThumbnailPipelineJobStatus = 'queued' | 'running' | 'succeeded' | 'failed';
 
 export type ThumbnailPipelineJobPayload = {
+  source: 'run' | 'run-video';
   body: ThumbnailPipelineRunDto;
   videoContext?: PipelineVideoContext;
+  cleanupTempStoragePath?: string;
 };
 
 export type ThumbnailPipelineJobRow = {

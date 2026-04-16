@@ -60,6 +60,22 @@ export class ThumbnailPipelineJobsService {
     });
   }
 
+  async requeue(jobId: string, errorPayload: { code?: string; message: string }): Promise<void> {
+    const client = this.supabase.getAdminClient();
+    const { error } = await client
+      .from(this.table)
+      .update({
+        status: 'queued',
+        updated_at: new Date().toISOString(),
+        error_payload: errorPayload,
+        lease_expires_at: null,
+      })
+      .eq('id', jobId);
+    if (error) {
+      throw new Error(`Failed to requeue pipeline job: ${error.message}`);
+    }
+  }
+
   async failExpiredRunningJobs(): Promise<number> {
     const client = this.supabase.getAdminClient();
     const nowIso = new Date().toISOString();
@@ -85,7 +101,7 @@ export class ThumbnailPipelineJobsService {
     const client = this.supabase.getAdminClient();
     const { data: queued, error: queuedError } = await client
       .from(this.table)
-      .select('id')
+      .select('id,attempt_count')
       .eq('status', 'queued')
       .order('created_at', { ascending: true })
       .limit(1)
@@ -104,7 +120,7 @@ export class ThumbnailPipelineJobsService {
         updated_at: now.toISOString(),
         started_at: now.toISOString(),
         lease_expires_at: leaseExpiresAt,
-        attempt_count: 1,
+        attempt_count: (queued.attempt_count ?? 0) + 1,
       })
       .eq('id', queued.id)
       .eq('status', 'queued')

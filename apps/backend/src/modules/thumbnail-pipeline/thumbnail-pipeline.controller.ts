@@ -8,14 +8,11 @@ import { THROTTLE_PIPELINE_RUN } from '../../common/throttle/throttle-limits';
 import { UserIdThrottlerGuard } from '../../common/throttle/user-id-throttler.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { SupabaseGuard } from '../auth/guards/supabase.guard';
-import { BUCKET_PROJECT_THUMBNAILS, StorageService } from '../storage/storage.service';
 import { VideoIngestionService } from '../video-thumbnails/services/video-ingestion.service';
 import { VideoPipelineDurationGateService } from '../video-thumbnails/services/video-pipeline-duration-gate.service';
 import type { UploadedVideoFile } from '../video-thumbnails/types/upload.types';
 import { ThumbnailPipelineRunDto } from './dto/thumbnail-pipeline-run.dto';
 import { ThumbnailPipelineRunVideoDto } from './dto/thumbnail-pipeline-run-video.dto';
-import type { PipelineVideoContext } from '../video-thumbnails/types/video-pipeline-video-context';
-import { ThumbnailPipelineExecutionService } from './services/thumbnail-pipeline-execution.service';
 import { ThumbnailPipelineJobsService } from './services/thumbnail-pipeline-jobs.service';
 
 const VIDEO_UPLOAD_LIMIT_BYTES = 80 * 1024 * 1024;
@@ -29,10 +26,8 @@ const VIDEO_UPLOAD_LIMIT_BYTES = 80 * 1024 * 1024;
 @UseGuards(SupabaseGuard)
 export class ThumbnailPipelineController {
   constructor(
-    private readonly execution: ThumbnailPipelineExecutionService,
     private readonly jobs: ThumbnailPipelineJobsService,
     private readonly ingestion: VideoIngestionService,
-    private readonly storage: StorageService,
     private readonly videoDurationGate: VideoPipelineDurationGateService,
   ) {}
 
@@ -40,19 +35,15 @@ export class ThumbnailPipelineController {
   @UseGuards(UserIdThrottlerGuard)
   @Throttle({ default: { ...THROTTLE_PIPELINE_RUN } })
   async runPipeline(@CurrentUser() userId: string, @Body() body: ThumbnailPipelineRunDto) {
-    const videoContext = await this.videoDurationGate.resolveContextAndEnforceForPipeline({
-      videoUrl: body.video_url?.trim(),
-      logContext: 'pipeline/run',
-    });
-    const job = await this.jobs.enqueue({
-      userId,
-      payload: { body, videoContext },
-    });
-    return {
-      job_id: job.id,
-      status: job.status,
-      created_at: job.created_at,
-    };
+    return this.enqueuePipelineRunJob(userId, body);
+  }
+
+  /** Alias for `POST pipeline/run` (used by frontend job client). */
+  @Post('pipeline/jobs')
+  @UseGuards(UserIdThrottlerGuard)
+  @Throttle({ default: { ...THROTTLE_PIPELINE_RUN } })
+  async createPipelineJob(@CurrentUser() userId: string, @Body() body: ThumbnailPipelineRunDto) {
+    return this.enqueuePipelineRunJob(userId, body);
   }
 
   @Get('pipeline/jobs/:jobId')
@@ -118,10 +109,7 @@ export class ThumbnailPipelineController {
       upload: file?.buffer?.length ? file : undefined,
       logContext: 'pipeline/run-video',
     });
-    try {
-      return await this.executePipeline(
-        userId,
-        {
+    const runBody: ThumbnailPipelineRunDto = {
         user_prompt: body.prompt?.trim() || 'Generate engaging YouTube thumbnails from this video.',
         style: body.style,
         video_url: resolved.url,
@@ -131,21 +119,36 @@ export class ThumbnailPipelineController {
         generate_images: true,
         prioritize_face: Boolean(body.prioritize_face),
         persist_project: true,
-        },
+      };
+    const job = await this.jobs.enqueue({
+      userId,
+      payload: {
+        source: 'run-video',
+        body: runBody,
         videoContext,
-      );
-    } finally {
-      if (resolved.tempStoragePath) {
-        await this.storage.removeObjectsIfPresent(BUCKET_PROJECT_THUMBNAILS, [resolved.tempStoragePath]);
-      }
-    }
+        cleanupTempStoragePath: resolved.tempStoragePath ?? undefined,
+      },
+    });
+    return {
+      job_id: job.id,
+      status: job.status,
+      created_at: job.created_at,
+    };
   }
 
-  private async executePipeline(
-    userId: string,
-    body: ThumbnailPipelineRunDto,
-    videoContext?: PipelineVideoContext,
-  ) {
-    return this.execution.execute(userId, body, videoContext);
+  private async enqueuePipelineRunJob(userId: string, body: ThumbnailPipelineRunDto) {
+    const videoContext = await this.videoDurationGate.resolveContextAndEnforceForPipeline({
+      videoUrl: body.video_url?.trim(),
+      logContext: 'pipeline/run',
+    });
+    const job = await this.jobs.enqueue({
+      userId,
+      payload: { source: 'run', body, videoContext },
+    });
+    return {
+      job_id: job.id,
+      status: job.status,
+      created_at: job.created_at,
+    };
   }
 }

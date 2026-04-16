@@ -1,4 +1,6 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { OpenRouterApiError } from '../../openrouter/openrouter-api.error';
+import { BUCKET_PROJECT_THUMBNAILS, StorageService } from '../../storage/storage.service';
 import type { PipelineVideoContext } from '../../video-thumbnails/types/video-pipeline-video-context';
 import { ThumbnailPipelineRunDto } from '../dto/thumbnail-pipeline-run.dto';
 import { ThumbnailPipelineExecutionService } from './thumbnail-pipeline-execution.service';
@@ -7,6 +9,7 @@ import type { ThumbnailPipelineJobRow } from '../types/thumbnail-pipeline-job.ty
 
 const JOB_POLL_INTERVAL_MS = 1500;
 const JOB_LEASE_MS = 2 * 60 * 1000;
+const MAX_RETRIES = 1;
 
 @Injectable()
 export class ThumbnailPipelineJobsRunnerService implements OnModuleInit, OnModuleDestroy {
@@ -17,6 +20,7 @@ export class ThumbnailPipelineJobsRunnerService implements OnModuleInit, OnModul
   constructor(
     private readonly jobs: ThumbnailPipelineJobsService,
     private readonly execution: ThumbnailPipelineExecutionService,
+    private readonly storage: StorageService,
   ) {}
 
   onModuleInit(): void {
@@ -54,10 +58,13 @@ export class ThumbnailPipelineJobsRunnerService implements OnModuleInit, OnModul
 
   private async runJob(job: ThumbnailPipelineJobRow): Promise<void> {
     const startedAt = Date.now();
+    const queuedForMs = Math.max(0, startedAt - new Date(job.created_at).getTime());
     try {
       const payload = (job.request_payload ?? {}) as {
+        source?: 'run' | 'run-video';
         body?: ThumbnailPipelineRunDto;
         videoContext?: PipelineVideoContext;
+        cleanupTempStoragePath?: string;
       };
       const body = payload.body;
       if (!body?.user_prompt) {
@@ -66,13 +73,56 @@ export class ThumbnailPipelineJobsRunnerService implements OnModuleInit, OnModul
       const result = await this.execution.execute(job.user_id, body, payload.videoContext);
       await this.jobs.markSucceeded(job.id, result);
       const elapsed = Date.now() - startedAt;
-      this.logger.log(`Pipeline job succeeded id=${job.id} elapsedMs=${elapsed}`);
+      this.logger.log(
+        `Pipeline job succeeded id=${job.id} source=${payload.source ?? 'run'} attempts=${job.attempt_count} queuedMs=${queuedForMs} execMs=${elapsed}`,
+      );
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      await this.jobs.markFailed(job.id, { message: msg });
-      const elapsed = Date.now() - startedAt;
-      this.logger.warn(`Pipeline job failed id=${job.id} elapsedMs=${elapsed} reason=${msg}`);
+      const err = e instanceof Error ? e : new Error(String(e));
+      const retryable = this.isRetryableError(err);
+      const canRetry = retryable && job.attempt_count <= MAX_RETRIES;
+      if (canRetry) {
+        await this.jobs.requeue(job.id, {
+          code: 'RETRYABLE_ERROR',
+          message: err.message,
+        });
+        this.logger.warn(
+          `Pipeline job retry scheduled id=${job.id} attempt=${job.attempt_count} reason=${this.retryReason(err)}`,
+        );
+      } else {
+        await this.jobs.markFailed(job.id, { message: err.message });
+        const elapsed = Date.now() - startedAt;
+        this.logger.warn(
+          `Pipeline job failed id=${job.id} attempts=${job.attempt_count} queuedMs=${queuedForMs} execMs=${elapsed} retryable=${retryable} reason=${err.message}`,
+        );
+      }
+    } finally {
+      const payload = (job.request_payload ?? {}) as { cleanupTempStoragePath?: string };
+      if (payload.cleanupTempStoragePath) {
+        await this.storage.removeObjectsIfPresent(BUCKET_PROJECT_THUMBNAILS, [payload.cleanupTempStoragePath]);
+      }
     }
   }
+
+  private isRetryableError(err: Error): boolean {
+    if (err instanceof OpenRouterApiError) {
+      if (err.statusCode === 429) return true;
+      if (err.statusCode >= 500) return true;
+      return false;
+    }
+    const msg = err.message.toLowerCase();
+    return (
+      msg.includes('timeout') ||
+      msg.includes('timed out') ||
+      msg.includes('network') ||
+      msg.includes('econnreset') ||
+      msg.includes('socket hang up')
+    );
+  }
+
+  private retryReason(err: Error): string {
+    if (err instanceof OpenRouterApiError) return `openrouter_${err.statusCode}`;
+    return 'transient_network_or_timeout';
+  }
+
 }
 

@@ -148,7 +148,7 @@ export async function getThumbnailPipelineJob(
 export async function runThumbnailPipelineVideo(
   token: string | null,
   params: PipelineVideoRunRequest,
-): Promise<PipelineRunResponse> {
+): Promise<PipelineJobSubmitResponse> {
   const { file, videoUrl, count, style, prompt, template_id, avatar_id, prioritize_face } = params;
   const form = new FormData();
   if (file) form.append('file', file);
@@ -159,7 +159,7 @@ export async function runThumbnailPipelineVideo(
   if (template_id?.trim()) form.append('template_id', template_id.trim());
   if (avatar_id?.trim()) form.append('avatar_id', avatar_id.trim());
   if (prioritize_face === true) form.append('prioritize_face', 'true');
-  return fetchMultipart<PipelineRunResponse>(ApiRoutes.thumbnails.pipelineRunVideo, token, form);
+  return fetchMultipart<PipelineJobSubmitResponse>(ApiRoutes.thumbnails.pipelineRunVideo, token, form);
 }
 
 export async function parseVideoUrl(token: string | null, rawUrl: string): Promise<ParseVideoUrlResponse> {

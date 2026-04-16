@@ -546,7 +546,9 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
                 ? videoPreparing
                   ? 'Preparing video…'
                   : pipelineVideoCreate.isPending
-                    ? 'Working…'
+                    ? pipelineVideoCreate.jobStatusLabel
+                      ? `${pipelineVideoCreate.jobStatusLabel}…`
+                      : 'Working…'
                     : 'Generate from video'
                 : runPipeline.isPending
                   ? runPipeline.jobStatusLabel

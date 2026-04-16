@@ -4,6 +4,7 @@ This runbook verifies failure handling and operational limits for:
 
 - `POST /api/thumbnails/pipeline/run` (JSON)
 - `POST /api/thumbnails/pipeline/run-video` (multipart)
+- `GET /api/thumbnails/pipeline/jobs/:jobId` (polling for async runs)
 
 Use a valid bearer token (`$TOKEN`) and backend base URL (`$API`, e.g. `http://localhost:3001/api`).
 
@@ -19,7 +20,7 @@ Use a valid bearer token (`$TOKEN`) and backend base URL (`$API`, e.g. `http://l
 
 ## 1) Baseline success checks
 
-### 1.1 JSON pipeline with persistence
+### 1.1 JSON pipeline enqueue + polling
 
 ```bash
 curl -sS -X POST "$API/thumbnails/pipeline/run" \
@@ -35,12 +36,20 @@ curl -sS -X POST "$API/thumbnails/pipeline/run" \
 
 Expect:
 
-- `200`
-- `run_id`
-- `persisted_project.project_id`
-- `persisted_project.variants[].signed_url`
+- `200` enqueue response
+- `job_id`
+- `status=queued|running`
 
-### 1.2 Video pipeline (multipart)
+Then poll:
+
+```bash
+curl -sS "$API/thumbnails/pipeline/jobs/<JOB_ID>" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+Expect transition to `status=succeeded` and `result.persisted_project.project_id`.
+
+### 1.2 Video pipeline enqueue + polling (multipart)
 
 ```bash
 curl -sS -X POST "$API/thumbnails/pipeline/run-video" \
@@ -52,8 +61,9 @@ curl -sS -X POST "$API/thumbnails/pipeline/run-video" \
 
 Expect:
 
-- `200`
-- persisted project payload as above
+- `200` enqueue response with `job_id`
+- polling reaches `status=succeeded`
+- `result.persisted_project.project_id` exists
 
 ## 2) Negative cases
 
@@ -63,9 +73,8 @@ Temporarily set invalid `OPENROUTER_API_KEY` and restart backend.
 
 Run 1.1 again and expect:
 
-- non-2xx (usually `500`),
-- no persisted project,
-- request fails fast enough,
+- job eventually reaches `failed`,
+- failure reason appears in job `error`,
 - no unhandled crash.
 
 Then restore key.

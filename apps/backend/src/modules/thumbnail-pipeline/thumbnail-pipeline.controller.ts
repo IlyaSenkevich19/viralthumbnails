@@ -11,6 +11,7 @@ import { SupabaseGuard } from '../auth/guards/supabase.guard';
 import { ProjectVariantImageService } from '../project-thumbnail-generation/project-variant-image.service';
 import { BUCKET_PROJECT_THUMBNAILS, StorageService } from '../storage/storage.service';
 import { VideoIngestionService } from '../video-thumbnails/services/video-ingestion.service';
+import { VideoPipelineDurationGateService } from '../video-thumbnails/services/video-pipeline-duration-gate.service';
 import type { UploadedVideoFile } from '../video-thumbnails/types/upload.types';
 import { ThumbnailPipelineRunDto } from './dto/thumbnail-pipeline-run.dto';
 import { ThumbnailPipelineRunVideoDto } from './dto/thumbnail-pipeline-run-video.dto';
@@ -33,12 +34,17 @@ export class ThumbnailPipelineController {
     private readonly projectVariantImage: ProjectVariantImageService,
     private readonly ingestion: VideoIngestionService,
     private readonly storage: StorageService,
+    private readonly videoDurationGate: VideoPipelineDurationGateService,
   ) {}
 
   @Post('pipeline/run')
   @UseGuards(UserIdThrottlerGuard)
   @Throttle({ default: { ...THROTTLE_PIPELINE_RUN } })
   async runPipeline(@CurrentUser() userId: string, @Body() body: ThumbnailPipelineRunDto) {
+    await this.videoDurationGate.enforceMaxDurationForPipelineInput({
+      videoUrl: body.video_url?.trim(),
+      logContext: 'pipeline/run',
+    });
     return this.executePipeline(userId, body);
   }
 
@@ -78,6 +84,17 @@ export class ThumbnailPipelineController {
       videoUrl: body.videoUrl,
       file,
     });
+    if (file?.buffer?.length) {
+      await this.videoDurationGate.enforceMaxDurationForPipelineInput({
+        upload: file,
+        logContext: 'pipeline/run-video',
+      });
+    } else if (body.videoUrl?.trim()) {
+      await this.videoDurationGate.enforceMaxDurationForPipelineInput({
+        videoUrl: body.videoUrl.trim(),
+        logContext: 'pipeline/run-video',
+      });
+    }
     try {
       return await this.executePipeline(userId, {
         user_prompt: body.prompt?.trim() || 'Generate engaging YouTube thumbnails from this video.',

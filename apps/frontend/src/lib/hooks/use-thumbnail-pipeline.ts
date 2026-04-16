@@ -7,7 +7,11 @@ import { queryKeys } from '@/lib/query-keys';
 import type { PipelineRunRequest } from '@/lib/api/thumbnails';
 import { toast } from 'sonner';
 import { isApiError } from '@/lib/api/api-error';
-import { handleBillingMutationError, handleOpenRouterMutationError } from '@/lib/paywall-notify';
+import {
+  handleBillingMutationError,
+  handleOpenRouterMutationError,
+  handlePipelineVideoDurationError,
+} from '@/lib/paywall-notify';
 
 export function useThumbnailPipelineMutation() {
   const queryClient = useQueryClient();
@@ -24,6 +28,7 @@ export function useThumbnailPipelineMutation() {
         toast.error('Too many thumbnail runs. Try again in a little while.');
         return;
       }
+      if (handlePipelineVideoDurationError(err)) return;
       if (handleOpenRouterMutationError(err)) return;
       if (handleBillingMutationError(err)) return;
       toast.error(err instanceof Error ? err.message : 'Thumbnail pipeline failed');

@@ -20,7 +20,7 @@ API for **ViralThumblify**: Supabase-backed projects, thumbnail variants, templa
 
 | Модуль / слой | За что отвечает |
 |---------------|-----------------|
-| **ConfigModule** (+ `openrouter.config.ts`, `openrouter-models.ts`) | Env: в т.ч. `OPENROUTER_API_KEY`; slug’и и настройки OpenRouter — в **`openrouter-models.ts`** (`OPENROUTER_STACK`, `PIPELINE_STEP_MODELS`) |
+| **ConfigModule** (+ `openrouter.config.ts`, `video-pipeline.config.ts`, `openrouter-models.ts`) | Env: `OPENROUTER_API_KEY`; **Phase 0:** лимит длительности — константа `VIDEO_PIPELINE_MAX_DURATION_SECONDS` в коде; опционально `YOUTUBE_DATA_API_KEY` для YouTube; slug’и — **`openrouter-models.ts`** |
 | **SupabaseModule** | Admin-клиент Supabase для БД и Storage с сервера |
 | **AuthModule** | Проверка JWT (`SupabaseGuard`), `GET /api/auth/me` |
 | **HealthModule** | Liveness |

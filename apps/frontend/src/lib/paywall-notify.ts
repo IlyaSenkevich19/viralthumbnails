@@ -58,6 +58,16 @@ export function handleBillingMutationError(err: unknown): boolean {
   return false;
 }
 
+/** Pipeline Phase 0: server rejected video longer than configured max. */
+export function handlePipelineVideoDurationError(err: unknown): boolean {
+  if (!isApiError(err) || err.statusCode !== 400) return false;
+  if (err.code === 'VIDEO_EXCEEDS_MAX_DURATION') {
+    toast.error('Video too long for analysis', { description: err.message });
+    return true;
+  }
+  return false;
+}
+
 /** OpenRouter rejected the request (402) — separate from in-app Viral credits. */
 export function handleOpenRouterMutationError(err: unknown): boolean {
   if (!isApiError(err) || err.statusCode !== 402) return false;

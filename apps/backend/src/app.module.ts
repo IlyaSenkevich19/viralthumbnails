@@ -5,6 +5,7 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { UserIdThrottlerGuard } from './common/throttle/user-id-throttler.guard';
 import { ConfigModule } from '@nestjs/config';
 import { openRouterConfig } from './config/openrouter.config';
+import { videoPipelineConfig } from './config/video-pipeline.config';
 
 import { SupabaseModule } from './modules/supabase/supabase.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -22,7 +23,7 @@ import { ThumbnailPipelineModule } from './modules/thumbnail-pipeline/thumbnail-
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: ['.env', '../../.env'],
-      load: [openRouterConfig],
+      load: [openRouterConfig, videoPipelineConfig],
     }),
     ThrottlerModule.forRoot([
       {

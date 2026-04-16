@@ -25,6 +25,8 @@ export type VideoUnderstandingParams = {
   videoUrl?: string;
   /** Phase 1+: duration for bounded frame sampling. */
   videoContext?: PipelineVideoContext;
+  /** Phase 3: compact transcript snippet (e.g., YouTube captions) when available. */
+  transcriptSnippet?: string;
   templateReferenceDataUrls?: string[];
   faceReferenceDataUrls?: string[];
   /** Phase 2: set internally when ffmpeg frame sampling succeeds (replaces `video_url` in VL payload). */
@@ -152,7 +154,11 @@ ${ThumbnailPipelineAnalysisJsonPrompt}`;
         ? 'A video is attached; ground timing fields in what you see.'
         : 'No video is attached; infer carefully from the text prompt and any reference images. Use startSec 0 when unknown.';
 
-    const userText = `Analyze for YouTube thumbnail strategy and output JSON only.${refNote}\n\n${videoNote}\n\nCreator prompt:\n${params.userPrompt.trim()}${fixHint}`;
+    const transcriptLine = params.transcriptSnippet?.trim()
+      ? `\n\nTranscript snippet (possibly truncated):\n${params.transcriptSnippet.trim()}`
+      : '';
+
+    const userText = `Analyze for YouTube thumbnail strategy and output JSON only.${refNote}\n\n${videoNote}${transcriptLine}\n\nCreator prompt:\n${params.userPrompt.trim()}${fixHint}`;
 
     const userContent: OpenRouterMessage['content'] = useFrames
       ? userContentTextThenReferenceImages(userText, [...sampled, ...templateUrls, ...faceUrls])

@@ -107,12 +107,16 @@ Types: `apps/backend/src/modules/video-thumbnails/types/video-pipeline-video-con
 - **Config (code):** `VIDEO_PIPELINE_ANALYZE_WINDOW_SECONDS`, `VIDEO_PIPELINE_FRAME_SAMPLE_COUNT` in `video-pipeline.config.ts`.
 - **Service:** `VideoFrameSampleService` — **ffprobe** duration on HTTPS URL when not already known from `video_context`; **ffmpeg** extracts **K** evenly spaced JPEGs within `min(duration, analyze_window)`; images passed as **data URLs** in `image_url` parts.
 - **VL:** `PipelineVideoUnderstandingService` — if sampling returns frames → `userContentTextThenReferenceImages` (frames + template + face order); else **fallback** to `video_url` (e.g. YouTube when ffmpeg cannot decode the URL).
-- **Not yet:** background worker, persistent frame storage, dedup/quality filters (still in §3.1 target).
+- **Phase 2.1:** cheap pre-filter now enabled in `VideoFrameSampleService` — drop dark/low-contrast frames and near-duplicates from a low-res grayscale signature; if usable frames fall below a minimum threshold, fallback to `video_url`.
+- **Phase 2.2:** coverage-aware candidate timestamps (primary + offset pass), blur proxy via grayscale edge energy, and tolerant extraction errors (keep sampling instead of immediate abort).
+- **Not yet:** background worker, persistent frame storage, stronger perceptual dedup/blur scoring.
 
-### Phase 3 — Transcript (optional)
+### Phase 3 — Transcript (optional) — **implemented (YouTube MVP)**
 
-- YouTube captions when available; truncate to budget; inject into prompt.
-- Explicit UX when captions are missing.
+- Added `YoutubeTranscriptService`: for YouTube URLs, fetch caption track list (`timedtext?type=list`), pick preferred language (`en`/`ru`/fallback), fetch transcript, normalize, and truncate to budget.
+- Orchestrator fetches transcript snippet best-effort and passes it to `PipelineVideoUnderstandingService` as compact text context (`transcriptSnippet`).
+- Captions are optional by design: if unavailable/failing, pipeline continues without transcript (no hard failure).
+- Explicit UX for “no captions available” is still pending.
 
 ### Phase 4 — Polish & scale
 
@@ -141,6 +145,7 @@ Transcripts (Phase 3) can parallelize after Phase 1 if captions are a product pr
 - Analysis schema: `apps/backend/src/modules/thumbnail-pipeline/schemas/thumbnail-pipeline-analysis.schema.ts`
 - Video ingest: `apps/backend/src/modules/video-thumbnails/services/video-ingestion.service.ts`
 - Frame sampling (Phase 2): `apps/backend/src/modules/video-thumbnails/services/video-frame-sample.service.ts`, `apps/backend/src/modules/video-thumbnails/utils/video-duration-ffprobe.ts` (`getVideoDurationSecondsFromHttpUrl`)
+- Transcript (Phase 3): `apps/backend/src/modules/video-thumbnails/services/youtube-transcript.service.ts`
 - Client trim helper (reference only): `apps/frontend/src/lib/video/trim-video-for-thumbnails.ts`
 
 ---
@@ -150,3 +155,6 @@ Transcripts (Phase 3) can parallelize after Phase 1 if captions are a product pr
 - **2026-04-16** — Initial spec and phased plan.
 - **2026-04-16** — Phase 0 (duration gate) + Phase 1 (`video_context`, get-video-meta duration, `source_data.video_context`).
 - **2026-04-16** — Phase 2 (MVP): ffmpeg frame sampling + VL multimodal images path with `video_url` fallback; `video_context` passed into pipeline run input for duration bounds.
+- **2026-04-16** — Phase 2.1: cheap frame quality + dedup filters before VL (`VideoFrameSampleService`) with minimum-usable-frame fallback to `video_url`.
+- **2026-04-16** — Phase 2.2: blur proxy (`edgeEnergy`) + coverage-aware extra candidate timestamps and tolerant extraction failures.
+- **2026-04-16** — Phase 3 (YouTube MVP): optional captions snippet fetched from YouTube timedtext and injected into VL context.

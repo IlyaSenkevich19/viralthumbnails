@@ -7,6 +7,7 @@ import { PipelinePromptRefinementService } from './pipeline-prompt-refinement.se
 import { PipelineThumbnailEditingService } from './pipeline-thumbnail-editing.service';
 import { PipelineThumbnailGenerationService } from './pipeline-thumbnail-generation.service';
 import { PipelineVideoUnderstandingService } from './pipeline-video-understanding.service';
+import { YoutubeTranscriptService } from '../../video-thumbnails/services/youtube-transcript.service';
 
 /**
  * Coordinates ingest-shaped inputs → understanding → prompt building →
@@ -19,6 +20,7 @@ export class ThumbnailPipelineOrchestratorService {
     private readonly billing: BillingService,
     private readonly refinement: PipelinePromptRefinementService,
     private readonly videoUnderstanding: PipelineVideoUnderstandingService,
+    private readonly youtubeTranscript: YoutubeTranscriptService,
     private readonly promptBuilder: PipelinePromptBuilderService,
     private readonly thumbnailGen: PipelineThumbnailGenerationService,
     private readonly thumbnailEdit: PipelineThumbnailEditingService,
@@ -43,12 +45,16 @@ export class ThumbnailPipelineOrchestratorService {
 
     try {
       const refined = await this.refinement.refineIfConfigured(input.userPrompt);
+      const transcriptSnippet = input.videoUrl?.trim()
+        ? await this.youtubeTranscript.tryFetchCompactTranscript(input.videoUrl.trim(), 'pipeline-vl')
+        : null;
 
       const { analysis, modelUsed } = await this.videoUnderstanding.analyze({
         userPrompt: refined.text,
         style: input.style,
         videoUrl: input.videoUrl,
         videoContext: input.videoContext,
+        transcriptSnippet: transcriptSnippet ?? undefined,
         templateReferenceDataUrls: input.templateReferenceDataUrls,
         faceReferenceDataUrls: input.faceReferenceDataUrls,
       });

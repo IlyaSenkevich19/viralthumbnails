@@ -94,11 +94,13 @@ Order is intentional: each phase delivers value or de-risks the next.
 
 See `VideoPipelineDurationGateService`, `video-pipeline.config.ts`, `apps/backend/src/modules/thumbnail-pipeline/thumbnail-pipeline.controller.ts`.
 
-### Phase 1 — Metadata + duration gate only
+### Phase 1 — Metadata + duration — **implemented**
 
-- Server-side **duration** for uploaded files (e.g. ffprobe in worker or lightweight binary).
-- YouTube: duration from existing meta path or minimal API usage (respect quotas/TOS).
-- Persist “analyzed window” in run metadata for support/debug.
+- **Pipeline responses** include optional **`video_context`**: `duration_seconds`, `duration_resolution` (`ffprobe_upload` | `youtube_data_api` | `unavailable`), `max_duration_seconds`, `analyzed_window` (`start_sec`, `end_sec` — full source when duration known; `end_sec` null if unknown).
+- **Project persistence:** same object stored under `projects.source_data.video_context` when the run is persisted.
+- **`POST /api/thumbnails/get-video-meta`:** `data.duration_seconds` when `YOUTUBE_DATA_API_KEY` is set (Data API `videos.list`).
+
+Types: `apps/backend/src/modules/video-thumbnails/types/video-pipeline-video-context.ts`, `VideoPipelineDurationGateService.resolveContextAndEnforceForPipeline`.
 
 ### Phase 2 — Frame sampling + cheap filters (core)
 
@@ -144,3 +146,4 @@ Transcripts (Phase 3) can parallelize after Phase 1 if captions are a product pr
 ## 7. Document history
 
 - **2026-04-16** — Initial spec and phased plan.
+- **2026-04-16** — Phase 0 (duration gate) + Phase 1 (`video_context`, get-video-meta duration, `source_data.video_context`).

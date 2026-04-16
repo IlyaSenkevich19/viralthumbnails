@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { SupabaseService } from '../../supabase/supabase.service';
 import { BUCKET_PROJECT_THUMBNAILS, StorageService } from '../../storage/storage.service';
+import type { PipelineVideoContext } from '../../video-thumbnails/types/video-pipeline-video-context';
 import type { ThumbnailPipelineRunInput, ThumbnailPipelineRunResult } from '../types/thumbnail-pipeline-run.types';
 
 export type PersistedPipelineVariant = {
@@ -26,6 +27,7 @@ export class PipelineProjectPersistenceService {
     userId: string;
     runInput: ThumbnailPipelineRunInput;
     runResult: ThumbnailPipelineRunResult;
+    videoContext?: PipelineVideoContext;
   }): Promise<PersistedPipelineProject> {
     const variants = params.runResult.variants ?? [];
     if (variants.length === 0) {
@@ -54,6 +56,7 @@ export class PipelineProjectPersistenceService {
         userId: params.userId,
         runInput: params.runInput,
         runResult: params.runResult,
+        videoContext: params.videoContext,
         coverThumbnailStoragePath: uploaded[0]?.storagePath ?? null,
       });
 
@@ -73,6 +76,7 @@ export class PipelineProjectPersistenceService {
     userId: string;
     runInput: ThumbnailPipelineRunInput;
     runResult: ThumbnailPipelineRunResult;
+    videoContext?: PipelineVideoContext;
     coverThumbnailStoragePath: string | null;
   }): Promise<string> {
     const client = this.supabase.getAdminClient();
@@ -92,6 +96,7 @@ export class PipelineProjectPersistenceService {
       prioritize_face: params.runInput.prioritizeFace ?? undefined,
       generated_models: params.runResult.modelsUsed,
       scene_summary_excerpt: sceneSummary.slice(0, 500),
+      video_context: params.videoContext ?? undefined,
     };
 
     const { data: project, error } = await client

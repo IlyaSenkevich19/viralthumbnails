@@ -66,6 +66,16 @@ export type PipelineRunResponse = {
     face_from_id: boolean;
   };
   warnings?: string[];
+  /** Phase 1: server-measured duration / policy window when `video_url` or upload was used. */
+  video_context?: PipelineVideoContext;
+};
+
+/** Mirrors backend `PipelineVideoContext` (snake_case JSON). */
+export type PipelineVideoContext = {
+  duration_seconds: number | null;
+  duration_resolution: 'ffprobe_upload' | 'youtube_data_api' | 'unavailable';
+  max_duration_seconds: number;
+  analyzed_window: { start_sec: number; end_sec: number | null };
 };
 
 export type ParseVideoUrlResponse = {
@@ -88,6 +98,7 @@ export type VideoMetaResponse = {
     video_id: string | null;
     video_platform: 'youtube';
     source: 'oembed';
+    duration_seconds?: number | null;
   } | null;
 };
 

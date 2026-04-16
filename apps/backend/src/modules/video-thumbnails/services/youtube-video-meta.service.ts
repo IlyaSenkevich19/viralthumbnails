@@ -1,4 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { getVideoPipelineConfig } from '../../../config/video-pipeline.config';
+import { fetchYoutubeDurationSecondsFromDataApi } from './youtube-data-api-duration';
 
 export type ParsedVideoUrl = {
   ok: boolean;
@@ -20,6 +23,8 @@ export type YoutubeVideoMeta = {
     video_id: string | null;
     video_platform: 'youtube';
     source: 'oembed';
+    /** Seconds; set when `YOUTUBE_DATA_API_KEY` is configured (Phase 1). */
+    duration_seconds?: number | null;
   } | null;
 };
 
@@ -28,6 +33,8 @@ const OEMBED_TIMEOUT_MS = 4500;
 @Injectable()
 export class YoutubeVideoMetaService {
   private readonly logger = new Logger(YoutubeVideoMetaService.name);
+
+  constructor(private readonly config: ConfigService) {}
 
   parseUrl(rawUrl: string): ParsedVideoUrl {
     const originalUrl = rawUrl?.trim() ?? '';
@@ -136,6 +143,12 @@ export class YoutubeVideoMetaService {
       const author = typeof json.author_name === 'string' ? json.author_name.trim() : null;
       const thumbnail = typeof json.thumbnail_url === 'string' ? json.thumbnail_url.trim() : null;
 
+      const { youtubeDataApiKey } = getVideoPipelineConfig(this.config);
+      let durationSeconds: number | null | undefined;
+      if (youtubeDataApiKey) {
+        durationSeconds = await fetchYoutubeDurationSecondsFromDataApi(parsed.videoId, youtubeDataApiKey);
+      }
+
       return {
         code: '0',
         message: 'Succeed',
@@ -147,6 +160,7 @@ export class YoutubeVideoMetaService {
           video_id: `youtube_${parsed.videoId}`,
           video_platform: 'youtube',
           source: 'oembed',
+          duration_seconds: durationSeconds ?? null,
         },
       };
     } catch (e) {

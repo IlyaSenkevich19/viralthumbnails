@@ -16,6 +16,7 @@ import type { UploadedVideoFile } from '../video-thumbnails/types/upload.types';
 import { ThumbnailPipelineRunDto } from './dto/thumbnail-pipeline-run.dto';
 import { ThumbnailPipelineRunVideoDto } from './dto/thumbnail-pipeline-run-video.dto';
 import { ThumbnailPipelineOrchestratorService } from './services/thumbnail-pipeline-orchestrator.service';
+import type { PipelineVideoContext } from '../video-thumbnails/types/video-pipeline-video-context';
 import { PipelineProjectPersistenceService } from './services/pipeline-project-persistence.service';
 
 const VIDEO_UPLOAD_LIMIT_BYTES = 80 * 1024 * 1024;
@@ -41,11 +42,11 @@ export class ThumbnailPipelineController {
   @UseGuards(UserIdThrottlerGuard)
   @Throttle({ default: { ...THROTTLE_PIPELINE_RUN } })
   async runPipeline(@CurrentUser() userId: string, @Body() body: ThumbnailPipelineRunDto) {
-    await this.videoDurationGate.enforceMaxDurationForPipelineInput({
+    const videoContext = await this.videoDurationGate.resolveContextAndEnforceForPipeline({
       videoUrl: body.video_url?.trim(),
       logContext: 'pipeline/run',
     });
-    return this.executePipeline(userId, body);
+    return this.executePipeline(userId, body, videoContext);
   }
 
   @Post('pipeline/run-video')
@@ -84,19 +85,15 @@ export class ThumbnailPipelineController {
       videoUrl: body.videoUrl,
       file,
     });
-    if (file?.buffer?.length) {
-      await this.videoDurationGate.enforceMaxDurationForPipelineInput({
-        upload: file,
-        logContext: 'pipeline/run-video',
-      });
-    } else if (body.videoUrl?.trim()) {
-      await this.videoDurationGate.enforceMaxDurationForPipelineInput({
-        videoUrl: body.videoUrl.trim(),
-        logContext: 'pipeline/run-video',
-      });
-    }
+    const videoContext = await this.videoDurationGate.resolveContextAndEnforceForPipeline({
+      videoUrl: body.videoUrl?.trim(),
+      upload: file?.buffer?.length ? file : undefined,
+      logContext: 'pipeline/run-video',
+    });
     try {
-      return await this.executePipeline(userId, {
+      return await this.executePipeline(
+        userId,
+        {
         user_prompt: body.prompt?.trim() || 'Generate engaging YouTube thumbnails from this video.',
         style: body.style,
         video_url: resolved.url,
@@ -106,7 +103,9 @@ export class ThumbnailPipelineController {
         generate_images: true,
         prioritize_face: Boolean(body.prioritize_face),
         persist_project: true,
-      });
+        },
+        videoContext,
+      );
     } finally {
       if (resolved.tempStoragePath) {
         await this.storage.removeObjectsIfPresent(BUCKET_PROJECT_THUMBNAILS, [resolved.tempStoragePath]);
@@ -114,7 +113,11 @@ export class ThumbnailPipelineController {
     }
   }
 
-  private async executePipeline(userId: string, body: ThumbnailPipelineRunDto) {
+  private async executePipeline(
+    userId: string,
+    body: ThumbnailPipelineRunDto,
+    videoContext?: PipelineVideoContext,
+  ) {
     const resolvedRefs =
       body.template_id?.trim() || body.avatar_id?.trim()
         ? await this.projectVariantImage.resolveReferenceDataUrlsForUser({
@@ -161,6 +164,7 @@ export class ThumbnailPipelineController {
             userId,
             runInput,
             runResult: result,
+            videoContext,
           })
         : undefined;
 
@@ -200,6 +204,7 @@ export class ThumbnailPipelineController {
           }
         : undefined,
       warnings: warnings.length ? warnings : undefined,
+      video_context: videoContext,
     };
   }
 }

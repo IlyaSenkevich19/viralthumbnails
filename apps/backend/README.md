@@ -31,7 +31,7 @@ API for **ViralThumblify**: Supabase-backed projects, thumbnail variants, templa
 | **ProjectsModule** | CRUD проектов; `ProjectGenerationService` — оркестрация N вариантов + биллинг + вызов `ProjectVariantImageService` |
 | **TemplatesModule** | Каталог шаблонов, ниши, загрузки в `thumbnail-templates` |
 | **AvatarsModule** | `GET/POST/DELETE /api/avatars` — лица в `user-avatars` |
-| **VideoThumbnailsModule** | Сервисные video endpoints: URL parse/meta + ingestion для `pipeline/run-video` |
+| **VideoThumbnailsModule** | URL parse/meta (`get-video-meta` с `duration_seconds` при Data API key), ingestion, **Phase 0–1** `VideoPipelineDurationGateService` |
 | **ThumbnailPipelineModule** | `POST /api/thumbnails/pipeline/run` и `POST /api/thumbnails/pipeline/run-video`: JSON/multipart-пайплайн (VL + Flux в `openrouter-models.ts` → `PIPELINE_STEP_MODELS`) |
 
 Cross-cutting: **HttpExceptionFilter**, **shutdown hooks**.

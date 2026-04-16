@@ -1,101 +1,68 @@
 # Video Analysis Release Roadmap (MVP -> Release)
 
-This document fixes the final scope for release of the optimized video-analysis thumbnail pipeline.
+This document is the **single place** for release scope, what is already shipped, what is deferred, and the acceptance checklist.
 
-## 1) Current state (implemented)
+---
+
+## 1) Shipped (baseline)
 
 - Duration gate + `video_context` policy metadata.
 - Frame-based VL input with fallback to `video_url`.
-- Cheap frame quality filters (dedup/brightness/contrast/edge proxy).
+- Cheap frame quality filters (dedup / brightness / contrast / edge proxy).
 - YouTube transcript snippet (best-effort, truncated).
-- Async jobs for `POST /api/thumbnails/pipeline/run` and `POST /api/thumbnails/pipeline/run-video` with polling (`GET /thumbnails/pipeline/jobs/:jobId`).
+- Async jobs for `POST /api/thumbnails/pipeline/run` and `POST /api/thumbnails/pipeline/run-video` with polling (`GET /api/thumbnails/pipeline/jobs/:jobId`).
 - In-memory TTL caches for sampled frames and transcript snippets.
+- Capped transient job retries (`ThumbnailPipelineJobsRunnerService`); failed attempts refund credits in `ThumbnailPipelineOrchestratorService` so users are not double-charged for a single successful outcome.
+
+---
 
 ## 2) Release goal
 
-Ship a stable, cost-predictable pipeline with clear UX status and no sync-heavy bottlenecks.
+Stable, cost-predictable pipeline with clear async UX and no sync-heavy bottlenecks.
 
-## 3) In-scope before release (must do)
+---
 
-### A. Stability and throughput
+## 3) Release track — completed milestones
 
-1. Move `POST /api/thumbnails/pipeline/run-video` to async jobs (same queue model as `pipeline/run`).
-2. Keep one execution path through `ThumbnailPipelineExecutionService`.
-3. Preserve current output contract for completed runs.
+The following were the pre-release “must do” items; they are **done in code**:
 
-### B. Safe retry policy
+- Async `pipeline/run` + `pipeline/run-video` + polling.
+- One execution path via `ThumbnailPipelineExecutionService`.
+- Safe retry (transient-only, cap 1).
+- Minimal logs: job timing / attempts / retry reason; `vl_input_mode` in VL service.
+- UI: `jobStatusLabel` on New project (text + video flows).
 
-1. Add retry only for clearly transient failures (network timeout/reset, provider `429/5xx`).
-2. Start with `MAX_RETRIES = 1`.
-3. No retry for validation/content/schema deterministic errors.
-4. User credits must remain fixed per run (retry must not increase user credit charge).
-
-### C. Minimal observability
-
-Log enough to compute:
-
-- job success/fail rate,
-- average job duration,
-- frame fallback rate (`frames -> video_url`),
-- retry count/reason.
-
-### D. Minimal UX status
-
-Expose and display async statuses (`Queued`, `Processing`, `Done`, `Failed`) for both run modes.
+---
 
 ## 4) Out of scope for this release (defer)
 
-### 4.1 Redis/shared distributed cache
+### 4.1 Redis / shared distributed cache
 
-Deferred intentionally.
-
-Reason:
-
-- current in-memory cache is enough for MVP scale,
-- Redis adds operational complexity and cost before we confirm necessity from metrics.
+Deferred: in-memory cache is enough until metrics justify Redis/KV and ops cost.
 
 ### 4.2 Advanced two-pass moment mining
 
-Deferred intentionally.
+Deferred: larger tuning surface; current uniform + quality-filter sampling is acceptable for v1.
 
-What it is:
+### 4.3 Complex ranking / dedup of generated outputs
 
-- first pass finds likely highlight moments semantically,
-- second pass re-samples around those moments and re-ranks context.
+Deferred: extra cost and complexity; post-release quality iteration.
 
-Why not now:
-
-- larger algorithmic surface and quality-tuning cycle,
-- not required to stabilize reliability/cost for initial release,
-- current uniform+quality-filter sampling already gives usable outputs.
-
-### 4.3 Complex ranking/dedup of generated outputs
-
-Deferred intentionally.
-
-What it is:
-
-- semantic similarity clustering of final variants,
-- quality reranking before persistence/response.
-
-Why not now:
-
-- extra generation-time complexity and additional model/image scoring costs,
-- not a blocker for core reliability and async rollout,
-- can be added as post-release quality iteration.
+---
 
 ## 5) Release acceptance checklist
 
 - [x] `pipeline/run` and `pipeline/run-video` are both async with polling.
-- [x] retry policy is enabled only for transient failures and capped (`MAX_RETRIES = 1` in `ThumbnailPipelineJobsRunnerService`).
-- [x] no extra user credit charging due to retries (each attempt is a full `orchestrator.run` with its own `run_id`; a failed attempt refunds in `ThumbnailPipelineOrchestratorService`; only a successful completion keeps the charge).
-- [x] baseline metrics above are visible in logs (job success/fail + `queuedMs`/`execMs`/`attempts` in runner; `vl_input_mode` in `PipelineVideoUnderstandingService`).
-- [x] UI shows async status clearly in both flows (New project: text + video tabs use `jobStatusLabel` on the submit button).
-- [ ] regression pass done for text/script/youtube/video modes (manual QA sign-off).
+- [x] Retry policy: transient-only, capped.
+- [x] No extra user credit charging for retries (failed attempt refunds; success keeps one charge).
+- [x] Baseline metrics in logs (job runner + `vl_input_mode`).
+- [x] UI async status (New project).
+- [ ] Manual regression: text / script / youtube / video modes (sign-off).
 
-## 6) Post-release priority (first)
+---
 
-1. Measure real fallback and failure rates for 1-2 weeks.
-2. Decide whether shared cache (Redis) is needed from data.
-3. If quality is the main complaint, prioritize moment-aware second pass.
+## 6) Post-release (first)
 
+1. Measure fallback and failure rates from logs.
+2. Revisit shared cache if multi-instance or repeat traffic demands it.
+3. If quality is the bottleneck, add moment-aware second pass and/or mid/end window sampling.

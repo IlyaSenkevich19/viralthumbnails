@@ -48,6 +48,7 @@ export class ThumbnailPipelineOrchestratorService {
         userPrompt: refined.text,
         style: input.style,
         videoUrl: input.videoUrl,
+        videoContext: input.videoContext,
         templateReferenceDataUrls: input.templateReferenceDataUrls,
         faceReferenceDataUrls: input.faceReferenceDataUrls,
       });

@@ -21,13 +21,13 @@ Full-length uploads (e.g. hour-long videos) are a poor fit for “send the whole
 |------|----------|
 | **Endpoints** | `POST /api/thumbnails/pipeline/run` (JSON with optional `video_url`), `POST /api/thumbnails/pipeline/run-video` (multipart file or `videoUrl`). |
 | **Ingest** | File → temporary Supabase upload → signed URL passed as `video_url`; YouTube/public URL passed through when valid. |
-| **VL step** | Single OpenRouter chat completion: user message = text + optional `video_url` part + optional reference images (`PipelineVideoUnderstandingService`, `multipart-user-content`). |
+| **VL step** | Single OpenRouter chat completion: text + optional **`video_url`** *or* **Phase 2:** up to **K** JPEG stills (`image_url`, data URLs) sampled via **ffmpeg** from the analyzed window when extraction succeeds, else fallback to `video_url` (`PipelineVideoUnderstandingService`, `VideoFrameSampleService`, `multipart-user-content`). |
 | **Models** | Configured in `apps/backend/src/config/openrouter-models.ts` (Gemini-class VL for YouTube/video compatibility). |
 | **Output** | Structured JSON validated by `ThumbnailPipelineAnalysisSchema` (subject, hooks, `bestThumbnailMoment`, text ideas, image prompt suggestions, etc.). |
 | **Downstream** | Prompt builder → image generation → optional persistence. |
 | **Client** | YouTube flow may enrich prompt with title/channel; `trim-video-for-thumbnails` exists for **client-side** file trimming — not wired as a server-side analysis pipeline. |
 
-**Gaps vs target:** no server-side **duration policy**, **transcript extraction**, **frame sampling**, **dedup/blur filtering**, or **compact multimodal bundle** (many images + short text) as a replacement for raw long `video_url` to the LLM.
+**Gaps vs target:** **transcript extraction**, **dedup/blur filtering**, async worker queue; **frame sampling** for VL is partially implemented (Phase 2 — see §4).
 
 ---
 
@@ -102,11 +102,12 @@ See `VideoPipelineDurationGateService`, `video-pipeline.config.ts`, `apps/backen
 
 Types: `apps/backend/src/modules/video-thumbnails/types/video-pipeline-video-context.ts`, `VideoPipelineDurationGateService.resolveContextAndEnforceForPipeline`.
 
-### Phase 2 — Frame sampling + cheap filters (core)
+### Phase 2 — Frame sampling + cheap filters (core) — **implemented (MVP)**
 
-- Worker pipeline: **decode window** → extract **K** frames → dedup + quality filter → encode JPEG.
-- Replace or **fallback** alongside raw `video_url` to VL: send **images + text** instead of full video when policy says so.
-- **Outcome:** major cost control; quality iteration loop on K and window strategy.
+- **Config (code):** `VIDEO_PIPELINE_ANALYZE_WINDOW_SECONDS`, `VIDEO_PIPELINE_FRAME_SAMPLE_COUNT` in `video-pipeline.config.ts`.
+- **Service:** `VideoFrameSampleService` — **ffprobe** duration on HTTPS URL when not already known from `video_context`; **ffmpeg** extracts **K** evenly spaced JPEGs within `min(duration, analyze_window)`; images passed as **data URLs** in `image_url` parts.
+- **VL:** `PipelineVideoUnderstandingService` — if sampling returns frames → `userContentTextThenReferenceImages` (frames + template + face order); else **fallback** to `video_url` (e.g. YouTube when ffmpeg cannot decode the URL).
+- **Not yet:** background worker, persistent frame storage, dedup/quality filters (still in §3.1 target).
 
 ### Phase 3 — Transcript (optional)
 
@@ -139,6 +140,7 @@ Transcripts (Phase 3) can parallelize after Phase 1 if captions are a product pr
 - VL messages: `apps/backend/src/modules/openrouter/multipart-user-content.ts`
 - Analysis schema: `apps/backend/src/modules/thumbnail-pipeline/schemas/thumbnail-pipeline-analysis.schema.ts`
 - Video ingest: `apps/backend/src/modules/video-thumbnails/services/video-ingestion.service.ts`
+- Frame sampling (Phase 2): `apps/backend/src/modules/video-thumbnails/services/video-frame-sample.service.ts`, `apps/backend/src/modules/video-thumbnails/utils/video-duration-ffprobe.ts` (`getVideoDurationSecondsFromHttpUrl`)
 - Client trim helper (reference only): `apps/frontend/src/lib/video/trim-video-for-thumbnails.ts`
 
 ---
@@ -147,3 +149,4 @@ Transcripts (Phase 3) can parallelize after Phase 1 if captions are a product pr
 
 - **2026-04-16** — Initial spec and phased plan.
 - **2026-04-16** — Phase 0 (duration gate) + Phase 1 (`video_context`, get-video-meta duration, `source_data.video_context`).
+- **2026-04-16** — Phase 2 (MVP): ffmpeg frame sampling + VL multimodal images path with `video_url` fallback; `video_context` passed into pipeline run input for duration bounds.

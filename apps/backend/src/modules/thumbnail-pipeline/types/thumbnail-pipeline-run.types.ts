@@ -1,3 +1,4 @@
+import type { PipelineVideoContext } from '../../video-thumbnails/types/video-pipeline-video-context';
 import type { ThumbnailPipelineAnalysis } from '../schemas/thumbnail-pipeline-analysis.schema';
 
 export type ThumbnailPipelineRunInput = {
@@ -6,6 +7,8 @@ export type ThumbnailPipelineRunInput = {
   style?: string;
   /** Public HTTPS or signed URL after ingestion. Omit for prompt-only (and optional reference images). */
   videoUrl?: string;
+  /** Phase 1+: duration probe for bounded frame sampling (Phase 2 VL input). */
+  videoContext?: PipelineVideoContext;
   templateReferenceDataUrls?: string[];
   faceReferenceDataUrls?: string[];
   variantCount?: number;

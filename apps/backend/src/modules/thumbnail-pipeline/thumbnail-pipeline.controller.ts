@@ -141,6 +141,7 @@ export class ThumbnailPipelineController {
       userPrompt: body.user_prompt,
       style: body.style,
       videoUrl: body.video_url,
+      videoContext,
       templateReferenceDataUrls: [...resolvedTemplateRefs, ...(body.template_reference_data_urls ?? [])],
       faceReferenceDataUrls: [...resolvedFaceRefs, ...(body.face_reference_data_urls ?? [])],
       variantCount: body.variant_count,

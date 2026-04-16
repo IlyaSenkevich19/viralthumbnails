@@ -4,8 +4,13 @@ import { extractJsonObject } from '../../../common/json/extract-json-object';
 import { approximateOpenRouterMessagesPayloadChars } from '../../openrouter/approximate-message-payload-chars';
 import { OpenRouterClient } from '../../openrouter/openrouter.client';
 import { requestPipelineVlAnalysis } from '../../openrouter/openrouter-requests';
-import { userContentTextVideoThenReferenceImages } from '../../openrouter/multipart-user-content';
+import {
+  userContentTextThenReferenceImages,
+  userContentTextVideoThenReferenceImages,
+} from '../../openrouter/multipart-user-content';
 import type { OpenRouterMessage } from '../../openrouter/openrouter.types';
+import type { PipelineVideoContext } from '../../video-thumbnails/types/video-pipeline-video-context';
+import { VideoFrameSampleService } from '../../video-thumbnails/services/video-frame-sample.service';
 import {
   ThumbnailPipelineAnalysis,
   ThumbnailPipelineAnalysisJsonPrompt,
@@ -18,8 +23,12 @@ export type VideoUnderstandingParams = {
   userPrompt: string;
   style?: string;
   videoUrl?: string;
+  /** Phase 1+: duration for bounded frame sampling. */
+  videoContext?: PipelineVideoContext;
   templateReferenceDataUrls?: string[];
   faceReferenceDataUrls?: string[];
+  /** Phase 2: set internally when ffmpeg frame sampling succeeds (replaces `video_url` in VL payload). */
+  sampledFrameDataUrls?: string[];
 };
 
 export type VideoUnderstandingResult = {
@@ -31,7 +40,10 @@ export type VideoUnderstandingResult = {
 export class PipelineVideoUnderstandingService {
   private readonly logger = new Logger(PipelineVideoUnderstandingService.name);
 
-  constructor(private readonly openRouter: OpenRouterClient) {}
+  constructor(
+    private readonly openRouter: OpenRouterClient,
+    private readonly frameSample: VideoFrameSampleService,
+  ) {}
 
   async analyze(params: VideoUnderstandingParams): Promise<VideoUnderstandingResult> {
     const hasVideo = Boolean(params.videoUrl?.trim());
@@ -51,6 +63,21 @@ export class PipelineVideoUnderstandingService {
       throw new Error('OPENROUTER_API_KEY is not set');
     }
 
+    let vlParams: VideoUnderstandingParams = { ...params };
+    if (hasVideo && params.videoUrl?.trim()) {
+      const sampled = await this.frameSample.trySampleFrames({
+        videoUrl: params.videoUrl.trim(),
+        durationSeconds: params.videoContext?.duration_seconds ?? null,
+        logContext: 'pipeline-vl',
+      });
+      if (sampled.length > 0) {
+        vlParams = { ...params, sampledFrameDataUrls: sampled };
+        this.logger.log(`Pipeline VL: vl_input_mode=frames frames=${sampled.length}`);
+      } else {
+        this.logger.log('Pipeline VL: vl_input_mode=video_url');
+      }
+    }
+
     const primary = PIPELINE_STEP_MODELS.vlPrimary;
     const fallback = PIPELINE_STEP_MODELS.vlFallback?.trim() || undefined;
     const models = fallback && fallback !== primary ? [primary, fallback] : [primary];
@@ -58,7 +85,7 @@ export class PipelineVideoUnderstandingService {
     let lastErr: Error | null = null;
     for (const model of models) {
       try {
-        const analysis = await this.analyzeWithModel(model, params);
+        const analysis = await this.analyzeWithModel(model, vlParams);
         return { analysis, modelUsed: model };
       } catch (e) {
         lastErr = e instanceof Error ? e : new Error(String(e));
@@ -109,23 +136,27 @@ ${ThumbnailPipelineAnalysisJsonPrompt}`;
 
     const templateUrls = params.templateReferenceDataUrls ?? [];
     const faceUrls = params.faceReferenceDataUrls ?? [];
+    const sampled = params.sampledFrameDataUrls ?? [];
+    const useFrames = sampled.length > 0;
+
     const refNote =
-      templateUrls.length || faceUrls.length
-        ? '\n\nAttached images order: template reference(s) first (if any), then face reference(s) (if any). Use them for likeness, layout, or palette — do not invent on-screen branding that contradicts them.'
+      templateUrls.length || faceUrls.length || useFrames
+        ? useFrames
+          ? '\n\nAttached images order: sampled video frames first (chronological within the analyzed window), then template reference(s) (if any), then face reference(s) (if any). Use them for likeness, layout, or palette — do not invent on-screen branding that contradicts them.'
+          : '\n\nAttached images order: template reference(s) first (if any), then face reference(s) (if any). Use them for likeness, layout, or palette — do not invent on-screen branding that contradicts them.'
         : '';
 
-    const videoNote = params.videoUrl?.trim()
-      ? 'A video is attached; ground timing fields in what you see.'
-      : 'No video is attached; infer carefully from the text prompt and any reference images. Use startSec 0 when unknown.';
+    const videoNote = useFrames
+      ? `The video is represented by ${sampled.length} evenly spaced still frames from the start of the recording (analyzed window). Ground timing fields in what you see in these frames.`
+      : params.videoUrl?.trim()
+        ? 'A video is attached; ground timing fields in what you see.'
+        : 'No video is attached; infer carefully from the text prompt and any reference images. Use startSec 0 when unknown.';
 
     const userText = `Analyze for YouTube thumbnail strategy and output JSON only.${refNote}\n\n${videoNote}\n\nCreator prompt:\n${params.userPrompt.trim()}${fixHint}`;
 
-    const orderedImages = [...templateUrls, ...faceUrls];
-    const userContent: OpenRouterMessage['content'] = userContentTextVideoThenReferenceImages(
-      userText,
-      params.videoUrl?.trim(),
-      orderedImages,
-    );
+    const userContent: OpenRouterMessage['content'] = useFrames
+      ? userContentTextThenReferenceImages(userText, [...sampled, ...templateUrls, ...faceUrls])
+      : userContentTextVideoThenReferenceImages(userText, params.videoUrl?.trim(), [...templateUrls, ...faceUrls]);
 
     return [
       { role: 'system', content: system },

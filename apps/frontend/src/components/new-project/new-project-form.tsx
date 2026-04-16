@@ -549,7 +549,9 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
                     ? 'Working…'
                     : 'Generate from video'
                 : runPipeline.isPending
-                  ? 'Working…'
+                  ? runPipeline.jobStatusLabel
+                    ? `${runPipeline.jobStatusLabel}…`
+                    : 'Working…'
                   : 'Create & generate'}
             </Button>
           </form>

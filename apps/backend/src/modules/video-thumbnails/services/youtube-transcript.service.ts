@@ -1,4 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
+import {
+  VIDEO_PIPELINE_CACHE_MAX_ENTRIES,
+  VIDEO_PIPELINE_CACHE_TTL_MS,
+} from '../../../config/video-pipeline.config';
 import { YoutubeVideoMetaService } from './youtube-video-meta.service';
 
 const TRANSCRIPT_FETCH_TIMEOUT_MS = 4500;
@@ -89,12 +93,34 @@ async function fetchTextWithTimeout(url: string): Promise<string | null> {
 @Injectable()
 export class YoutubeTranscriptService {
   private readonly logger = new Logger(YoutubeTranscriptService.name);
+  private readonly cache = new Map<string, { expiresAt: number; transcript: string | null }>();
 
   constructor(private readonly youtubeMeta: YoutubeVideoMetaService) {}
+
+  private pruneCache(now: number): void {
+    for (const [k, v] of this.cache.entries()) {
+      if (v.expiresAt <= now) this.cache.delete(k);
+    }
+    while (this.cache.size > VIDEO_PIPELINE_CACHE_MAX_ENTRIES) {
+      const oldest = this.cache.keys().next().value as string | undefined;
+      if (!oldest) break;
+      this.cache.delete(oldest);
+    }
+  }
 
   async tryFetchCompactTranscript(rawUrl: string, logContext: string): Promise<string | null> {
     const parsed = this.youtubeMeta.parseUrl(rawUrl);
     if (!parsed.ok || !parsed.videoId) return null;
+    const cacheKey = parsed.videoId;
+    const now = Date.now();
+    this.pruneCache(now);
+    const cached = this.cache.get(cacheKey);
+    if (cached && cached.expiresAt > now) {
+      this.logger.debug(
+        `[${logContext}] transcript cache hit videoId=${parsed.videoId} hasText=${Boolean(cached.transcript)}`,
+      );
+      return cached.transcript;
+    }
 
     const listUrl = `https://video.google.com/timedtext?type=list&v=${encodeURIComponent(parsed.videoId)}`;
     const listXml = await fetchTextWithTimeout(listUrl);
@@ -102,18 +128,25 @@ export class YoutubeTranscriptService {
 
     const tracks = parseCaptionTracks(listXml);
     const track = pickPreferredTrack(tracks);
-    if (!track) return null;
+    if (!track) {
+      this.cache.set(cacheKey, { expiresAt: now + VIDEO_PIPELINE_CACHE_TTL_MS, transcript: null });
+      return null;
+    }
 
     const transcriptUrl = `https://video.google.com/timedtext?v=${encodeURIComponent(parsed.videoId)}&lang=${encodeURIComponent(track.langCode)}`;
     const transcriptXml = await fetchTextWithTimeout(transcriptUrl);
     if (!transcriptXml) return null;
 
     const transcript = parseTranscriptText(transcriptXml);
-    if (!transcript) return null;
+    if (!transcript) {
+      this.cache.set(cacheKey, { expiresAt: now + VIDEO_PIPELINE_CACHE_TTL_MS, transcript: null });
+      return null;
+    }
 
     this.logger.log(
       `[${logContext}] fetched YouTube transcript snippet lang=${track.langCode} chars=${transcript.length}`,
     );
+    this.cache.set(cacheKey, { expiresAt: now + VIDEO_PIPELINE_CACHE_TTL_MS, transcript });
     return transcript;
   }
 }

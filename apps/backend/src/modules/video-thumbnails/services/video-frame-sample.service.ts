@@ -3,6 +3,8 @@ import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import {
   VIDEO_PIPELINE_ANALYZE_WINDOW_SECONDS,
+  VIDEO_PIPELINE_CACHE_MAX_ENTRIES,
+  VIDEO_PIPELINE_CACHE_TTL_MS,
   VIDEO_PIPELINE_FRAME_DEDUP_DISTANCE_THRESHOLD,
   VIDEO_PIPELINE_FRAME_SAMPLE_COUNT,
   VIDEO_PIPELINE_MIN_FRAME_BRIGHTNESS,
@@ -213,6 +215,18 @@ function signatureDistance(a: Uint8Array, b: Uint8Array): number {
 @Injectable()
 export class VideoFrameSampleService {
   private readonly logger = new Logger(VideoFrameSampleService.name);
+  private readonly cache = new Map<string, { expiresAt: number; frames: string[] }>();
+
+  private pruneCache(now: number): void {
+    for (const [k, v] of this.cache.entries()) {
+      if (v.expiresAt <= now) this.cache.delete(k);
+    }
+    while (this.cache.size > VIDEO_PIPELINE_CACHE_MAX_ENTRIES) {
+      const oldest = this.cache.keys().next().value as string | undefined;
+      if (!oldest) break;
+      this.cache.delete(oldest);
+    }
+  }
 
   async trySampleFrames(params: {
     videoUrl: string;
@@ -221,6 +235,16 @@ export class VideoFrameSampleService {
   }): Promise<string[]> {
     const url = params.videoUrl?.trim();
     if (!url) return [];
+    const cacheKey = `${url}|dur=${params.durationSeconds ?? 'na'}|w=${VIDEO_PIPELINE_ANALYZE_WINDOW_SECONDS}|k=${VIDEO_PIPELINE_FRAME_SAMPLE_COUNT}|q=${VIDEO_PIPELINE_MIN_FRAME_BRIGHTNESS},${VIDEO_PIPELINE_MIN_FRAME_STDDEV},${VIDEO_PIPELINE_MIN_FRAME_EDGE_ENERGY}|d=${VIDEO_PIPELINE_FRAME_DEDUP_DISTANCE_THRESHOLD}`;
+    const now = Date.now();
+    this.pruneCache(now);
+    const cached = this.cache.get(cacheKey);
+    if (cached && cached.expiresAt > now) {
+      this.logger.debug(
+        `[${params.logContext}] frame sample cache hit frames=${cached.frames.length}`,
+      );
+      return cached.frames;
+    }
 
     let duration = params.durationSeconds ?? null;
     if (duration == null || !Number.isFinite(duration) || duration <= 0) {
@@ -289,6 +313,7 @@ export class VideoFrameSampleService {
     this.logger.log(
       `[${params.logContext}] sampled ${out.length}/${times.length} usable frames (window=${windowSec.toFixed(1)}s of ${duration.toFixed(1)}s, droppedLowQuality=${droppedLowQuality}, droppedDuplicates=${droppedDuplicates}, extractionFailures=${extractionFailures})`,
     );
+    this.cache.set(cacheKey, { expiresAt: now + VIDEO_PIPELINE_CACHE_TTL_MS, frames: out });
     return out;
   }
 }

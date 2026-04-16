@@ -70,6 +70,22 @@ export type PipelineRunResponse = {
   video_context?: PipelineVideoContext;
 };
 
+export type PipelineJobSubmitResponse = {
+  job_id: string;
+  status: 'queued' | 'running' | 'succeeded' | 'failed';
+  created_at: string;
+};
+
+export type PipelineJobStatusResponse = {
+  job_id: string;
+  status: 'queued' | 'running' | 'succeeded' | 'failed';
+  created_at: string;
+  started_at?: string | null;
+  finished_at?: string | null;
+  result?: PipelineRunResponse;
+  error?: { code?: string; message: string };
+};
+
 /** Mirrors backend `PipelineVideoContext` (snake_case JSON). */
 export type PipelineVideoContext = {
   duration_seconds: number | null;
@@ -110,6 +126,23 @@ export async function runThumbnailPipeline(
     method: 'POST',
     body: JSON.stringify(body),
   });
+}
+
+export async function createThumbnailPipelineJob(
+  token: string | null,
+  body: PipelineRunRequest,
+): Promise<PipelineJobSubmitResponse> {
+  return fetchJson<PipelineJobSubmitResponse>(ApiRoutes.thumbnails.pipelineJobCreate, token, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+export async function getThumbnailPipelineJob(
+  token: string | null,
+  jobId: string,
+): Promise<PipelineJobStatusResponse> {
+  return fetchJson<PipelineJobStatusResponse>(ApiRoutes.thumbnails.pipelineJobOne(jobId), token);
 }
 
 export async function runThumbnailPipelineVideo(

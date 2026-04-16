@@ -120,6 +120,9 @@ Types: `apps/backend/src/modules/video-thumbnails/types/video-pipeline-video-con
 
 ### Phase 4 — Polish & scale
 
+- **Implemented (backend, partial):** in-memory TTL cache for sampled frames (`VideoFrameSampleService`) and YouTube transcript snippets (`YoutubeTranscriptService`) to speed repeated runs on the same source/policy.
+- **Implemented (async, partial):** DB-backed async jobs for `pipeline/run` with persistent statuses (`queued` → `running` → `succeeded|failed`), polling endpoint, and lease-expiration safety for stuck jobs.
+- **Current rollout:** `pipeline/run` is async; `pipeline/run-video` remains sync for now.
 - Caching, async queue UI, face/contrast heuristics if metrics show lift.
 - Tune sampling for vertical/long-form niches.
 
@@ -158,3 +161,5 @@ Transcripts (Phase 3) can parallelize after Phase 1 if captions are a product pr
 - **2026-04-16** — Phase 2.1: cheap frame quality + dedup filters before VL (`VideoFrameSampleService`) with minimum-usable-frame fallback to `video_url`.
 - **2026-04-16** — Phase 2.2: blur proxy (`edgeEnergy`) + coverage-aware extra candidate timestamps and tolerant extraction failures.
 - **2026-04-16** — Phase 3 (YouTube MVP): optional captions snippet fetched from YouTube timedtext and injected into VL context.
+- **2026-04-16** — Phase 4 (partial): in-memory cache for frame sampling/transcript snippets with TTL + max-entry cap.
+- **2026-04-16** — Phase 4 (partial): DB-backed async jobs for `pipeline/run` (`POST /thumbnails/pipeline/jobs`, `GET /thumbnails/pipeline/jobs/:jobId`) with runner lease timeout handling.

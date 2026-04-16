@@ -11,6 +11,9 @@ import { PipelineProjectPersistenceService } from './services/pipeline-project-p
 import { PipelineThumbnailEditingService } from './services/pipeline-thumbnail-editing.service';
 import { PipelineThumbnailGenerationService } from './services/pipeline-thumbnail-generation.service';
 import { PipelineVideoUnderstandingService } from './services/pipeline-video-understanding.service';
+import { ThumbnailPipelineExecutionService } from './services/thumbnail-pipeline-execution.service';
+import { ThumbnailPipelineJobsRunnerService } from './services/thumbnail-pipeline-jobs-runner.service';
+import { ThumbnailPipelineJobsService } from './services/thumbnail-pipeline-jobs.service';
 import { ThumbnailPipelineOrchestratorService } from './services/thumbnail-pipeline-orchestrator.service';
 
 @Module({
@@ -23,6 +26,9 @@ import { ThumbnailPipelineOrchestratorService } from './services/thumbnail-pipel
     PipelineThumbnailGenerationService,
     PipelineThumbnailEditingService,
     PipelineProjectPersistenceService,
+    ThumbnailPipelineExecutionService,
+    ThumbnailPipelineJobsService,
+    ThumbnailPipelineJobsRunnerService,
     ThumbnailPipelineOrchestratorService,
   ],
   exports: [

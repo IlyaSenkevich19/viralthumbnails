@@ -23,6 +23,10 @@ export const VIDEO_PIPELINE_MIN_FRAME_EDGE_ENERGY = 7; // simple blur proxy from
 /** Phase 2.1: treat signatures below this distance as near-duplicates. */
 export const VIDEO_PIPELINE_FRAME_DEDUP_DISTANCE_THRESHOLD = 4.5;
 
+/** Phase 4: in-memory cache for frame sampling and transcript snippets. */
+export const VIDEO_PIPELINE_CACHE_TTL_MS = 15 * 60 * 1000; // 15 min
+export const VIDEO_PIPELINE_CACHE_MAX_ENTRIES = 200;
+
 export type VideoPipelineEnvConfig = {
   /** Optional; enables YouTube duration checks via Data API v3 (`videos.list`). */
   youtubeDataApiKey: string | undefined;

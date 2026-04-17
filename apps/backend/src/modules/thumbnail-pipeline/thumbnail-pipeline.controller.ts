@@ -4,7 +4,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { Throttle } from '@nestjs/throttler';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
 import { ApiControllerPaths } from '../../common/constants/api-controller-paths';
-import { THROTTLE_PIPELINE_RUN } from '../../common/throttle/throttle-limits';
+import { THROTTLE_PIPELINE_JOB_STATUS, THROTTLE_PIPELINE_RUN } from '../../common/throttle/throttle-limits';
 import { UserIdThrottlerGuard } from '../../common/throttle/user-id-throttler.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { SupabaseGuard } from '../auth/guards/supabase.guard';
@@ -48,7 +48,7 @@ export class ThumbnailPipelineController {
 
   @Get('pipeline/jobs/:jobId')
   @UseGuards(UserIdThrottlerGuard)
-  @Throttle({ default: { ...THROTTLE_PIPELINE_RUN } })
+  @Throttle({ default: { ...THROTTLE_PIPELINE_JOB_STATUS } })
   async getPipelineJob(@CurrentUser() userId: string, @Param('jobId') jobId: string) {
     const job = await this.jobs.getForUser(jobId, userId);
     if (!job) {

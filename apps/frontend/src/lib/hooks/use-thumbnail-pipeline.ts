@@ -16,6 +16,7 @@ import {
 
 const POLL_INTERVAL_MS = 1500;
 const MAX_POLL_ATTEMPTS = 200;
+const MAX_POLL_BACKOFF_MS = 10_000;
 
 export function useThumbnailPipelineMutation() {
   const queryClient = useQueryClient();
@@ -28,10 +29,22 @@ export function useThumbnailPipelineMutation() {
       if (!accessToken) throw new Error('Not signed in');
       const created = await thumbnailsApi.createThumbnailPipelineJob(accessToken, params);
       setJobStatusLabel('Queued');
+      let pollIntervalMs = POLL_INTERVAL_MS;
 
       for (let i = 0; i < MAX_POLL_ATTEMPTS; i++) {
-        await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
-        const job = await thumbnailsApi.getThumbnailPipelineJob(accessToken, created.job_id);
+        await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+        let job;
+        try {
+          job = await thumbnailsApi.getThumbnailPipelineJob(accessToken, created.job_id);
+        } catch (err) {
+          if (isApiError(err) && err.statusCode === 429) {
+            pollIntervalMs = Math.min(MAX_POLL_BACKOFF_MS, pollIntervalMs * 2);
+            setJobStatusLabel('Processing');
+            continue;
+          }
+          throw err;
+        }
+        pollIntervalMs = POLL_INTERVAL_MS;
         if (job.status === 'queued') {
           setJobStatusLabel('Queued');
           continue;

@@ -44,6 +44,11 @@ export default function ProjectsListPage() {
     router.push(projectVariantsPath(p.id));
   }
 
+  function prefetchProjectVariants(p: { id: string }) {
+    if (isOptimisticProjectId(p.id)) return;
+    void router.prefetch(projectVariantsPath(p.id));
+  }
+
   return (
     <div className="space-y-6">
       <SetPageFrame title="Projects" />
@@ -158,6 +163,8 @@ export default function ProjectsListPage() {
                         'motion-base hover:bg-secondary/50',
                         !optimistic && 'cursor-pointer focus-visible:bg-secondary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring',
                       )}
+                      onMouseEnter={() => prefetchProjectVariants(p)}
+                      onFocus={() => prefetchProjectVariants(p)}
                       onClick={() => openProject(p)}
                       onKeyDown={(e) => {
                         if (optimistic) return;
@@ -223,6 +230,8 @@ export default function ProjectsListPage() {
                     !optimistic &&
                       'cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                   )}
+                  onMouseEnter={() => prefetchProjectVariants(p)}
+                  onFocus={() => prefetchProjectVariants(p)}
                   onClick={() => openProject(p)}
                   onKeyDown={(e) => {
                     if (optimistic) return;

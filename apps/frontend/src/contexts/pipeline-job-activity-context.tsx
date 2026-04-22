@@ -18,13 +18,14 @@ import {
   DASHBOARD_PIPELINE_VIDEO_RECOVERY_KEY,
 } from '@/lib/pipeline/pipeline-recovery-storage';
 import {
+  getPipelineJobPollWaitMs,
+  PIPELINE_JOB_MAX_POLL_ATTEMPTS,
+  PIPELINE_JOB_POLL_429_MAX_BACKOFF_MS,
+} from '@/lib/pipeline/pipeline-job-poll';
+import {
   handleRecoveredPipelineRunSuccess,
   handleRecoveredVideoRunSuccess,
 } from '@/components/dashboard/dashboard-create-hub.handlers';
-
-const POLL_MS = 1500;
-const MAX_ATTEMPTS = 200;
-const MAX_BACKOFF_MS = 10_000;
 
 export type PipelineJobActivityValue = {
   /** Status text while a stored job is being polled in the app shell (e.g. after reload). */
@@ -79,29 +80,24 @@ function usePipelineJobAppRecoveryValue(): PipelineJobActivityValue {
       jobId: string;
       storageKey: string;
     }) => {
-      let intervalMs = POLL_MS;
-      for (let i = 0; i < MAX_ATTEMPTS; i++) {
+      let successfulPolls = 0;
+      let nextWaitMs = 0;
+      for (let i = 0; i < PIPELINE_JOB_MAX_POLL_ATTEMPTS; i++) {
         if (cancelled) return;
-        if (i > 0) await new Promise((r) => setTimeout(r, intervalMs));
+        if (nextWaitMs > 0) {
+          await new Promise((r) => setTimeout(r, nextWaitMs));
+        }
         let job;
         try {
           job = await thumbnailsApi.getThumbnailPipelineJob(token, params.jobId);
         } catch (e) {
           if (isApiError(e) && e.statusCode === 429) {
-            intervalMs = Math.min(MAX_BACKOFF_MS, intervalMs * 2);
+            const base = nextWaitMs > 0 ? nextWaitMs : getPipelineJobPollWaitMs(0);
+            nextWaitMs = Math.min(PIPELINE_JOB_POLL_429_MAX_BACKOFF_MS, base * 2);
             setActivityLabel('Processing');
             continue;
           }
           throw e;
-        }
-        intervalMs = POLL_MS;
-        if (job.status === 'queued') {
-          setActivityLabel('Queued');
-          continue;
-        }
-        if (job.status === 'running') {
-          setActivityLabel('Processing');
-          continue;
         }
         if (job.status === 'succeeded') {
           clearId(params.storageKey);
@@ -124,6 +120,9 @@ function usePipelineJobAppRecoveryValue(): PipelineJobActivityValue {
           clearId(params.storageKey);
           throw new Error(job.error?.message || 'Pipeline job failed');
         }
+        setActivityLabel(job.status === 'queued' ? 'Queued' : 'Processing');
+        successfulPolls += 1;
+        nextWaitMs = getPipelineJobPollWaitMs(successfulPolls - 1);
       }
       clearId(params.storageKey);
       throw new Error('Pipeline job polling timed out');

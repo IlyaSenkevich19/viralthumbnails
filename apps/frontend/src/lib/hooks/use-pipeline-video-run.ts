@@ -11,14 +11,15 @@ import { toast } from 'sonner';
 import { isApiError } from '@/lib/api/api-error';
 import { THUMBNAIL_PIPELINE_VIDEO_MUTATION_KEY } from '@/lib/hooks/pipeline-mutation-keys';
 import {
+  getPipelineJobPollWaitMs,
+  PIPELINE_JOB_MAX_POLL_ATTEMPTS,
+  PIPELINE_JOB_POLL_429_MAX_BACKOFF_MS,
+} from '@/lib/pipeline/pipeline-job-poll';
+import {
   handleBillingMutationError,
   handleOpenRouterMutationError,
   handlePipelineVideoDurationError,
 } from '@/lib/paywall-notify';
-
-const POLL_INTERVAL_MS = 1500;
-const MAX_POLL_ATTEMPTS = 200;
-const MAX_POLL_BACKOFF_MS = 10_000;
 
 type PipelineVideoRecoveryOptions = {
   /** When set, job id is persisted for app-shell recovery after reload. */
@@ -56,28 +57,20 @@ export function usePipelineVideoRunMutation(options?: PipelineVideoRecoveryOptio
       const created = await thumbnailsApi.runThumbnailPipelineVideo(accessToken, params);
       writeStoredJobId(options?.recoveryKey, created.job_id);
       setJobStatusLabel('Queued');
-      let pollIntervalMs = POLL_INTERVAL_MS;
-      for (let i = 0; i < MAX_POLL_ATTEMPTS; i++) {
-        await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+      let attempt = 0;
+      let nextWaitMs = getPipelineJobPollWaitMs(0);
+      for (let i = 0; i < PIPELINE_JOB_MAX_POLL_ATTEMPTS; i++) {
+        await new Promise((resolve) => setTimeout(resolve, nextWaitMs));
         let job;
         try {
           job = await thumbnailsApi.getThumbnailPipelineJob(accessToken, created.job_id);
         } catch (err) {
           if (isApiError(err) && err.statusCode === 429) {
-            pollIntervalMs = Math.min(MAX_POLL_BACKOFF_MS, pollIntervalMs * 2);
+            nextWaitMs = Math.min(PIPELINE_JOB_POLL_429_MAX_BACKOFF_MS, nextWaitMs * 2);
             setJobStatusLabel('Processing');
             continue;
           }
           throw err;
-        }
-        pollIntervalMs = POLL_INTERVAL_MS;
-        if (job.status === 'queued') {
-          setJobStatusLabel('Queued');
-          continue;
-        }
-        if (job.status === 'running') {
-          setJobStatusLabel('Processing');
-          continue;
         }
         if (job.status === 'succeeded') {
           setJobStatusLabel('Done');
@@ -92,6 +85,9 @@ export function usePipelineVideoRunMutation(options?: PipelineVideoRecoveryOptio
           clearStoredJobId(options?.recoveryKey);
           throw new Error(job.error?.message || 'Video pipeline job failed');
         }
+        setJobStatusLabel(job.status === 'queued' ? 'Queued' : 'Processing');
+        attempt += 1;
+        nextWaitMs = getPipelineJobPollWaitMs(attempt);
       }
       clearStoredJobId(options?.recoveryKey);
       throw new Error('Video pipeline polling timed out');

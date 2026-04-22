@@ -1,9 +1,11 @@
 export { useBackendHealth } from './use-backend-health';
 export { useBackendSetupHealth } from './use-backend-setup-health';
 export {
+  createEmptyProjectMutationKey,
   createProjectAndGenerateMutationKey,
   useProjectsList,
   useProjectWithVariants,
+  useCreateEmptyProjectMutation,
   useCreateProjectAndGenerateMutation,
   useGenerateThumbnailsMutation,
   useDeleteProjectMutation,

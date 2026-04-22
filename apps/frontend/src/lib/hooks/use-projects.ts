@@ -1,7 +1,9 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/auth-context';
+import { projectVariantsPath } from '@/config/routes';
 import { projectsApi } from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
 import type { ProjectRow, ProjectSourceType, ProjectWithVariants } from '@/lib/types/project';
@@ -12,6 +14,7 @@ import { INITIAL_GENERATION_ALL_FAILED } from '@/lib/api/project-errors';
 import { handleBillingMutationError } from '@/lib/paywall-notify';
 
 export const createProjectAndGenerateMutationKey = ['projects', 'create-and-generate'] as const;
+export const createEmptyProjectMutationKey = ['projects', 'create-empty'] as const;
 
 export function useProjectsList() {
   const { user, accessToken, isLoading: authLoading } = useAuth();
@@ -152,6 +155,33 @@ export function useCreateProjectAndGenerateMutation() {
       if (userId) {
         queryClient.invalidateQueries({ queryKey: queryKeys.billing.credits(userId) });
       }
+    },
+  });
+}
+
+export function useCreateEmptyProjectMutation() {
+  const queryClient = useQueryClient();
+  const router = useRouter();
+  const { accessToken, user } = useAuth();
+  const userId = user?.id;
+
+  return useMutation({
+    mutationKey: createEmptyProjectMutationKey,
+    mutationFn: async () => {
+      if (!accessToken) throw new Error('Not signed in');
+      return projectsApi.createProject(accessToken, {
+        source_type: 'text',
+        source_data: { text: '' },
+      });
+    },
+    onSuccess: (project) => {
+      if (userId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.projects.list(userId) });
+      }
+      router.push(projectVariantsPath(project.id));
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : 'Could not create project');
     },
   });
 }

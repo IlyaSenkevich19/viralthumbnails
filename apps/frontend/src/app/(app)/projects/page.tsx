@@ -3,9 +3,15 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { FolderOpen, Loader2, Plus } from 'lucide-react';
+import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
-import { useNewProject } from '@/contexts/new-project-context';
-import { useProjectsList, useDeleteProjectMutation, usePipelineJobSurface } from '@/lib/hooks';
+import {
+  useProjectsList,
+  useDeleteProjectMutation,
+  usePipelineJobSurface,
+  useCreateEmptyProjectMutation,
+} from '@/lib/hooks';
+import { AppRoutes, projectVariantsPath } from '@/config/routes';
 import { formatRelativeTime, humanizeKey } from '@/lib/format';
 import { projectStatusLabel, statusToneClass } from '@/lib/status-tone';
 import { isOptimisticProjectId } from '@/lib/types/project';
@@ -15,16 +21,15 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { ConfirmationModal } from '@/components/ui/confirmation-modal';
-import { projectVariantsPath } from '@/config/routes';
 import { ProjectRowMenu } from '@/components/projects/project-row-menu';
 import { SetPageFrame } from '@/components/layout/set-page-frame';
 
 export default function ProjectsListPage() {
   const router = useRouter();
   const { user, accessToken, isLoading: authLoading } = useAuth();
-  const { openNewProject } = useNewProject();
   const { data: projects = [], isPending, isError, error } = useProjectsList();
   const deleteProject = useDeleteProjectMutation();
+  const createEmptyProject = useCreateEmptyProjectMutation();
   const pipelineSurface = usePipelineJobSurface();
 
   const [projectToDelete, setProjectToDelete] = useState<{ id: string; title: string } | null>(
@@ -88,8 +93,17 @@ export default function ProjectsListPage() {
       />
 
       <div className="flex flex-wrap items-center justify-end gap-3">
-        <Button type="button" className="inline-flex h-10 gap-2" onClick={() => openNewProject()}>
-          <Plus className="h-4 w-4" aria-hidden />
+        <Button
+          type="button"
+          className="inline-flex h-10 gap-2"
+          disabled={!hasSession || createEmptyProject.isPending}
+          onClick={() => createEmptyProject.mutate()}
+        >
+          {createEmptyProject.isPending ? (
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+          ) : (
+            <Plus className="h-4 w-4" aria-hidden />
+          )}
           New project
         </Button>
       </div>
@@ -126,12 +140,25 @@ export default function ProjectsListPage() {
             <div className="space-y-2">
               <p className="text-base font-semibold tracking-tight text-foreground">No projects yet</p>
               <p className="mx-auto max-w-sm text-sm leading-relaxed text-muted-foreground">
-                Start from the dashboard with a prompt, YouTube link, or video — then open projects here to refine
-                variants.
+                Create a project, then pick a template and face and generate thumbnails on the next screen. For a
+                one-step run from a prompt, YouTube link, or video, use the{' '}
+                <Link href={AppRoutes.dashboard} className="font-medium text-primary underline-offset-2 hover:underline">
+                  Dashboard
+                </Link>
+                .
               </p>
             </div>
-            <Button type="button" className={buttonVariants()} onClick={() => openNewProject()}>
-              <Plus className="h-4 w-4" aria-hidden />
+            <Button
+              type="button"
+              className={buttonVariants()}
+              disabled={!hasSession || createEmptyProject.isPending}
+              onClick={() => createEmptyProject.mutate()}
+            >
+              {createEmptyProject.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              ) : (
+                <Plus className="h-4 w-4" aria-hidden />
+              )}
               New project
             </Button>
           </CardContent>

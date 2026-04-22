@@ -33,3 +33,4 @@ export { useYoutubeInspiration } from './use-youtube-inspiration';
 export { usePipelineVideoRunMutation } from './use-pipeline-video-run';
 export { usePipelineVideoCreateFlow } from './use-pipeline-video-create-flow';
 export { useThumbnailPipelineMutation } from './use-thumbnail-pipeline';
+export { usePipelineJobSurface } from './use-pipeline-job-surface';

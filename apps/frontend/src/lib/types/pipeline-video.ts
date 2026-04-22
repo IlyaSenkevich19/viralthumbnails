@@ -15,5 +15,9 @@ export type PipelineVideoResponse = {
   analysis: unknown;
   selectedShots: unknown;
   thumbnails: PipelineVideoThumbnailRow[];
+  resolvedReferences?: {
+    templateFromId: boolean;
+    faceFromId: boolean;
+  };
   warnings?: string[];
 };

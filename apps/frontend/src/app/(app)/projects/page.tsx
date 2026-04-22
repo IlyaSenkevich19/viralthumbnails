@@ -2,10 +2,10 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { FolderOpen, Plus } from 'lucide-react';
+import { FolderOpen, Loader2, Plus } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import { useNewProject } from '@/contexts/new-project-context';
-import { useProjectsList, useDeleteProjectMutation } from '@/lib/hooks';
+import { useProjectsList, useDeleteProjectMutation, usePipelineJobSurface } from '@/lib/hooks';
 import { formatRelativeTime, humanizeKey } from '@/lib/format';
 import { projectStatusLabel, statusToneClass } from '@/lib/status-tone';
 import { isOptimisticProjectId } from '@/lib/types/project';
@@ -25,6 +25,7 @@ export default function ProjectsListPage() {
   const { openNewProject } = useNewProject();
   const { data: projects = [], isPending, isError, error } = useProjectsList();
   const deleteProject = useDeleteProjectMutation();
+  const pipelineSurface = usePipelineJobSurface();
 
   const [projectToDelete, setProjectToDelete] = useState<{ id: string; title: string } | null>(
     null,
@@ -52,6 +53,18 @@ export default function ProjectsListPage() {
   return (
     <div className="space-y-6">
       <SetPageFrame title="Projects" />
+      {pipelineSurface.active && pipelineSurface.label ? (
+        <div
+          className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-sm text-foreground"
+          role="status"
+          aria-live="polite"
+        >
+          <Loader2 className="h-4 w-4 shrink-0 animate-spin text-primary" aria-hidden />
+          <span>
+            {pipelineSurface.label}. The new project will appear here when the run finishes.
+          </span>
+        </div>
+      ) : null}
       <ConfirmationModal
         open={projectToDelete !== null}
         onOpenChange={(open) => {

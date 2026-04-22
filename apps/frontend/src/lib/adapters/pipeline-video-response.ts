@@ -27,6 +27,12 @@ export function toPipelineVideoResponse(res: PipelineRunResponse): PipelineVideo
     analysis: res.analysis,
     selectedShots,
     thumbnails,
+    resolvedReferences: res.resolved_references
+      ? {
+          templateFromId: Boolean(res.resolved_references.template_from_id),
+          faceFromId: Boolean(res.resolved_references.face_from_id),
+        }
+      : undefined,
     warnings: res.warnings,
   };
 }

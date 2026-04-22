@@ -2,7 +2,8 @@
 
 import { useMemo } from 'react';
 import { usePathname } from 'next/navigation';
-import { Menu } from 'lucide-react';
+import { Loader2, Menu } from 'lucide-react';
+import { usePipelineJobSurface } from '@/lib/hooks/use-pipeline-job-surface';
 import { BrandWordmark } from '@/components/layout/brand-wordmark';
 import { AppRoutes } from '@/config/routes';
 import { usePageFrame } from '@/contexts/page-frame-context';
@@ -22,6 +23,7 @@ export function HeaderShell({
   className?: string;
 }) {
   const pathname = usePathname();
+  const pipelineJob = usePipelineJobSurface();
   const { frame } = usePageFrame();
   const staticFrame = useMemo(() => resolveStaticPageFrame(pathname), [pathname]);
 
@@ -83,6 +85,17 @@ export function HeaderShell({
             alignActionsTop ? 'pt-0.5 sm:pt-1' : 'pt-0.5',
           )}
         >
+          {pipelineJob.active && pipelineJob.label ? (
+            <p
+              className="flex min-w-0 max-w-[6.5rem] items-center gap-1.5 truncate text-xs text-muted-foreground sm:max-w-[10rem]"
+              role="status"
+              aria-live="polite"
+              title={pipelineJob.label}
+            >
+              <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-primary" aria-hidden />
+              <span className="min-w-0 truncate">{pipelineJob.label}</span>
+            </p>
+          ) : null}
           <HeaderCreditsLink className="max-w-[10rem] sm:max-w-[12rem] lg:max-w-none" />
           <button
             type="button"

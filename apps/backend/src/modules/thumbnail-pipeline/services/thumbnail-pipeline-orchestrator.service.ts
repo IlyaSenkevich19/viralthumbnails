@@ -8,6 +8,7 @@ import { PipelineThumbnailEditingService } from './pipeline-thumbnail-editing.se
 import { PipelineThumbnailGenerationService } from './pipeline-thumbnail-generation.service';
 import { PipelineVideoUnderstandingService } from './pipeline-video-understanding.service';
 import { YoutubeTranscriptService } from '../../video-thumbnails/services/youtube-transcript.service';
+import type { ThumbnailPipelineJobProgress } from '../types/thumbnail-pipeline-job.types';
 
 /**
  * Coordinates ingest-shaped inputs → understanding → prompt building →
@@ -26,7 +27,10 @@ export class ThumbnailPipelineOrchestratorService {
     private readonly thumbnailEdit: PipelineThumbnailEditingService,
   ) {}
 
-  async run(input: ThumbnailPipelineRunInput): Promise<ThumbnailPipelineRunResult> {
+  async run(
+    input: ThumbnailPipelineRunInput,
+    onProgress?: (progress: ThumbnailPipelineJobProgress) => Promise<void>,
+  ): Promise<ThumbnailPipelineRunResult> {
     const runId = randomUUID();
     const count = Math.min(12, Math.max(1, input.variantCount ?? 4));
     const includeImageEdit = Boolean(input.baseImageDataUrl?.trim() && input.editInstruction?.trim());
@@ -44,6 +48,7 @@ export class ThumbnailPipelineOrchestratorService {
     });
 
     try {
+      await onProgress?.({ stage: 'analyzing_source', label: 'Analyzing source context' });
       const refined = await this.refinement.refineIfConfigured(input.userPrompt);
       const transcriptSnippet = input.videoUrl?.trim()
         ? await this.youtubeTranscript.tryFetchCompactTranscript(input.videoUrl.trim(), 'pipeline-vl')
@@ -59,6 +64,7 @@ export class ThumbnailPipelineOrchestratorService {
         faceReferenceDataUrls: input.faceReferenceDataUrls,
       });
 
+      await onProgress?.({ stage: 'building_prompts', label: 'Building generation prompts' });
       const basePrompts = this.promptBuilder.buildFinalImagePrompts({
         analysis,
         userPrompt: refined.text,
@@ -90,10 +96,28 @@ export class ThumbnailPipelineOrchestratorService {
 
       let variants: ThumbnailPipelineRunResult['variants'];
       if (generateImages) {
+        await onProgress?.({
+          stage: 'generating_images',
+          label: `Generating images (0/${imagePromptsUsed.length})`,
+          current: 0,
+          total: imagePromptsUsed.length,
+          percent: 0,
+        });
         modelsUsed.imageGeneration = this.thumbnailGen.imageModel();
         variants = await this.thumbnailGen.generateVariants({
           prompts: imagePromptsUsed,
           reference: refBundle,
+          onProgress: onProgress
+            ? async (progress) => {
+                await onProgress({
+                  stage: 'generating_images',
+                  label: `Generating images (${progress.current}/${progress.total})`,
+                  current: progress.current,
+                  total: progress.total,
+                  percent: progress.percent,
+                });
+              }
+            : undefined,
         });
         if (!variants.length) {
           throw new BadGatewayException({

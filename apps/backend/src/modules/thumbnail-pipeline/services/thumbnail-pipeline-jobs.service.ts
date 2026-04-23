@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { SupabaseService } from '../../supabase/supabase.service';
 import type {
   ThumbnailPipelineJobPayload,
+  ThumbnailPipelineJobProgress,
   ThumbnailPipelineJobRow,
   ThumbnailPipelineJobStatus,
 } from '../types/thumbnail-pipeline-job.types';
@@ -20,6 +21,10 @@ export class ThumbnailPipelineJobsService {
         user_id: params.userId,
         status: 'queued',
         request_payload: params.payload,
+        progress_payload: {
+          stage: 'queued',
+          label: 'Queued',
+        } satisfies ThumbnailPipelineJobProgress,
       })
       .select('*')
       .single();
@@ -47,6 +52,11 @@ export class ThumbnailPipelineJobsService {
     await this.patchJob(jobId, 'succeeded', {
       result_payload: resultPayload,
       error_payload: null,
+      progress_payload: {
+        stage: 'completed',
+        label: 'Completed',
+        percent: 100,
+      } satisfies ThumbnailPipelineJobProgress,
       finished_at: new Date().toISOString(),
       lease_expires_at: null,
     });
@@ -55,6 +65,10 @@ export class ThumbnailPipelineJobsService {
   async markFailed(jobId: string, errorPayload: { code?: string; message: string }): Promise<void> {
     await this.patchJob(jobId, 'failed', {
       error_payload: errorPayload,
+      progress_payload: {
+        stage: 'failed',
+        label: errorPayload.message,
+      } satisfies ThumbnailPipelineJobProgress,
       finished_at: new Date().toISOString(),
       lease_expires_at: null,
     });
@@ -68,6 +82,10 @@ export class ThumbnailPipelineJobsService {
         status: 'queued',
         updated_at: new Date().toISOString(),
         error_payload: errorPayload,
+        progress_payload: {
+          stage: 'queued',
+          label: 'Queued for retry',
+        } satisfies ThumbnailPipelineJobProgress,
         lease_expires_at: null,
       })
       .eq('id', jobId);
@@ -87,6 +105,10 @@ export class ThumbnailPipelineJobsService {
         finished_at: nowIso,
         lease_expires_at: null,
         error_payload: { code: 'JOB_LEASE_EXPIRED', message: 'Pipeline job lease expired before completion' },
+        progress_payload: {
+          stage: 'failed',
+          label: 'Failed (lease expired)',
+        } satisfies ThumbnailPipelineJobProgress,
       })
       .eq('status', 'running')
       .lt('lease_expires_at', nowIso)
@@ -121,6 +143,10 @@ export class ThumbnailPipelineJobsService {
         started_at: now.toISOString(),
         lease_expires_at: leaseExpiresAt,
         attempt_count: (queued.attempt_count ?? 0) + 1,
+        progress_payload: {
+          stage: 'resolving_references',
+          label: 'Preparing inputs',
+        } satisfies ThumbnailPipelineJobProgress,
       })
       .eq('id', queued.id)
       .eq('status', 'queued')
@@ -149,6 +175,37 @@ export class ThumbnailPipelineJobsService {
     if (error) {
       throw new Error(`Failed to update pipeline job: ${error.message}`);
     }
+  }
+
+  async updateProgress(jobId: string, progress: ThumbnailPipelineJobProgress): Promise<void> {
+    const client = this.supabase.getAdminClient();
+    const { error } = await client
+      .from(this.table)
+      .update({
+        progress_payload: progress,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', jobId)
+      .in('status', ['queued', 'running']);
+    if (error) {
+      throw new Error(`Failed to update pipeline job progress: ${error.message}`);
+    }
+  }
+
+  async findActiveForUser(userId: string): Promise<ThumbnailPipelineJobRow | null> {
+    const client = this.supabase.getAdminClient();
+    const { data, error } = await client
+      .from(this.table)
+      .select('*')
+      .eq('user_id', userId)
+      .in('status', ['queued', 'running'])
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    if (error) {
+      throw new Error(`Failed to read active pipeline job: ${error.message}`);
+    }
+    return (data as ThumbnailPipelineJobRow | null) ?? null;
   }
 }
 

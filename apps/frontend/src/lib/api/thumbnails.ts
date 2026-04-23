@@ -76,12 +76,29 @@ export type PipelineJobSubmitResponse = {
   created_at: string;
 };
 
+export type PipelineJobProgress = {
+  stage:
+    | 'queued'
+    | 'resolving_references'
+    | 'analyzing_source'
+    | 'building_prompts'
+    | 'generating_images'
+    | 'persisting_project'
+    | 'completed'
+    | 'failed';
+  label: string;
+  current?: number;
+  total?: number;
+  percent?: number;
+};
+
 export type PipelineJobStatusResponse = {
   job_id: string;
   status: 'queued' | 'running' | 'succeeded' | 'failed';
   created_at: string;
   started_at?: string | null;
   finished_at?: string | null;
+  progress?: PipelineJobProgress;
   result?: PipelineRunResponse;
   error?: { code?: string; message: string };
 };

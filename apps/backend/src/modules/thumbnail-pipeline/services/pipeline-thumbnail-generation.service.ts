@@ -35,6 +35,7 @@ export class PipelineThumbnailGenerationService {
   async generateVariants(params: {
     prompts: string[];
     reference?: ReferenceBundle;
+    onProgress?: (progress: { current: number; total: number; percent: number }) => Promise<void>;
   }): Promise<GeneratedPipelineImage[]> {
     if (!this.openRouter.getApiKey()) {
       throw new Error('OPENROUTER_API_KEY is not set');
@@ -46,6 +47,7 @@ export class PipelineThumbnailGenerationService {
     const timeoutMs = getOpenRouterConfig(this.config).projectGenTimeoutMs;
 
     const out: GeneratedPipelineImage[] = [];
+    const total = params.prompts.length;
     for (let i = 0; i < params.prompts.length; i++) {
       const prompt = params.prompts[i];
       try {
@@ -78,6 +80,11 @@ export class PipelineThumbnailGenerationService {
           this.logger.warn(`Pipeline image gen failed index=${i}: ${msg}`);
         }
       }
+      await params.onProgress?.({
+        current: Math.min(i + 1, total),
+        total,
+        percent: total > 0 ? Math.round(((i + 1) / total) * 100) : 100,
+      });
     }
 
     return out;

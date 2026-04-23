@@ -4,6 +4,7 @@ import type { PipelineVideoContext } from '../../video-thumbnails/types/video-pi
 import { ThumbnailPipelineRunDto } from '../dto/thumbnail-pipeline-run.dto';
 import { ThumbnailPipelineOrchestratorService } from './thumbnail-pipeline-orchestrator.service';
 import { PipelineProjectPersistenceService } from './pipeline-project-persistence.service';
+import type { ThumbnailPipelineJobProgress } from '../types/thumbnail-pipeline-job.types';
 
 @Injectable()
 export class ThumbnailPipelineExecutionService {
@@ -17,7 +18,9 @@ export class ThumbnailPipelineExecutionService {
     userId: string,
     body: ThumbnailPipelineRunDto,
     videoContext?: PipelineVideoContext,
+    onProgress?: (progress: ThumbnailPipelineJobProgress) => Promise<void>,
   ): Promise<Record<string, unknown>> {
+    await onProgress?.({ stage: 'resolving_references', label: 'Resolving template and face references' });
     const resolvedRefs =
       body.template_id?.trim() || body.avatar_id?.trim()
         ? await this.projectVariantImage.resolveReferenceDataUrlsForUser({
@@ -50,7 +53,7 @@ export class ThumbnailPipelineExecutionService {
       baseImageDataUrl: body.base_image_data_url,
       editInstruction: body.edit_instruction,
     };
-    const result = await this.orchestrator.run(runInput);
+    const result = await this.orchestrator.run(runInput, onProgress);
     const warnings: string[] = [];
     if (body.template_id?.trim() && resolvedRefs && !resolvedRefs.hasTemplateImage) {
       warnings.push(`Template reference not resolved: ${body.template_id.trim()}`);
@@ -61,12 +64,15 @@ export class ThumbnailPipelineExecutionService {
 
     const persistedProject =
       body.persist_project && result.variants?.length
-        ? await this.persistence.persist({
+        ? await (async () => {
+            await onProgress?.({ stage: 'persisting_project', label: 'Saving project and variants' });
+            return this.persistence.persist({
             userId,
             runInput,
             runResult: result,
             videoContext,
-          })
+            });
+          })()
         : undefined;
 
     return {

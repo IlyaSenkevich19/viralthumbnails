@@ -70,7 +70,16 @@ export class ThumbnailPipelineJobsRunnerService implements OnModuleInit, OnModul
       if (!body?.user_prompt) {
         throw new Error('Invalid job payload: missing body.user_prompt');
       }
-      const result = await this.execution.execute(job.user_id, body, payload.videoContext);
+      await this.jobs.updateProgress(job.id, {
+        stage: 'resolving_references',
+        label: 'Preparing inputs',
+      });
+      const result = await this.execution.execute(
+        job.user_id,
+        body,
+        payload.videoContext,
+        async (progress) => this.jobs.updateProgress(job.id, progress),
+      );
       await this.jobs.markSucceeded(job.id, result);
       const elapsed = Date.now() - startedAt;
       this.logger.log(

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, NotFoundException, Param, Post, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Body, ConflictException, Controller, Get, NotFoundException, Param, Post, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Throttle } from '@nestjs/throttler';
@@ -63,6 +63,7 @@ export class ThumbnailPipelineController {
       created_at: job.created_at,
       started_at: job.started_at,
       finished_at: job.finished_at,
+      progress: job.progress_payload ?? undefined,
       result: job.result_payload ?? undefined,
       error: job.error_payload ?? undefined,
     };
@@ -97,6 +98,7 @@ export class ThumbnailPipelineController {
     @Body() body: ThumbnailPipelineRunVideoDto,
     @UploadedFile() file?: UploadedVideoFile,
   ) {
+    await this.ensureNoActiveJob(userId);
     const ingestRunId = randomUUID();
     const resolved = await this.ingestion.resolve({
       userId,
@@ -137,6 +139,7 @@ export class ThumbnailPipelineController {
   }
 
   private async enqueuePipelineRunJob(userId: string, body: ThumbnailPipelineRunDto) {
+    await this.ensureNoActiveJob(userId);
     const videoContext = await this.videoDurationGate.resolveContextAndEnforceForPipeline({
       videoUrl: body.video_url?.trim(),
       logContext: 'pipeline/run',
@@ -150,5 +153,14 @@ export class ThumbnailPipelineController {
       status: job.status,
       created_at: job.created_at,
     };
+  }
+
+  private async ensureNoActiveJob(userId: string): Promise<void> {
+    const active = await this.jobs.findActiveForUser(userId);
+    if (!active) return;
+    throw new ConflictException({
+      code: 'PIPELINE_JOB_ALREADY_ACTIVE',
+      message: 'A pipeline generation is already in progress. Please wait until it finishes.',
+    });
   }
 }

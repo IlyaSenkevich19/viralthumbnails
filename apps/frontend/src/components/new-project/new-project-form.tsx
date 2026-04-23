@@ -6,6 +6,7 @@ import { DEFAULT_NEW_PROJECT_VARIANT_COUNT } from '@/config/credits';
 import { useAuth } from '@/contexts/auth-context';
 import {
   useGenerationCredits,
+  usePipelineJobSurface,
   usePipelineVideoCreateFlow,
   useThumbnailPipelineMutation,
 } from '@/lib/hooks';
@@ -44,6 +45,7 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
   const { accessToken } = useAuth();
   const runPipeline = useThumbnailPipelineMutation();
   const pipelineVideoCreate = usePipelineVideoCreateFlow();
+  const pipelineSurface = usePipelineJobSurface();
   const { data: credits } = useGenerationCredits();
   const submitLock = useRef(false);
 
@@ -120,6 +122,10 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (submitLock.current) return;
+    if (pipelineSurface.active) {
+      toast.info('A generation is already in progress. Wait until it finishes before starting another one.');
+      return;
+    }
     if (!accessToken) {
       toast.error('Not signed in');
       return;
@@ -539,7 +545,7 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
               disabled={
                 tab === 'video'
                   ? pipelineVideoCreate.isPending || videoPreparing || cannotAffordVideo
-                  : runPipeline.isPending || cannotAffordInitialBatch
+                  : runPipeline.isPending || pipelineSurface.active || cannotAffordInitialBatch
               }
             >
               {tab === 'video'
@@ -550,7 +556,7 @@ export function NewProjectForm({ initialQuery, onRequestClose }: NewProjectFormP
                       ? `${pipelineVideoCreate.jobStatusLabel}…`
                       : 'Working…'
                     : 'Generate from video'
-                : runPipeline.isPending
+                : runPipeline.isPending || pipelineSurface.active
                   ? runPipeline.jobStatusLabel
                     ? `${runPipeline.jobStatusLabel}…`
                     : 'Working…'

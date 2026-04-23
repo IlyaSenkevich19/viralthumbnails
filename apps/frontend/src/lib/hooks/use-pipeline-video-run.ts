@@ -85,7 +85,7 @@ export function usePipelineVideoRunMutation(options?: PipelineVideoRecoveryOptio
           clearStoredJobId(options?.recoveryKey);
           throw new Error(job.error?.message || 'Video pipeline job failed');
         }
-        setJobStatusLabel(job.status === 'queued' ? 'Queued' : 'Processing');
+        setJobStatusLabel(job.progress?.label || (job.status === 'queued' ? 'Queued' : 'Processing'));
         attempt += 1;
         nextWaitMs = getPipelineJobPollWaitMs(attempt);
       }

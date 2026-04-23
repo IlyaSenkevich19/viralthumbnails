@@ -120,7 +120,7 @@ function usePipelineJobAppRecoveryValue(): PipelineJobActivityValue {
           clearId(params.storageKey);
           throw new Error(job.error?.message || 'Pipeline job failed');
         }
-        setActivityLabel(job.status === 'queued' ? 'Queued' : 'Processing');
+        setActivityLabel(job.progress?.label || (job.status === 'queued' ? 'Queued' : 'Processing'));
         successfulPolls += 1;
         nextWaitMs = getPipelineJobPollWaitMs(successfulPolls - 1);
       }

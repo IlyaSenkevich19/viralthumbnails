@@ -12,6 +12,7 @@ import {
   NICHE_ALL,
   useAvatarsList,
   useGenerationCredits,
+  usePipelineJobSurface,
   usePipelineVideoCreateFlow,
   useThumbnailPipelineMutation,
   useTemplatesList,
@@ -46,6 +47,7 @@ export function useDashboardCreateHub() {
   const runPipeline = useThumbnailPipelineMutation({
     recoveryKey: DASHBOARD_RUN_RECOVERY_KEY,
   });
+  const pipelineSurface = usePipelineJobSurface();
   const pipelineVideoCreate = usePipelineVideoCreateFlow({
     recoveryKey: DASHBOARD_VIDEO_RECOVERY_KEY,
   });
@@ -101,7 +103,7 @@ export function useDashboardCreateHub() {
       : false;
   const busyVideo =
     mode === DASHBOARD_CREATE_HUB_MODE.video && (pipelineVideoCreate.isPending || videoPreparing);
-  const primaryBusy = busyProject || busyVideo;
+  const primaryBusy = busyProject || busyVideo || pipelineSurface.active;
   const requiredCredits = creditsRequiredForMode({ mode, videoCount });
   const cannotAffordGenerate = credits?.balance != null && credits.balance < requiredCredits;
   const plannedStyleCount = plannedStyleCountForMode(mode, videoCount);

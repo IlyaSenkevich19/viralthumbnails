@@ -3,6 +3,24 @@ import type { ThumbnailPipelineRunDto } from '../dto/thumbnail-pipeline-run.dto'
 
 export type ThumbnailPipelineJobStatus = 'queued' | 'running' | 'succeeded' | 'failed';
 
+export type ThumbnailPipelineJobStage =
+  | 'queued'
+  | 'resolving_references'
+  | 'analyzing_source'
+  | 'building_prompts'
+  | 'generating_images'
+  | 'persisting_project'
+  | 'completed'
+  | 'failed';
+
+export type ThumbnailPipelineJobProgress = {
+  stage: ThumbnailPipelineJobStage;
+  label: string;
+  current?: number;
+  total?: number;
+  percent?: number;
+};
+
 export type ThumbnailPipelineJobPayload = {
   source: 'run' | 'run-video';
   body: ThumbnailPipelineRunDto;
@@ -15,6 +33,7 @@ export type ThumbnailPipelineJobRow = {
   user_id: string;
   status: ThumbnailPipelineJobStatus;
   request_payload: ThumbnailPipelineJobPayload;
+  progress_payload: ThumbnailPipelineJobProgress | null;
   result_payload: unknown | null;
   error_payload: { code?: string; message: string } | null;
   attempt_count: number;

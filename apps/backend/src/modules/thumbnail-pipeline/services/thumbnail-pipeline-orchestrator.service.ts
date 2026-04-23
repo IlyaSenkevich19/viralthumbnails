@@ -10,6 +10,8 @@ import { PipelineVideoUnderstandingService } from './pipeline-video-understandin
 import { YoutubeTranscriptService } from '../../video-thumbnails/services/youtube-transcript.service';
 import type { ThumbnailPipelineJobProgress } from '../types/thumbnail-pipeline-job.types';
 
+const DEFAULT_PIPELINE_VARIANT_COUNT = 3;
+
 /**
  * Coordinates ingest-shaped inputs → understanding → prompt building →
  * optional generation and optional editing. Credits are reserved up-front
@@ -32,7 +34,7 @@ export class ThumbnailPipelineOrchestratorService {
     onProgress?: (progress: ThumbnailPipelineJobProgress) => Promise<void>,
   ): Promise<ThumbnailPipelineRunResult> {
     const runId = randomUUID();
-    const count = Math.min(12, Math.max(1, input.variantCount ?? 4));
+    const count = Math.min(12, Math.max(1, input.variantCount ?? DEFAULT_PIPELINE_VARIANT_COUNT));
     const includeImageEdit = Boolean(input.baseImageDataUrl?.trim() && input.editInstruction?.trim());
     const generateImages = Boolean(input.generateImages);
 
@@ -139,9 +141,23 @@ export class ThumbnailPipelineOrchestratorService {
         });
       }
 
+      const generatedCount = variants?.length ?? 0;
+      const actuallyCharged = 1 + (generateImages ? generatedCount : 0) + (edited ? 1 : 0);
+      const refund = Math.max(0, creditCost - actuallyCharged);
+      if (refund > 0) {
+        try {
+          await this.billing.refundGenerationCredits(input.userId, refund, {
+            referenceType: 'thumbnail_pipeline_run',
+            referenceId: runId,
+          });
+        } catch {
+          /* best-effort; BillingService logs */
+        }
+      }
+
       return {
         runId,
-        creditsCharged: creditCost,
+        creditsCharged: actuallyCharged,
         analysis,
         imagePromptsUsed,
         variants,

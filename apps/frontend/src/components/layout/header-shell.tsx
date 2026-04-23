@@ -39,6 +39,7 @@ export function HeaderShell({
 
   const variantsPending = isProjectVariantsPath(pathname) && !merged.title;
   const hasPageHeader = Boolean(merged.title);
+  const isProjectDetailHeader = isProjectVariantsPath(pathname) && hasPageHeader;
   const alignActionsTop = hasPageHeader || variantsPending;
   const showCreateCta = pathname !== AppRoutes.create;
 
@@ -61,7 +62,7 @@ export function HeaderShell({
               <Skeleton className="h-7 w-[min(18rem,88%)] rounded-md sm:h-8 lg:h-9" />
             </div>
           ) : hasPageHeader ? (
-            <div>
+            <div className="min-w-0 pr-1">
               {merged.eyebrow ? (
                 <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
                   {merged.eyebrow}
@@ -71,7 +72,9 @@ export function HeaderShell({
                 className={cn(
                   'text-xl font-semibold tracking-tight text-foreground sm:text-2xl lg:text-3xl',
                   merged.eyebrow ? 'mt-1.5 sm:mt-2' : 'mt-0',
+                  isProjectDetailHeader && 'truncate',
                 )}
+                title={isProjectDetailHeader && typeof merged.title === 'string' ? merged.title : undefined}
               >
                 {merged.title}
               </h1>

@@ -1,0 +1,136 @@
+'use client';
+
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { SetPageFrame } from '@/components/layout/set-page-frame';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { QA_STORAGE_KEY, QA_TEST_GROUPS, type QATestCase } from '@/lib/qa/qa-test-cases';
+import { cn } from '@/lib/utils';
+
+function loadChecks(): Record<string, boolean> {
+  if (typeof window === 'undefined') return {};
+  try {
+    const raw = localStorage.getItem(QA_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as unknown;
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return parsed as Record<string, boolean>;
+    }
+  } catch {
+    /* ignore */
+  }
+  return {};
+}
+
+function allCaseIds(): string[] {
+  return QA_TEST_GROUPS.flatMap((g) => g.items.map((i) => i.id));
+}
+
+export function QAChecklistClient() {
+  const [checks, setChecks] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    setChecks(loadChecks());
+  }, []);
+
+  const persist = useCallback((next: Record<string, boolean>) => {
+    setChecks(next);
+    try {
+      localStorage.setItem(QA_STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const toggle = useCallback(
+    (id: string) => {
+      persist({ ...checks, [id]: !checks[id] });
+    },
+    [checks, persist],
+  );
+
+  const doneCount = useMemo(() => allCaseIds().filter((id) => checks[id]).length, [checks]);
+  const total = allCaseIds().length;
+
+  const reset = useCallback(() => {
+    persist({});
+  }, [persist]);
+
+  const markAllDone = useCallback(() => {
+    const next: Record<string, boolean> = {};
+    allCaseIds().forEach((id) => {
+      next[id] = true;
+    });
+    persist(next);
+  }, [persist]);
+
+  return (
+    <>
+      <SetPageFrame title="QA checklist" />
+      <div className="mx-auto max-w-3xl space-y-6 px-1 pb-16">
+        <div className="space-y-2">
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Manual QA checklist</h1>
+          <p className="text-sm text-muted-foreground">
+            Development only. Progress is stored in this browser (localStorage). See also{' '}
+            <code className="rounded bg-muted px-1.5 py-0.5 text-xs">docs/qa-manual-test-checklist.md</code> in
+            the repo.
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Progress:{' '}
+            <span className="font-medium text-foreground">
+              {doneCount}/{total}
+            </span>
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" size="sm" variant="outline" onClick={reset}>
+              Clear all checks
+            </Button>
+            <Button type="button" size="sm" variant="secondary" onClick={markAllDone}>
+              Mark all done
+            </Button>
+          </div>
+        </div>
+
+        {QA_TEST_GROUPS.map((group) => (
+          <Card key={group.id}>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">{group.title}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {group.items.map((item: QATestCase) => {
+                const checked = Boolean(checks[item.id]);
+                return (
+                  <label
+                    key={item.id}
+                    className={cn(
+                      'flex cursor-pointer items-start gap-3 rounded-lg border border-transparent p-2 transition-colors hover:bg-muted/50',
+                      checked && 'bg-muted/30',
+                    )}
+                  >
+                    <input
+                      type="checkbox"
+                      className="mt-1 h-4 w-4 shrink-0 rounded border-border"
+                      checked={checked}
+                      onChange={() => toggle(item.id)}
+                    />
+                    <span className="min-w-0 text-sm leading-relaxed text-foreground">
+                      {item.label}
+                      {item.hint ? (
+                        <span className="mt-0.5 block text-xs text-muted-foreground">{item.hint}</span>
+                      ) : null}
+                    </span>
+                  </label>
+                );
+              })}
+            </CardContent>
+          </Card>
+        ))}
+
+        <p className="text-xs text-muted-foreground">
+          Remove this route before production hardening, or keep gated by NODE_ENV (page returns 404 in
+          production builds).
+        </p>
+      </div>
+    </>
+  );
+}

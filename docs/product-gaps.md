@@ -12,7 +12,7 @@
 - [x] Кредиты: `profiles.generation_credits_*`, резерв на generate и pipeline (`run` / `run-video`), профиль (триггер 007 + lazy insert)
 - [x] Шаблоны и ниши: API + UI
 - [x] Аватары (faces): загрузка / список / удаление в Storage
-- [x] Видео → превью: `POST /api/thumbnails/pipeline/run-video` + UI в модалке «другие источники»
+- [x] Видео / YouTube → превью: async pipeline jobs (`run` / `run-video`, poll job), Create hub + project detail
 - [x] Админ: YouTube inspiration (`ADMIN_USER_IDS`, API key)
 - [x] Rate limiting на тяжёлые эндпоинты
 
@@ -28,10 +28,10 @@
 
 ## 2. Качество генерации (промпт / мультимодал)
 
-- [ ] **Аватар в генерации:** сейчас выбор face в UI не попадает в бэкенд `generate` (нет в DTO / `ProjectVariantImageService`)
-- [ ] **Шаблон в промпте:** сейчас в промпт уходит сырой `template_id`, не имя/описание шаблона и не изображение шаблона
-- [ ] Отдельные поля: текст на превью, стиль, (по желанию) aspect ratio / разрешение — см. `docs/nanothumbnail-adoption-notes.md`
-- [ ] YouTube URL как контекст: сейчас в промпт идёт строка `YouTube: …`, без метаданных/кадров
+- [x] **Аватар в генерации:** `avatar_id` / `prioritize_face` / `face_in_thumbnail` (with face vs faceless) в `POST …/generate` + мультимодал в `ProjectVariantImageService`
+- [x] **Шаблон в промпте:** подтягивается изображение шаблона из Storage как референс, если `template_id` валиден
+- [ ] Отдельные поля в UI: явный «текст на превью», отдельное поле «стиль», (по желанию) aspect ratio в API — см. `docs/nanothumbnail-adoption-notes.md`
+- [x] YouTube как контекст: метаданные + полный video pipeline; повторная генерация на проекте использует `source_data` / oEmbed согласованно
 
 ---
 
@@ -75,7 +75,7 @@
 
 ## 8. Инфраструктура
 
-- [ ] Очереди для длительной генерации (сейчас синхронно в HTTP)
+- [x] Длительная генерация pipeline: **асинхронные jobs** (`thumbnail_pipeline_jobs`) + poll с клиента (HTTP handlers не держат весь run синхронно)
 - [ ] Письма (готово, счёт, алерты)
 - [ ] Наблюдаемость: Sentry / трассы / структурные логи по запросам
 
@@ -83,6 +83,7 @@
 
 ## Референсы в репозитории
 
+- Ручной QA: [`qa-manual-test-checklist.md`](./qa-manual-test-checklist.md) и `/qa-checklist` (только `development`)
 - Идеи по промпту и UX: [`nanothumbnail-adoption-notes.md`](./nanothumbnail-adoption-notes.md)
 - Модели OpenRouter: `apps/backend/README.md` → раздел OpenRouter
-- Миграции Supabase: `supabase/migrations/`
+- Миграции Supabase: `supabase/migrations/README.md`

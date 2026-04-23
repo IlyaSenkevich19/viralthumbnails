@@ -64,6 +64,7 @@ yarn dev
 
 ## Where to extend
 
+- **Manual QA (dev):** run the app, open [`/qa-checklist`](http://localhost:3000/qa-checklist) for an interactive checklist; see [`docs/qa-manual-test-checklist.md`](docs/qa-manual-test-checklist.md). The route returns 404 in production builds.
 - **OpenRouter / модели**: **`apps/backend/src/config/openrouter-models.ts`** (`OPENROUTER_STACK` — shared runtime OpenRouter settings; `PIPELINE_STEP_MODELS` — pipeline steps), секрет **`OPENROUTER_API_KEY`** — см. **`apps/backend/README.md`**.
 - **Backend**: register new modules in `apps/backend/src/app.module.ts`.
 - **Frontend**: add routes under `apps/frontend/src/app`, API clients under `src/lib/api`, React Query hooks under `src/lib/queries`.

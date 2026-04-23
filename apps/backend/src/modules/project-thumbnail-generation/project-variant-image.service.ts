@@ -2,6 +2,12 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PIPELINE_STEP_MODELS } from '../../config/openrouter-models';
 import { getOpenRouterConfig } from '../../config/openrouter.config';
+import {
+  type ThumbnailFaceInImage,
+  THUMBNAIL_PROMPT_QUALITY_GUARDRAILS,
+  resolveFaceInThumbnailInstruction,
+  resolveThumbnailStyleInstruction,
+} from '../../common/thumbnail-prompt-guidelines';
 import { userContentTextThenReferenceImages } from '../openrouter/multipart-user-content';
 import { OpenRouterClient } from '../openrouter/openrouter.client';
 import { requestOpenRouterSingleThumbnailImage } from '../openrouter/openrouter-requests';
@@ -37,14 +43,6 @@ type YoutubeVideoMeta = {
 
 const MAX_REFERENCE_IMAGE_BYTES = 12 * 1024 * 1024;
 const YOUTUBE_OEMBED_TIMEOUT_MS = 4500;
-const STYLE_VARIANTS = [
-  'Style angle: bold high-contrast text + dramatic focal subject.',
-  'Style angle: clean minimal composition, premium modern look, restrained text.',
-  'Style angle: high emotion/reaction, expressive face and motion energy.',
-  'Style angle: authority/educational look with clear hierarchy and readable labels.',
-  'Style angle: curiosity-gap concept, intriguing visual conflict, strong contrast.',
-  'Style angle: news/urgent vibe, punchy framing and decisive focal point.',
-] as const;
 
 /**
  * Generates one stored image for a `thumbnail_variants` row (OpenRouter image model).
@@ -151,10 +149,16 @@ export class ProjectVariantImageService {
     templateId?: string;
     avatarId?: string;
     prioritizeFace?: boolean;
+    faceInThumbnail?: ThumbnailFaceInImage;
     styleVariantIndex?: number;
     totalVariants?: number;
   }): Promise<GenerateThumbnailResult> {
     const client = this.supabase.getAdminClient();
+    const faceInThumbnail: ThumbnailFaceInImage = params.faceInThumbnail ?? 'default';
+    const omitFaceRef = faceInThumbnail === 'faceless';
+    const effectiveAvatarId = omitFaceRef ? undefined : params.avatarId;
+    const effectivePrioritize = omitFaceRef ? false : Boolean(params.prioritizeFace);
+
     const { data: project, error: pErr } = await client
       .from('projects')
       .select('*')
@@ -178,7 +182,7 @@ export class ProjectVariantImageService {
     } = await this.resolveReferenceDataUrlsForUser({
       userId: params.userId,
       templateId: params.templateId,
-      avatarId: params.avatarId,
+      avatarId: effectiveAvatarId,
       logContext: `variant ${params.variantId}`,
     });
 
@@ -189,8 +193,9 @@ export class ProjectVariantImageService {
       {
         hasTemplateImage,
         hasAvatarImage,
-        prioritizeFace: Boolean(params.prioritizeFace) && hasAvatarImage,
+        prioritizeFace: effectivePrioritize && hasAvatarImage,
       },
+      faceInThumbnail,
       params.styleVariantIndex,
       params.totalVariants,
     );
@@ -285,6 +290,7 @@ export class ProjectVariantImageService {
       hasAvatarImage: boolean;
       prioritizeFace: boolean;
     },
+    faceInThumbnail: ThumbnailFaceInImage,
     styleVariantIndex?: number,
     totalVariants?: number,
   ): Promise<string> {
@@ -292,6 +298,7 @@ export class ProjectVariantImageService {
     const sourceType = String(project.source_type ?? 'text');
     const sourceData = (project.source_data as Record<string, unknown>) ?? {};
     const excerpt = this.buildSourceExcerpt(sourceType, sourceData, projectId);
+    const faceModeLine = resolveFaceInThumbnailInstruction(faceInThumbnail);
 
     const templateText =
       templateId && !refs.hasTemplateImage
@@ -314,9 +321,19 @@ export class ProjectVariantImageService {
     const styleVariantLine =
       styleVariantIndex === undefined
         ? ''
-        : ` ${STYLE_VARIANTS[styleVariantIndex % STYLE_VARIANTS.length]} Variation ${styleVariantIndex + 1}${typeof totalVariants === 'number' ? ` of ${totalVariants}` : ''}; keep output distinct from other variations.`;
+        : ` ${resolveThumbnailStyleInstruction(undefined, styleVariantIndex)} Variation ${styleVariantIndex + 1}${typeof totalVariants === 'number' ? ` of ${totalVariants}` : ''}; keep output distinct from other variations.`;
 
-    return `YouTube thumbnail, bold readable title, high contrast, no small text, subject: "${title}". Source (${sourceType}): ${await excerpt}.${styleVariantLine}${templateText}${faceText}`;
+    return [
+      `YouTube thumbnail concept for topic "${title}".`,
+      THUMBNAIL_PROMPT_QUALITY_GUARDRAILS,
+      faceModeLine,
+      styleVariantLine.trim(),
+      `Source context (${sourceType}): ${await excerpt}.`,
+      templateText.trim(),
+      faceText.trim(),
+    ]
+      .filter(Boolean)
+      .join(' ');
   }
 
   private async buildSourceExcerpt(
@@ -330,11 +347,18 @@ export class ProjectVariantImageService {
     if (typeof sourceData.script === 'string') {
       return sourceData.script.slice(0, 500);
     }
-    if (typeof sourceData.url !== 'string') {
+    const sourceUrl =
+      typeof sourceData.video_url === 'string'
+        ? sourceData.video_url
+        : typeof sourceData.url === 'string'
+          ? sourceData.url
+          : null;
+
+    if (!sourceUrl) {
       return JSON.stringify(sourceData).slice(0, 500);
     }
 
-    const url = sourceData.url;
+    const url = sourceUrl;
     if (sourceType !== 'youtube_url') {
       return `URL: ${url}`;
     }

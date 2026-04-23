@@ -1,4 +1,8 @@
 import { Injectable } from '@nestjs/common';
+import {
+  THUMBNAIL_PROMPT_QUALITY_GUARDRAILS,
+  resolveThumbnailStyleInstruction,
+} from '../../../common/thumbnail-prompt-guidelines';
 import type { ThumbnailPipelineAnalysis } from '../schemas/thumbnail-pipeline-analysis.schema';
 
 export type ReferenceBundle = {
@@ -14,64 +18,6 @@ export type ReferenceBundle = {
  */
 @Injectable()
 export class PipelinePromptBuilderService {
-  private static readonly STYLE_PRESETS: ReadonlyArray<{
-    key: string;
-    aliases: string[];
-    instruction: string;
-  }> = [
-    {
-      key: 'bold-hook',
-      aliases: ['bold hook', 'hook', 'bold'],
-      instruction:
-        'Style direction: bold hook. One dominant focal subject, dramatic contrast, punchy colors, clear visual hierarchy, and a short high-impact headline.',
-    },
-    {
-      key: 'clean-minimal',
-      aliases: ['clean minimal', 'minimal', 'clean'],
-      instruction:
-        'Style direction: clean minimal. Bright but controlled exposure, restrained saturation, neutral background, minimal clutter, generous negative space, and ultra-legible typography. Avoid blown highlights and washed-out whites.',
-    },
-    {
-      key: 'emotional-reaction',
-      aliases: ['emotional reaction', 'reaction', 'emotion'],
-      instruction:
-        'Style direction: emotional reaction. Emphasize expressive face/body language, tight crop, clear emotional storytelling, and supporting context only where it amplifies the reaction.',
-    },
-    {
-      key: 'authority-educational',
-      aliases: ['authority / educational', 'authority', 'educational', 'education'],
-      instruction:
-        'Style direction: authority/educational. Professional framing, trustworthy look, tidy composition, clear topic framing, and confident but not sensational visual tone.',
-    },
-    {
-      key: 'curiosity-gap',
-      aliases: ['curiosity gap', 'curiosity'],
-      instruction:
-        'Style direction: curiosity gap. Reveal enough context to intrigue, hide the full answer, use visual contrast between known vs unknown elements, and keep the core mystery obvious.',
-    },
-    {
-      key: 'news-urgency',
-      aliases: ['news / urgency', 'news', 'urgency', 'breaking'],
-      instruction:
-        'Style direction: news/urgency. Time-sensitive energy, crisp high-contrast composition, unmistakable key subject, and concise headline with urgency cues without becoming noisy.',
-    },
-  ];
-
-  private styleInstruction(style: string | undefined, index: number): string {
-    const raw = style?.trim();
-    if (!raw) {
-      return PipelinePromptBuilderService.STYLE_PRESETS[
-        index % PipelinePromptBuilderService.STYLE_PRESETS.length
-      ].instruction;
-    }
-    const normalized = raw.toLowerCase();
-    const matched = PipelinePromptBuilderService.STYLE_PRESETS.find((preset) =>
-      preset.aliases.some((alias) => normalized.includes(alias)),
-    );
-    if (matched) return matched.instruction;
-    return `Style direction: ${raw}. Keep this style explicit and visually consistent across layout, color, and typography.`;
-  }
-
   buildFinalImagePrompts(params: {
     analysis: ThumbnailPipelineAnalysis;
     userPrompt: string;
@@ -94,9 +40,9 @@ export class PipelinePromptBuilderService {
       const title = titles[i % titles.length];
       const hook = hooks[i % hooks.length];
       const comp = compositions[i % compositions.length];
-      const styleInstruction = this.styleInstruction(style, i);
+      const styleInstruction = resolveThumbnailStyleInstruction(style, i);
       out.push(
-        `YouTube thumbnail 16:9, professional quality. ${styleInstruction} ${styleLine} ${neg} Main subject: ${analysis.mainSubject}. Emotion: ${analysis.emotion}. Concept: ${seed}. On-image title idea (max 3-5 words, very large readable text): "${title}". Visual hook: ${hook}. Composition: ${comp}. Keep one primary subject and avoid clutter. Creator notes: ${userPrompt.slice(0, 500)}`,
+        `YouTube thumbnail 16:9, professional quality. ${THUMBNAIL_PROMPT_QUALITY_GUARDRAILS} ${styleInstruction} ${styleLine} ${neg} Main subject: ${analysis.mainSubject}. Emotion: ${analysis.emotion}. Concept: ${seed}. On-image title idea (max 3-5 words, very large readable text): "${title}". Visual hook: ${hook}. Composition: ${comp}. Keep one primary subject and avoid clutter. Creator notes: ${userPrompt.slice(0, 500)}`,
       );
     }
     return out;

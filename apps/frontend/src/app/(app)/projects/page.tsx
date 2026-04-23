@@ -105,7 +105,7 @@ export default function ProjectsListPage() {
           ) : (
             <Plus className="h-4 w-4" aria-hidden />
           )}
-          New project
+          Create project
         </Button>
       </div>
 
@@ -160,7 +160,7 @@ export default function ProjectsListPage() {
               ) : (
                 <Plus className="h-4 w-4" aria-hidden />
               )}
-              New project
+              Create project
             </Button>
           </CardContent>
         </Card>

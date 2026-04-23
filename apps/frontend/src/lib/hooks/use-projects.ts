@@ -232,6 +232,7 @@ export function useGenerateThumbnailsMutation(projectId: string) {
       avatar_id?: string;
       prioritize_face?: boolean;
       count?: number;
+      face_in_thumbnail?: 'default' | 'with_face' | 'faceless';
     }) => {
       if (!accessToken) throw new Error('Not signed in');
       return projectsApi.generateThumbnails(accessToken, projectId, opts);

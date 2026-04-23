@@ -15,14 +15,16 @@ export function DashboardCreateHub() {
   const h = useDashboardCreateHub();
 
   return (
-    <section className="surface-dashboard p-6 sm:p-8" aria-labelledby="dashboard-create-heading">
+    <section className="surface-dashboard p-4 sm:p-5" aria-labelledby="dashboard-create-heading">
       <CreateHubHeader />
-      <CreateHubModeTabs mode={h.mode} onModeChange={h.onModeChange} />
+      <div className="mt-3">
+        <CreateHubModeTabs mode={h.mode} onModeChange={h.onModeChange} />
+      </div>
       <div className="mt-3 min-h-7">
         <CreateHubRecoveringBanner show={h.recoveringPreviousGeneration} />
       </div>
 
-      <div className="mt-4 min-h-[11.5rem]">
+      <div className="mt-3 min-h-[8.5rem]">
         {h.mode === DASHBOARD_CREATE_HUB_MODE.prompt && (
           <PromptModePanel
             creative={h.creative}

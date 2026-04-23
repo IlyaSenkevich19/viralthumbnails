@@ -139,9 +139,11 @@ export function buildYoutubeUserPrompt(params: {
   author?: string;
 }): string {
   return [
-    `Create YouTube thumbnail concepts for this video URL: ${params.finalUrl}`,
+    'Goal: generate high-CTR YouTube thumbnail concepts.',
+    `Video URL: ${params.finalUrl}`,
     params.title ? `Video title: ${params.title}` : '',
     params.author ? `Channel: ${params.author}` : '',
+    'Priorities: one dominant subject, strong contrast, minimal clutter, and very short readable on-image text.',
   ]
     .filter(Boolean)
     .join('\n');

@@ -1,8 +1,9 @@
 'use client';
 
 import { useMemo } from 'react';
+import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Loader2, Menu } from 'lucide-react';
+import { Loader2, Menu, Plus } from 'lucide-react';
 import { usePipelineJobSurface } from '@/lib/hooks/use-pipeline-job-surface';
 import { BrandWordmark } from '@/components/layout/brand-wordmark';
 import { AppRoutes } from '@/config/routes';
@@ -14,6 +15,7 @@ import {
 import { cn } from '@/lib/utils';
 import { HeaderCreditsLink } from '@/components/layout/header-credits-link';
 import { Skeleton } from '@/components/ui/skeleton';
+import { buttonVariants } from '@/components/ui/button';
 
 export function HeaderShell({
   onMobileMenuClick,
@@ -38,6 +40,7 @@ export function HeaderShell({
   const variantsPending = isProjectVariantsPath(pathname) && !merged.title;
   const hasPageHeader = Boolean(merged.title);
   const alignActionsTop = hasPageHeader || variantsPending;
+  const showCreateCta = pathname !== AppRoutes.create;
 
   return (
     <header
@@ -85,6 +88,15 @@ export function HeaderShell({
             alignActionsTop ? 'pt-0.5 sm:pt-1' : 'pt-0.5',
           )}
         >
+          {showCreateCta ? (
+            <Link
+              href={AppRoutes.create}
+              className={cn(buttonVariants({ size: 'sm' }), 'hidden gap-1.5 px-3 lg:inline-flex')}
+            >
+              <Plus className="h-3.5 w-3.5" aria-hidden />
+              Create
+            </Link>
+          ) : null}
           {pipelineJob.active && pipelineJob.label ? (
             <p
               className="flex min-w-0 max-w-[6.5rem] items-center gap-1.5 truncate text-xs text-muted-foreground sm:max-w-[10rem]"

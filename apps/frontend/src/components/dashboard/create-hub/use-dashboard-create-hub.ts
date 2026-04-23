@@ -209,9 +209,16 @@ export function useDashboardCreateHub() {
           source_type: 'youtube_url',
           source_data: {
             video_url: finalUrl,
+            // Keep `url` for backward-compatible consumers while `video_url` stays canonical.
+            url: finalUrl,
             title: videoMeta?.title ?? null,
             author: videoMeta?.author ?? null,
             thumbnail: videoMeta?.thumbnail ?? null,
+            video_meta: {
+              title: videoMeta?.title ?? null,
+              author: videoMeta?.author ?? null,
+              thumbnail: videoMeta?.thumbnail ?? null,
+            },
           },
         });
         createdProjectId = project.id;

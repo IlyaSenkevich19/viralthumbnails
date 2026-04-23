@@ -11,19 +11,6 @@ export default function SettingsPage() {
 
       <PrimaryActionPanel>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Account</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Profile and sign-in are managed through your auth provider.
-          </p>
-        </CardHeader>
-        <CardContent className="text-sm text-muted-foreground">
-          Use the account menu in the sidebar to sign out. Password changes and email updates can be
-          added here or linked to your auth provider&apos;s flows.
-        </CardContent>
-      </PrimaryActionPanel>
-
-      <PrimaryActionPanel>
-        <CardHeader className="pb-2">
           <CardTitle className="text-base">App connection</CardTitle>
           <p className="text-sm text-muted-foreground">Whether the app can reach the API server.</p>
         </CardHeader>

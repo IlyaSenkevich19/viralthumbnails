@@ -1,6 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
-import { IsBoolean, IsInt, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
+import { IsBoolean, IsIn, IsInt, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
+import type { ThumbnailFaceInImage } from '../../../common/thumbnail-prompt-guidelines';
 
 function toOptionalBool(value: unknown): boolean | undefined {
   if (value === undefined || value === null || value === '') return undefined;
@@ -36,4 +37,14 @@ export class GenerateThumbnailsDto {
   @Min(1)
   @Max(5)
   count?: number;
+
+  @ApiPropertyOptional({
+    enum: ['default', 'with_face', 'faceless'],
+    description:
+      'Whether the thumbnail should highlight an on-camera face, or be faceless. Face reference images are ignored when `faceless`.',
+  })
+  @IsOptional()
+  @IsString()
+  @IsIn(['default', 'with_face', 'faceless'] satisfies ThumbnailFaceInImage[])
+  face_in_thumbnail?: ThumbnailFaceInImage;
 }

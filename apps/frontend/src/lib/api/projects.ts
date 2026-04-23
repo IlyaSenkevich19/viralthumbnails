@@ -57,6 +57,8 @@ export async function generateThumbnails(
     avatar_id?: string;
     prioritize_face?: boolean;
     count?: number;
+    /** `default` = no extra prompt constraint; `with_face` / `faceless` append explicit instructions. */
+    face_in_thumbnail?: 'default' | 'with_face' | 'faceless';
   },
 ): Promise<GenerateThumbnailsResponse> {
   return fetchJson<GenerateThumbnailsResponse>(ApiRoutes.projects.generate(projectId), token, {

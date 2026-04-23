@@ -17,6 +17,37 @@ const REASON_LABEL: Record<string, string> = {
   manual_adjustment: 'Manual adjustment',
 };
 
+function describeLedgerEntry(item: {
+  reason: string;
+  reference_type: string | null;
+  reference_id: string | null;
+}): string {
+  if (item.reason === 'trial_grant') return 'Trial credits granted';
+  if (item.reason === 'purchase') return 'Credit pack purchase';
+  if (item.reason === 'manual_adjustment') return 'Manual balance update by admin';
+
+  if (item.reference_type === 'thumbnail_pipeline_run') {
+    return item.reason === 'refund'
+      ? 'Pipeline refund (unused generation credits)'
+      : 'Pipeline run (video analysis + thumbnail generation)';
+  }
+
+  if (item.reference_type === 'project') {
+    return item.reason === 'refund'
+      ? 'Project generation refund'
+      : 'Project thumbnail generation';
+  }
+
+  if (item.reason === 'reserve') return 'Credits reserved for generation';
+  if (item.reason === 'refund') return 'Credits refunded';
+  if (item.reference_type) {
+    return item.reference_id
+      ? `${item.reference_type}:${item.reference_id}`
+      : item.reference_type;
+  }
+  return 'Operation';
+}
+
 export default function CreditsPricingPage() {
   const { data: credits } = useGenerationCredits();
   const { data: ledger, isPending: ledgerPending } = useCreditLedger();
@@ -124,16 +155,16 @@ export default function CreditsPricingPage() {
           </summary>
           <div className="overflow-x-auto pb-1 pt-1">
             <table className="min-w-full text-sm">
-              <thead className="border-b border-border/50 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <thead className="text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground/85">
                 <tr>
-                  <th className="py-2.5 pr-3 font-medium">Date</th>
-                  <th className="py-2.5 pr-3 font-medium">Reason</th>
-                  <th className="py-2.5 pr-3 font-medium">Reference</th>
-                  <th className="py-2.5 pr-2 text-right font-medium">Delta</th>
-                  <th className="py-2.5 pl-2 text-right font-medium">After</th>
+                  <th className="border-b border-border/25 py-2.5 pr-3 font-medium">Date</th>
+                  <th className="border-b border-border/25 py-2.5 pr-3 font-medium">Reason</th>
+                  <th className="border-b border-border/25 py-2.5 pr-3 font-medium">Description</th>
+                  <th className="border-b border-border/25 py-2.5 pr-2 text-right font-medium">Delta</th>
+                  <th className="border-b border-border/25 py-2.5 pl-2 text-right font-medium">After</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border/40">
+              <tbody className="divide-y divide-border/20">
                 {ledgerPending ? (
                   <tr>
                     <td className="py-8 text-center text-muted-foreground" colSpan={5}>
@@ -150,20 +181,18 @@ export default function CreditsPricingPage() {
                   ledger.map((item) => {
                     const isPositive = item.delta > 0;
                     const reasonLabel = REASON_LABEL[item.reason] ?? item.reason;
-                    const reference = item.reference_type
-                      ? `${item.reference_type}${item.reference_id ? `:${item.reference_id}` : ''}`
-                      : '—';
+                    const description = describeLedgerEntry(item);
                     return (
-                      <tr key={item.id} className="transition-colors hover:bg-muted/20">
+                      <tr key={item.id} className="transition-colors hover:bg-muted/12">
                         <td className="py-3 pr-3 text-muted-foreground">
                           {new Date(item.created_at).toLocaleString()}
                         </td>
                         <td className="py-3 pr-3">
-                          <span className="inline-flex rounded-md bg-muted/60 px-2 py-0.5 text-xs font-medium text-foreground/90">
+                          <span className="inline-flex rounded-md bg-muted/35 px-2 py-0.5 text-xs font-medium text-foreground/85">
                             {reasonLabel}
                           </span>
                         </td>
-                        <td className="py-3 pr-3 font-mono text-xs text-muted-foreground">{reference}</td>
+                        <td className="py-3 pr-3 text-xs text-muted-foreground">{description}</td>
                         <td
                           className={cn(
                             'py-3 pr-2 text-right font-semibold tabular-nums',

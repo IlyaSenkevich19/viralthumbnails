@@ -49,6 +49,26 @@ import type { PipelineJobStatusResponse } from '@/lib/api/thumbnails';
 import { PrimaryActionPanel } from '@/components/ui/primary-action-panel';
 
 const GENERATE_COUNT = 1;
+const TEMPLATE_FACE_FILTER = {
+  all: 'all',
+  withFace: 'with-face',
+  faceless: 'faceless',
+} as const;
+type TemplateFaceFilter = (typeof TEMPLATE_FACE_FILTER)[keyof typeof TEMPLATE_FACE_FILTER];
+
+function isLikelyFacelessTemplate(template: {
+  name: string;
+  slug: string;
+  niche?: string | null;
+}): boolean {
+  const source = `${template.name} ${template.slug} ${template.niche ?? ''}`.toLowerCase();
+  return (
+    source.includes('faceless') ||
+    source.includes('no face') ||
+    source.includes('without face') ||
+    source.includes('voiceover')
+  );
+}
 
 type ProjectVariantsWorkspaceProps = {
   project: ProjectWithVariants;
@@ -82,12 +102,19 @@ export function ProjectVariantsWorkspace({
   const { data: niches = [] } = useTemplateNiches();
 
   const [selectedNiche, setSelectedNiche] = useState<string | typeof NICHE_ALL>(NICHE_ALL);
+  const [templateFaceFilter, setTemplateFaceFilter] = useState<TemplateFaceFilter>(TEMPLATE_FACE_FILTER.all);
   const [templatePage, setTemplatePage] = useState(1);
   const [templateLimit, setTemplateLimit] = useState(TEMPLATES_DEFAULT_PAGE_SIZE);
 
   useEffect(() => {
     setTemplatePage(1);
   }, [selectedNiche]);
+
+  useEffect(() => {
+    if (templateFaceFilter === TEMPLATE_FACE_FILTER.faceless) {
+      setPrioritizeFace(false);
+    }
+  }, [templateFaceFilter]);
 
   const handleTemplatePageSize = useCallback((n: number) => {
     setTemplateLimit(n);
@@ -101,7 +128,14 @@ export function ProjectVariantsWorkspace({
     isPlaceholderData: templatesPlaceholder,
   } = useTemplatesList(selectedNiche, templatePage, templateLimit);
   const templatesLoading = templatesPending && !templatesData;
-  const templates = templatesData?.items ?? [];
+  const templates = useMemo(() => templatesData?.items ?? [], [templatesData]);
+  const filteredTemplates = useMemo(() => {
+    if (templateFaceFilter === TEMPLATE_FACE_FILTER.all) return templates;
+    return templates.filter((template) => {
+      const faceless = isLikelyFacelessTemplate(template);
+      return templateFaceFilter === TEMPLATE_FACE_FILTER.faceless ? faceless : !faceless;
+    });
+  }, [templateFaceFilter, templates]);
   const templatesTotal = templatesData?.total ?? 0;
   const templatesLimit = templatesData?.limit ?? templateLimit;
   const templatesPaginationBusy = Boolean(templatesFetching && templatesPlaceholder);
@@ -161,13 +195,28 @@ export function ProjectVariantsWorkspace({
       return;
     }
     if (!assertSufficientCredits({ balance: credits?.balance, cost: GENERATE_COUNT })) return;
+    const faceInThumbnail =
+      templateFaceFilter === TEMPLATE_FACE_FILTER.withFace
+        ? 'with_face'
+        : templateFaceFilter === TEMPLATE_FACE_FILTER.faceless
+          ? 'faceless'
+          : 'default';
     generate.mutate({
       count: GENERATE_COUNT,
       template_id: selectedTemplateId ?? undefined,
       avatar_id: selectedAvatarId.trim() || undefined,
       prioritize_face: prioritizeFace,
+      face_in_thumbnail: faceInThumbnail,
     });
-  }, [accessToken, credits?.balance, generate, prioritizeFace, selectedAvatarId, selectedTemplateId]);
+  }, [
+    accessToken,
+    credits?.balance,
+    generate,
+    prioritizeFace,
+    selectedAvatarId,
+    selectedTemplateId,
+    templateFaceFilter,
+  ]);
 
   const previewUrl = selectedVariant?.generated_image_url ?? null;
   const sourceData = project.source_data ?? {};
@@ -291,6 +340,35 @@ export function ProjectVariantsWorkspace({
                 ))}
               </div>
             ) : null}
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant={templateFaceFilter === TEMPLATE_FACE_FILTER.all ? 'default' : 'outline'}
+                className="rounded-full"
+                onClick={() => setTemplateFaceFilter(TEMPLATE_FACE_FILTER.all)}
+              >
+                All templates
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={templateFaceFilter === TEMPLATE_FACE_FILTER.withFace ? 'default' : 'outline'}
+                className="rounded-full"
+                onClick={() => setTemplateFaceFilter(TEMPLATE_FACE_FILTER.withFace)}
+              >
+                With face
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={templateFaceFilter === TEMPLATE_FACE_FILTER.faceless ? 'default' : 'outline'}
+                className="rounded-full"
+                onClick={() => setTemplateFaceFilter(TEMPLATE_FACE_FILTER.faceless)}
+              >
+                Faceless
+              </Button>
+            </div>
 
             {templatesLoading ? (
               <TemplatesGridSkeleton variant="picker" />
@@ -311,7 +389,7 @@ export function ProjectVariantsWorkspace({
                   <Copy className="h-6 w-6 opacity-60" aria-hidden />
                   <span>Replicate style</span>
                 </button>
-                {templates.map((t) => {
+                {filteredTemplates.map((t) => {
                   const active = selectedTemplateId === t.id;
                   return (
                     <button
@@ -344,6 +422,11 @@ export function ProjectVariantsWorkspace({
                 })}
               </div>
             )}
+            {!templatesLoading && filteredTemplates.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No templates match this face filter on the current page.
+              </p>
+            ) : null}
             {!templatesLoading && templatesTotal > 0 ? (
               <TemplatesPagination
                 page={templatePage}
@@ -389,6 +472,7 @@ export function ProjectVariantsWorkspace({
                 type="button"
                 role="switch"
                 aria-checked={prioritizeFace}
+                disabled={templateFaceFilter === TEMPLATE_FACE_FILTER.faceless || !selectedAvatarId.trim()}
                 onClick={() => setPrioritizeFace((v) => !v)}
                 className={cn(
                   'relative h-7 w-12 shrink-0 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
@@ -420,7 +504,11 @@ export function ProjectVariantsWorkspace({
                 {GENERATE_COUNT} credit{GENERATE_COUNT === 1 ? '' : 's'}
               </span>
             </Button>
-            {selectedAvatarId ? (
+            {templateFaceFilter === TEMPLATE_FACE_FILTER.faceless ? (
+              <p className="text-xs text-muted-foreground">
+                Faceless: the image prompt avoids people/faces; your character reference is not used.
+              </p>
+            ) : selectedAvatarId ? (
               <p className="text-xs text-muted-foreground">
                 Your face reference is sent with each generation so the model can match likeness when possible.
               </p>

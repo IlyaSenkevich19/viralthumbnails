@@ -214,6 +214,7 @@ export class ProjectsService {
     count: number,
     avatarId?: string,
     prioritizeFace?: boolean,
+    opts?: { faceInThumbnail?: 'default' | 'with_face' | 'faceless' },
   ) {
     const project = await this.getByIdForUser(projectId, userId);
     const wasDraft = (project as { status?: string }).status === 'draft';
@@ -228,6 +229,7 @@ export class ProjectsService {
         count,
         avatarId,
         prioritizeFace,
+        opts?.faceInThumbnail,
       );
       const done = result.results.filter((r) => r.status === 'done').length;
       if (wasDraft && done === 0) {

@@ -2,84 +2,39 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
-import {
-  ArrowLeft,
-  Copy,
-  Download,
-  ImageIcon,
-  Pencil,
-  RefreshCw,
-} from 'lucide-react';
+import { ArrowLeft, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import {
   NICHE_ALL,
   TEMPLATES_DEFAULT_PAGE_SIZE,
-  TEMPLATE_PAGE_SIZE_OPTIONS,
-  usePrefetchAdjacentTemplates,
   useAvatarsList,
   useDeleteVariantMutation,
   useGenerateThumbnailsMutation,
   useGenerationCredits,
+  usePrefetchAdjacentTemplates,
   useTemplateNiches,
   useTemplatesList,
 } from '@/lib/hooks';
 import { assertSufficientCredits } from '@/lib/paywall-notify';
-import { statusToneClass } from '@/lib/status-tone';
-import type { ProjectWithVariants, ThumbnailVariantRow } from '@/lib/types/project';
+import { pickThumbnailStyles } from '@/lib/thumbnail-style-matrix';
 import { Button, buttonVariants } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { AppRoutes } from '@/config/routes';
 import { toast } from 'sonner';
 import { ConfirmationModal } from '@/components/ui/confirmation-modal';
+import { ProjectVariantsGeneratePanel } from '@/components/projects/project-variants-generate-panel';
+import { ProjectVariantsResults } from '@/components/projects/project-variants-results';
+import { ProjectVariantsSourceCard } from '@/components/projects/project-variants-source-card';
+import { ProjectVariantsTemplatePicker } from '@/components/projects/project-variants-template-picker';
 import {
-  SELECT_EMPTY_VALUE,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { TemplatesGridSkeleton } from '@/components/templates/templates-grid-skeleton';
-import { TemplatesPagination } from '@/components/templates/templates-pagination';
-import { pickThumbnailStyles } from '@/lib/thumbnail-style-matrix';
-import type { PipelineJobStatusResponse } from '@/lib/api/thumbnails';
-import { PrimaryActionPanel } from '@/components/ui/primary-action-panel';
+  GENERATE_COUNT,
+  TEMPLATE_FACE_FILTER,
+  isLikelyFacelessTemplate,
+  type TemplateFaceFilter,
+} from '@/components/projects/project-variants-workspace.constants';
+import type { ProjectVariantsWorkspaceProps } from '@/components/projects/project-variants-workspace.types';
 
-const GENERATE_COUNT = 1;
-const TEMPLATE_FACE_FILTER = {
-  all: 'all',
-  withFace: 'with-face',
-  faceless: 'faceless',
-} as const;
-type TemplateFaceFilter = (typeof TEMPLATE_FACE_FILTER)[keyof typeof TEMPLATE_FACE_FILTER];
-
-function isLikelyFacelessTemplate(template: {
-  name: string;
-  slug: string;
-  niche?: string | null;
-}): boolean {
-  const source = `${template.name} ${template.slug} ${template.niche ?? ''}`.toLowerCase();
-  return (
-    source.includes('faceless') ||
-    source.includes('no face') ||
-    source.includes('without face') ||
-    source.includes('voiceover')
-  );
-}
-
-type ProjectVariantsWorkspaceProps = {
-  project: ProjectWithVariants;
-  projectId: string;
-  onRefresh: () => Promise<unknown>;
-  refreshing: boolean;
-  pipelineJob?: PipelineJobStatusResponse;
-  /** Applied once on mount when arriving from dashboard / deep link */
-  initialTemplateId?: string | null;
-  initialAvatarId?: string | null;
-};
+export type { ProjectVariantsWorkspaceProps } from '@/components/projects/project-variants-workspace.types';
 
 export function ProjectVariantsWorkspace({
   project,
@@ -149,6 +104,7 @@ export function ProjectVariantsWorkspace({
       setTemplatePage(totalPages);
     }
   }, [templatesData, templatesPending, templatePage]);
+
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const { data: avatars = [] } = useAvatarsList();
   const [selectedAvatarId, setSelectedAvatarId] = useState<string>('');
@@ -231,6 +187,10 @@ export function ProjectVariantsWorkspace({
   const pipelineBusy = pipelineJob?.status === 'queued' || pipelineJob?.status === 'running';
   const pipelineFailed = pipelineJob?.status === 'failed';
 
+  const canGenerate = Boolean(
+    accessToken && (credits == null || credits.balance >= GENERATE_COUNT) && !pipelineBusy,
+  );
+
   return (
     <>
       <ConfirmationModal
@@ -252,7 +212,6 @@ export function ProjectVariantsWorkspace({
       />
 
       <div className="flex min-h-0 flex-col gap-8 lg:flex-row lg:items-start lg:gap-10">
-        {/* Left: settings */}
         <aside className="w-full shrink-0 space-y-6 lg:sticky lg:top-6 lg:max-h-[calc(100vh-4rem)] lg:w-[min(100%,44rem)] lg:overflow-y-auto lg:pr-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <Link
@@ -276,438 +235,59 @@ export function ProjectVariantsWorkspace({
           </div>
 
           <div className="space-y-3">
-            {sourceVideoUrl || sourceFileName ? (
-              <Card>
-                <CardContent className="space-y-2 p-4">
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    Source
-                  </p>
-                  {sourceVideoUrl ? (
-                    <p className="truncate text-sm text-foreground" title={sourceVideoUrl}>
-                      {sourceVideoUrl}
-                    </p>
-                  ) : null}
-                  {sourceFileName ? (
-                    <p className="truncate text-sm text-foreground" title={sourceFileName}>
-                      {sourceFileName}
-                    </p>
-                  ) : null}
-                  {pipelineJob ? (
-                    <p
-                      className={cn(
-                        'text-xs',
-                        pipelineBusy
-                          ? 'text-primary'
-                          : pipelineFailed
-                            ? 'text-destructive'
-                            : 'text-muted-foreground',
-                      )}
-                    >
-                      {pipelineJob.progress?.label ??
-                        (pipelineBusy
-                          ? 'Analyzing source'
-                          : pipelineFailed
-                            ? pipelineJob.error?.message || 'Pipeline failed'
-                            : 'Pipeline completed')}
-                    </p>
-                  ) : null}
-                </CardContent>
-              </Card>
-            ) : null}
-            <h2 className="text-lg font-semibold tracking-tight text-foreground">Choose a template</h2>
-            {niches.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={selectedNiche === NICHE_ALL ? 'default' : 'outline'}
-                  className="rounded-full"
-                  onClick={() => setSelectedNiche(NICHE_ALL)}
-                >
-                  All
-                </Button>
-                {niches.map((n) => (
-                  <Button
-                    key={n.code}
-                    type="button"
-                    size="sm"
-                    variant={selectedNiche === n.code ? 'default' : 'outline'}
-                    className="rounded-full"
-                    onClick={() => setSelectedNiche(n.code)}
-                  >
-                    {n.label}
-                  </Button>
-                ))}
-              </div>
-            ) : null}
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                size="sm"
-                variant={templateFaceFilter === TEMPLATE_FACE_FILTER.all ? 'default' : 'outline'}
-                className="rounded-full"
-                onClick={() => setTemplateFaceFilter(TEMPLATE_FACE_FILTER.all)}
-              >
-                All templates
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant={templateFaceFilter === TEMPLATE_FACE_FILTER.withFace ? 'default' : 'outline'}
-                className="rounded-full"
-                onClick={() => setTemplateFaceFilter(TEMPLATE_FACE_FILTER.withFace)}
-              >
-                With face
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant={templateFaceFilter === TEMPLATE_FACE_FILTER.faceless ? 'default' : 'outline'}
-                className="rounded-full"
-                onClick={() => setTemplateFaceFilter(TEMPLATE_FACE_FILTER.faceless)}
-              >
-                Faceless
-              </Button>
-            </div>
-
-            {templatesLoading ? (
-              <TemplatesGridSkeleton variant="picker" />
-            ) : (
-              <div
-                className={cn(
-                  'grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4',
-                  templatesPaginationBusy && 'pointer-events-none opacity-55 transition-opacity',
-                )}
-              >
-                <button
-                  type="button"
-                  onClick={() =>
-                    toast.info('Add a reference template under Templates, then pick it from the grid.')
-                  }
-                  className="flex aspect-video flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border bg-muted/30 text-center text-xs text-muted-foreground transition-colors hover:border-primary/40 hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  <Copy className="h-6 w-6 opacity-60" aria-hidden />
-                  <span>Replicate style</span>
-                </button>
-                {filteredTemplates.map((t) => {
-                  const active = selectedTemplateId === t.id;
-                  return (
-                    <button
-                      key={t.id}
-                      type="button"
-                      onClick={() => setSelectedTemplateId(active ? null : t.id)}
-                      className={cn(
-                        'overflow-hidden rounded-xl border-2 bg-card text-left transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                        active ? 'border-primary shadow-md shadow-primary/15' : 'border-transparent ring-1 ring-border',
-                      )}
-                    >
-                      <div className="relative aspect-video bg-muted">
-                        {t.preview_url ? (
-                          <Image
-                            src={t.preview_url}
-                            alt=""
-                            fill
-                            sizes="(min-width: 1024px) 22vw, (min-width: 640px) 33vw, 50vw"
-                            className="object-cover"
-                          />
-                        ) : (
-                          <div className="flex h-full items-center justify-center text-[10px] text-muted-foreground">
-                            No preview
-                          </div>
-                        )}
-                      </div>
-                      <p className="truncate px-2 py-1.5 text-xs font-medium text-foreground">{t.name}</p>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-            {!templatesLoading && filteredTemplates.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No templates match this face filter on the current page.
-              </p>
-            ) : null}
-            {!templatesLoading && templatesTotal > 0 ? (
-              <TemplatesPagination
-                page={templatePage}
-                total={templatesTotal}
-                limit={templatesLimit}
-                onPageChange={setTemplatePage}
-                pageSizeOptions={TEMPLATE_PAGE_SIZE_OPTIONS}
-                onPageSizeChange={handleTemplatePageSize}
-                isNavBusy={templatesPaginationBusy}
-                className="pt-1"
-              />
-            ) : null}
+            <ProjectVariantsSourceCard
+              sourceVideoUrl={sourceVideoUrl}
+              sourceFileName={sourceFileName}
+              pipelineJob={pipelineJob}
+              pipelineBusy={pipelineBusy}
+              pipelineFailed={pipelineFailed}
+            />
+            <ProjectVariantsTemplatePicker
+              niches={niches}
+              selectedNiche={selectedNiche}
+              onNicheChange={setSelectedNiche}
+              templateFaceFilter={templateFaceFilter}
+              onTemplateFaceFilterChange={setTemplateFaceFilter}
+              templatesLoading={templatesLoading}
+              templatesPaginationBusy={templatesPaginationBusy}
+              filteredTemplates={filteredTemplates}
+              templatesTotal={templatesTotal}
+              templatePage={templatePage}
+              templatesLimit={templatesLimit}
+              onTemplatePageChange={setTemplatePage}
+              onTemplatePageSizeChange={handleTemplatePageSize}
+              selectedTemplateId={selectedTemplateId}
+              onToggleTemplate={(id, active) => setSelectedTemplateId(active ? null : id)}
+            />
           </div>
 
-          <PrimaryActionPanel className="space-y-4 p-4">
-            <div className="space-y-1.5">
-              <label htmlFor="variant-character" className="text-sm font-medium text-foreground">
-                Character (optional)
-              </label>
-              <Select
-                value={selectedAvatarId || SELECT_EMPTY_VALUE}
-                onValueChange={(v) =>
-                  setSelectedAvatarId(v === SELECT_EMPTY_VALUE ? '' : v)
-                }
-              >
-                <SelectTrigger id="variant-character" className="h-10">
-                  <SelectValue placeholder="None" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={SELECT_EMPTY_VALUE}>None</SelectItem>
-                  {avatars.map((a) => (
-                    <SelectItem key={a.id} value={a.id}>
-                      {a.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-sm text-foreground">Prioritize looking like me</span>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={prioritizeFace}
-                disabled={templateFaceFilter === TEMPLATE_FACE_FILTER.faceless || !selectedAvatarId.trim()}
-                onClick={() => setPrioritizeFace((v) => !v)}
-                className={cn(
-                  'relative h-7 w-12 shrink-0 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                  prioritizeFace ? 'bg-primary' : 'bg-muted',
-                )}
-              >
-                <span
-                  className={cn(
-                    'absolute top-0.5 block h-6 w-6 rounded-full bg-white shadow transition-transform',
-                    prioritizeFace ? 'translate-x-5' : 'translate-x-0.5',
-                  )}
-                />
-              </button>
-            </div>
-
-            <Button
-              type="button"
-              className="relative h-12 w-full gap-2 text-base font-semibold"
-              onClick={handleGenerate}
-              disabled={
-                generate.isPending ||
-                pipelineBusy ||
-                !accessToken ||
-                (credits != null && credits.balance < GENERATE_COUNT)
-              }
-            >
-              {generate.isPending ? 'Generating…' : 'Generate thumbnails'}
-              <span className="ml-auto text-xs font-normal opacity-90">
-                {GENERATE_COUNT} credit{GENERATE_COUNT === 1 ? '' : 's'}
-              </span>
-            </Button>
-            {templateFaceFilter === TEMPLATE_FACE_FILTER.faceless ? (
-              <p className="text-xs text-muted-foreground">
-                Faceless: the image prompt avoids people/faces; your character reference is not used.
-              </p>
-            ) : selectedAvatarId ? (
-              <p className="text-xs text-muted-foreground">
-                Your face reference is sent with each generation so the model can match likeness when possible.
-              </p>
-            ) : null}
-            {pipelineBusy ? (
-              <p className="text-xs text-muted-foreground">
-                Video analysis is in progress. Generation controls unlock when pipeline finishes.
-              </p>
-            ) : null}
-          </PrimaryActionPanel>
+          <ProjectVariantsGeneratePanel
+            avatars={avatars}
+            selectedAvatarId={selectedAvatarId}
+            onAvatarChange={setSelectedAvatarId}
+            prioritizeFace={prioritizeFace}
+            onPrioritizeFaceChange={setPrioritizeFace}
+            templateFaceFilter={templateFaceFilter}
+            onGenerate={handleGenerate}
+            generatePending={generate.isPending}
+            pipelineBusy={pipelineBusy}
+            canGenerate={canGenerate}
+            generateLabel={generate.isPending ? 'Generating…' : 'Generate thumbnails'}
+          />
         </aside>
 
-        {/* Right: results */}
-        <section className="min-w-0 flex-1 space-y-4">
-          <div>
-            <h2 className="text-xl font-semibold tracking-tight text-foreground">
-              Generated thumbnails ({variants.length})
-            </h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {variants.length > 0
-                ? 'Select a thumbnail below to preview. Open in a new tab or download when ready.'
-                : 'Run generation from the left. New variants will show up here.'}
-            </p>
-          </div>
-
-          {variants.length === 0 ? (
-            <Card>
-              <CardContent className="flex min-h-[220px] flex-col items-center justify-center gap-4 px-6 py-12 text-center">
-                <div
-                  className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/15 text-primary ring-1 ring-primary/20"
-                  aria-hidden
-                >
-                  <ImageIcon className="h-7 w-7" strokeWidth={1.75} />
-                </div>
-                <div className="space-y-2">
-                  <p className="text-base font-semibold tracking-tight text-foreground">No variants yet</p>
-                  <p className="mx-auto max-w-sm text-sm leading-relaxed text-muted-foreground">
-                    Pick a template on the left (optional), set face if you want, then{' '}
-                    <strong className="text-foreground/90">Generate thumbnails</strong>.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <>
-              <div className="surface overflow-hidden">
-                <div className="relative aspect-video max-h-[min(70vh,520px)] w-full bg-muted">
-                  {previewUrl ? (
-                    <div
-                      key={selectedVariantId}
-                      className="vt-preview-reveal flex h-full w-full items-center justify-center"
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={previewUrl}
-                        alt={`Selected thumbnail for ${project.title}`}
-                        className="max-h-full max-w-full object-contain"
-                      />
-                    </div>
-                  ) : selectedVariant ? (
-                    <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center text-sm text-muted-foreground">
-                      {selectedVariant.status === 'failed' ? (
-                        <span>{selectedVariant.error_message ?? 'Generation failed'}</span>
-                      ) : (
-                        <span>No image yet ({selectedVariant.status})</span>
-                      )}
-                    </div>
-                  ) : null}
-                </div>
-                <div className="flex flex-wrap gap-2 border-t border-border p-3">
-                  {selectedStyleLabel ? (
-                    <span className="rounded-full border border-border bg-background px-2.5 py-1 text-xs text-foreground/90">
-                      {selectedStyleLabel}
-                    </span>
-                  ) : null}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="gap-2"
-                    onClick={() => toast.info('Editing will open in a future update.')}
-                  >
-                    <Pencil className="h-4 w-4" aria-hidden />
-                    Modify
-                  </Button>
-                  {previewUrl ? (
-                    <a
-                      href={previewUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className={cn(
-                        buttonVariants({ variant: 'outline', size: 'sm' }),
-                        'inline-flex gap-2',
-                      )}
-                    >
-                      <Download className="h-4 w-4" aria-hidden />
-                      Download
-                    </a>
-                  ) : null}
-                  <Button
-                    type="button"
-                    size="sm"
-                    className="gap-2"
-                    onClick={() => toast.info('Watermark removal will be available in a future update.')}
-                  >
-                    Remove watermark
-                  </Button>
-                  {selectedVariant ? (
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="sm"
-                      className="ml-auto"
-                      onClick={() => setVariantToDelete(selectedVariant.id)}
-                    >
-                      Delete
-                    </Button>
-                  ) : null}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">All variants</p>
-                <div className="flex gap-2 overflow-x-auto pb-1">
-                  {variants.map((v, i) => (
-                    <VariantStripThumb
-                      key={v.id}
-                      enterIndex={i}
-                      variant={v}
-                      projectTitle={project.title}
-                      styleLabel={styleByVariantId.get(v.id)}
-                      selected={v.id === selectedVariantId}
-                      onSelect={() => setSelectedVariantId(v.id)}
-                    />
-                  ))}
-                </div>
-              </div>
-            </>
-          )}
-        </section>
+        <ProjectVariantsResults
+          projectTitle={project.title}
+          variants={variants}
+          styleByVariantId={styleByVariantId}
+          selectedVariantId={selectedVariantId}
+          onSelectVariant={setSelectedVariantId}
+          selectedVariant={selectedVariant}
+          selectedStyleLabel={selectedStyleLabel}
+          previewUrl={previewUrl}
+          onRequestDeleteVariant={(id) => setVariantToDelete(id)}
+        />
       </div>
     </>
-  );
-}
-
-function VariantStripThumb({
-  variant,
-  projectTitle,
-  styleLabel,
-  selected,
-  onSelect,
-  enterIndex,
-}: {
-  variant: ThumbnailVariantRow;
-  projectTitle: string;
-  styleLabel?: string;
-  selected: boolean;
-  onSelect: () => void;
-  enterIndex: number;
-}) {
-  const url = variant.generated_image_url;
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      style={{ animationDelay: `${Math.min(enterIndex, 24) * 42}ms` }}
-      className={cn(
-        'vt-variant-enter relative w-28 shrink-0 overflow-hidden rounded-lg border-2 bg-muted transition-[border-color,box-shadow]',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-        selected
-          ? 'border-primary shadow-sm shadow-primary/10 focus-visible:ring-primary/50'
-          : 'border-border/50 hover:border-border focus-visible:ring-ring',
-      )}
-    >
-      <div className="aspect-video w-full">
-        {url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={url} alt="" className="h-full w-full object-cover" />
-        ) : (
-          <div className="flex h-full items-center justify-center p-1 text-center text-[10px] text-muted-foreground">
-            {variant.status}
-          </div>
-        )}
-      </div>
-      <Badge
-        variant="default"
-        className={cn(
-          'absolute bottom-1 right-1 px-1.5 py-0 text-[10px] capitalize',
-          statusToneClass(variant.status),
-        )}
-      >
-        {variant.status}
-      </Badge>
-      {styleLabel ? (
-        <span className="absolute left-1 top-1 rounded bg-black/55 px-1.5 py-0.5 text-[10px] text-white/95">
-          {styleLabel}
-        </span>
-      ) : null}
-      <span className="sr-only">Select variant for {projectTitle}</span>
-    </button>
   );
 }

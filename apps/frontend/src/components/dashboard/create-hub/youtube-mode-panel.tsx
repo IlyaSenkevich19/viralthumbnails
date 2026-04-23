@@ -21,11 +21,9 @@ export const YoutubeModePanel = memo(function YoutubeModePanel({
   youtubeMetaPreview,
 }: Props) {
   return (
-    <div className="space-y-1.5">
-      <label htmlFor="dash-youtube" className="text-sm font-medium text-foreground">
-        YouTube URL
-      </label>
+    <div className="flex h-full flex-col">
       <Input
+        className="mt-0"
         id="dash-youtube"
         placeholder="https://www.youtube.com/watch?v=…"
         value={youtubeUrl}
@@ -37,33 +35,38 @@ export const YoutubeModePanel = memo(function YoutubeModePanel({
         }}
         inputMode="url"
         autoComplete="url"
+        aria-label="YouTube URL"
         aria-invalid={Boolean(urlError)}
       />
-      {youtubeMetaPreview ? (
-        <div className="surface mt-2 flex items-center gap-3 p-2.5">
-          {youtubeMetaPreview.thumbnail ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={youtubeMetaPreview.thumbnail}
-              alt=""
-              className="h-12 w-20 shrink-0 rounded-md object-cover"
-            />
-          ) : null}
-          <div className="min-w-0">
-            <p className="truncate text-sm font-medium text-foreground">
-              {youtubeMetaPreview.title || 'YouTube video'}
-            </p>
-            <p className="truncate text-xs text-muted-foreground">
-              {youtubeMetaPreview.author || 'Unknown channel'}
-            </p>
+      <div className="mt-3 min-h-[4.5rem]">
+        {youtubeMetaPreview ? (
+          <div className="surface flex items-center gap-3 p-2.5">
+            {youtubeMetaPreview.thumbnail ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={youtubeMetaPreview.thumbnail}
+                alt=""
+                className="h-12 w-20 shrink-0 rounded-md object-cover"
+              />
+            ) : null}
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium text-foreground">
+                {youtubeMetaPreview.title || 'YouTube video'}
+              </p>
+              <p className="truncate text-xs text-muted-foreground">
+                {youtubeMetaPreview.author || 'Unknown channel'}
+              </p>
+            </div>
           </div>
-        </div>
-      ) : null}
-      {urlError ? (
-        <p className="text-sm text-destructive" role="alert">
-          {urlError}
-        </p>
-      ) : null}
+        ) : null}
+      </div>
+      <p
+        className="mt-1.5 min-h-5 text-sm text-destructive"
+        role={urlError ? 'alert' : undefined}
+        aria-live="polite"
+      >
+        {urlError || ' '}
+      </p>
     </div>
   );
 });

@@ -3,13 +3,10 @@ import { memo } from 'react';
 export const CreateHubHeader = memo(function CreateHubHeader() {
   return (
     <div className="max-w-3xl">
-      <h2
-        id="dashboard-create-heading"
-        className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl"
-      >
-        Create <span className="text-primary">thumbnails</span>
+      <h2 id="dashboard-create-heading" className="sr-only">
+        Create thumbnails
       </h2>
-      <p className="mt-1 text-sm text-muted-foreground">Start with a prompt, YouTube link, or video.</p>
+      <p className="text-sm text-muted-foreground">Choose a source to start generation.</p>
     </div>
   );
 });

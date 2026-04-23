@@ -16,8 +16,27 @@ const backendBase = (process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:30
   /\/$/,
   '',
 );
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+let supabaseHostname = null;
+if (supabaseUrl) {
+  try {
+    supabaseHostname = new URL(supabaseUrl).hostname;
+  } catch {
+    supabaseHostname = null;
+  }
+}
 
 const nextConfig = {
+  images: {
+    remotePatterns: supabaseHostname
+      ? [
+          {
+            protocol: 'https',
+            hostname: supabaseHostname,
+          },
+        ]
+      : [],
+  },
   async rewrites() {
     return [
       {

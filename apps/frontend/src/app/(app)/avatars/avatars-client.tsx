@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import Image from 'next/image';
 import {
   useAvatarsList,
   useCreateAvatarMutation,
@@ -149,8 +150,13 @@ export function AvatarsClient() {
             <Card key={a.id} className="overflow-hidden">
               <div className="relative aspect-square bg-muted">
                 {a.preview_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={a.preview_url} alt="" className="h-full w-full object-cover" />
+                  <Image
+                    src={a.preview_url}
+                    alt=""
+                    fill
+                    sizes="(min-width: 1024px) 20rem, (min-width: 640px) 50vw, 100vw"
+                    className="object-cover"
+                  />
                 ) : (
                   <div className="flex h-full items-center justify-center text-xs text-muted-foreground">No preview</div>
                 )}

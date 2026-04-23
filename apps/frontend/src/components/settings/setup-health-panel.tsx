@@ -3,6 +3,7 @@
 import { AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { PrimaryActionPanel } from '@/components/ui/primary-action-panel';
 import { useBackendSetupHealth } from '@/lib/hooks';
 import { cn } from '@/lib/utils';
 
@@ -54,7 +55,7 @@ export function SetupHealthPanel() {
   const allReady = checks.every((c) => c.ok);
 
   return (
-    <Card className="relative overflow-hidden border-white/10 bg-[radial-gradient(ellipse_at_top_right,rgba(255,59,59,0.08),transparent_50%),var(--card)]">
+    <PrimaryActionPanel>
       <CardHeader className="space-y-3 pb-4">
         <CardTitle className="flex items-center justify-between gap-3 text-base">
           <span className="flex items-center gap-2.5">
@@ -125,6 +126,6 @@ export function SetupHealthPanel() {
           </div>
         </div>
       </CardContent>
-    </Card>
+    </PrimaryActionPanel>
   );
 }

@@ -4,9 +4,11 @@
  */
 export const AppRoutes = {
   home: '/',
+  create: '/create',
+  /** Legacy URL; middleware + page redirect to create. */
   dashboard: '/dashboard',
   projects: '/projects',
-  /** Legacy URL; root middleware redirects to dashboard. */
+  /** Legacy URL; root middleware redirects to create. */
   projectsNew: '/projects/new',
   templates: '/templates',
   /** YouTube inspiration (admin-only; env `ADMIN_USER_IDS`). */

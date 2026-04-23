@@ -35,7 +35,6 @@ export function useDashboardCreateHub() {
   const [creative, setCreative] = useState('');
   const [youtubeUrl, setYoutubeUrl] = useState('');
   const [videoFile, setVideoFile] = useState<File | null>(null);
-  const [videoRemoteUrl, setVideoRemoteUrl] = useState('');
   const videoCount = DEFAULT_VIDEO_THUMBNAIL_COUNT;
   const [videoResult, setVideoResult] = useState<PipelineVideoResponse | null>(null);
   const [videoPreparing, setVideoPreparing] = useState(false);
@@ -96,10 +95,8 @@ export function useDashboardCreateHub() {
     }
 
     if (mode === DASHBOARD_CREATE_HUB_MODE.video) {
-      const hasFile = Boolean(videoFile);
-      const url = videoRemoteUrl.trim();
-      if (!hasFile && !url) {
-        toast.error('Add a video file or a direct HTTPS link to the video.');
+      if (!videoFile) {
+        toast.error('Upload a video file to continue.');
         return;
       }
 
@@ -141,15 +138,13 @@ export function useDashboardCreateHub() {
         const project = await projectsApi.createProject(accessToken, {
           source_type: 'video',
           source_data: {
-            video_url: hasFile ? undefined : url || undefined,
-            file_name: hasFile ? videoFile?.name : undefined,
+            file_name: videoFile?.name,
           },
         });
         createdProjectId = project.id;
         router.push(projectVariantsPath(project.id));
         const created = await thumbnailsApi.runThumbnailPipelineVideo(accessToken, {
           file: fileToSend,
-          videoUrl: hasFile ? undefined : url || undefined,
           count: n,
           project_id: project.id,
         });
@@ -279,7 +274,6 @@ export function useDashboardCreateHub() {
     accessToken,
     mode,
     videoFile,
-    videoRemoteUrl,
     videoCount,
     credits?.balance,
     creative,
@@ -328,8 +322,6 @@ export function useDashboardCreateHub() {
     setYoutubeMetaPreview,
     videoFile,
     setVideoFile,
-    videoRemoteUrl,
-    setVideoRemoteUrl,
     videoCount,
     videoResult,
     videoPreparing,

@@ -7,7 +7,8 @@ import type { PageFrameState } from '@/contexts/page-frame-context';
  * When changing copy here, update the matching page’s SetPageFrame props.
  */
 const STATIC_PAGE_FRAMES: Record<string, PageFrameState> = {
-  [AppRoutes.dashboard]: { title: 'Dashboard', eyebrow: null },
+  [AppRoutes.create]: { title: 'Create', eyebrow: null },
+  [AppRoutes.dashboard]: { title: 'Create', eyebrow: null },
   [AppRoutes.projects]: { title: 'Projects', eyebrow: null },
   [AppRoutes.templates]: { title: 'Templates', eyebrow: null },
   [AppRoutes.avatars]: { title: 'My faces', eyebrow: null },

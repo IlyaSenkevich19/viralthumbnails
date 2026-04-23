@@ -94,7 +94,13 @@ export class AvatarsService {
       BUCKET_USER_AVATARS,
       'storage_path',
       'preview_url',
-      { nullUrlOnSignError: true },
+      {
+        nullUrlOnSignError: true,
+        transform: {
+          width: 768,
+          quality: 88,
+        },
+      },
     );
   }
 }

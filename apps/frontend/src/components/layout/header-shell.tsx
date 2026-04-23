@@ -75,7 +75,7 @@ export function HeaderShell({
             </div>
           ) : (
             <div className="flex min-w-0 items-center pt-0.5">
-              <BrandWordmark className="truncate text-sm sm:text-base" href={AppRoutes.dashboard} />
+              <BrandWordmark className="truncate text-sm sm:text-base" href={AppRoutes.create} />
             </div>
           )}
         </div>

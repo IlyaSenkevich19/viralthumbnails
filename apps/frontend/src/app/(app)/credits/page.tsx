@@ -186,8 +186,8 @@ export default function CreditsPricingPage() {
 
       <p className="text-center text-xs text-muted-foreground">
         Need a custom pack size? Contact support and we&apos;ll set it up manually.{' '}
-        <Link href={AppRoutes.dashboard} className="text-primary underline-offset-4 hover:underline">
-          Back to dashboard
+        <Link href={AppRoutes.create} className="text-primary underline-offset-4 hover:underline">
+          Back to create
         </Link>
       </p>
     </div>

@@ -12,7 +12,7 @@ export default async function AdminYoutubeInspirationPage() {
   } = await supabase.auth.getUser();
 
   if (!user || !userIdIsAdmin(user.id)) {
-    redirect(AppRoutes.dashboard);
+    redirect(AppRoutes.create);
   }
 
   return (

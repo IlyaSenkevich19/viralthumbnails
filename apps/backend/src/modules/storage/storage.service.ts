@@ -132,11 +132,28 @@ export class StorageService {
     return { path };
   }
 
-  async createSignedUrl(bucket: string, objectPath: string): Promise<string> {
+  async createSignedUrl(
+    bucket: string,
+    objectPath: string,
+    opts?: {
+      transform?: {
+        width?: number;
+        height?: number;
+        resize?: 'cover' | 'contain' | 'fill';
+        quality?: number;
+      };
+    },
+  ): Promise<string> {
     const client = this.supabase.getAdminClient();
-    const { data, error } = await client.storage
-      .from(bucket)
-      .createSignedUrl(objectPath, this.signExpiresSeconds());
+    const { data, error } = await client.storage.from(bucket).createSignedUrl(
+      objectPath,
+      this.signExpiresSeconds(),
+      opts?.transform
+        ? {
+            transform: opts.transform,
+          }
+        : undefined,
+    );
     if (error || !data?.signedUrl) {
       throw new Error(error?.message ?? 'createSignedUrl failed');
     }
@@ -148,14 +165,22 @@ export class StorageService {
     bucket: string,
     storagePathField: string,
     signedUrlField: string,
-    opts?: { nullUrlOnSignError?: boolean },
+    opts?: {
+      nullUrlOnSignError?: boolean;
+      transform?: {
+        width?: number;
+        height?: number;
+        resize?: 'cover' | 'contain' | 'fill';
+        quality?: number;
+      };
+    },
   ): Promise<T> {
     const path = row[storagePathField];
     if (typeof path !== 'string' || path.length === 0) {
       return row;
     }
     try {
-      const url = await this.createSignedUrl(bucket, path);
+      const url = await this.createSignedUrl(bucket, path, { transform: opts?.transform });
       return { ...row, [signedUrlField]: url } as T;
     } catch {
       if (opts?.nullUrlOnSignError) {

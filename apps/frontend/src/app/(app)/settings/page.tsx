@@ -1,15 +1,15 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BackendHealth } from '@/components/backend-health';
 import { SetPageFrame } from '@/components/layout/set-page-frame';
 import { SetupHealthPanel } from '@/components/settings/setup-health-panel';
+import { PrimaryActionPanel } from '@/components/ui/primary-action-panel';
 
 export default function SettingsPage() {
   return (
     <div className="space-y-8">
       <SetPageFrame title="Settings" />
 
-      <Card className="relative overflow-hidden">
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
+      <PrimaryActionPanel>
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Account</CardTitle>
           <p className="text-sm text-muted-foreground">
@@ -20,10 +20,9 @@ export default function SettingsPage() {
           Use the account menu in the sidebar to sign out. Password changes and email updates can be
           added here or linked to your auth provider&apos;s flows.
         </CardContent>
-      </Card>
+      </PrimaryActionPanel>
 
-      <Card className="relative overflow-hidden">
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
+      <PrimaryActionPanel>
         <CardHeader className="pb-2">
           <CardTitle className="text-base">App connection</CardTitle>
           <p className="text-sm text-muted-foreground">Whether the app can reach the API server.</p>
@@ -35,7 +34,7 @@ export default function SettingsPage() {
             point to the correct API URL.
           </p>
         </CardContent>
-      </Card>
+      </PrimaryActionPanel>
 
       <SetupHealthPanel />
     </div>

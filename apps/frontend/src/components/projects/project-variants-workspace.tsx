@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   ArrowLeft,
   Copy,
@@ -45,6 +46,7 @@ import { TemplatesGridSkeleton } from '@/components/templates/templates-grid-ske
 import { TemplatesPagination } from '@/components/templates/templates-pagination';
 import { pickThumbnailStyles } from '@/lib/thumbnail-style-matrix';
 import type { PipelineJobStatusResponse } from '@/lib/api/thumbnails';
+import { PrimaryActionPanel } from '@/components/ui/primary-action-panel';
 
 const GENERATE_COUNT = 1;
 
@@ -323,11 +325,12 @@ export function ProjectVariantsWorkspace({
                     >
                       <div className="relative aspect-video bg-muted">
                         {t.preview_url ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
+                          <Image
                             src={t.preview_url}
                             alt=""
-                            className="h-full w-full object-cover"
+                            fill
+                            sizes="(min-width: 1024px) 22vw, (min-width: 640px) 33vw, 50vw"
+                            className="object-cover"
                           />
                         ) : (
                           <div className="flex h-full items-center justify-center text-[10px] text-muted-foreground">
@@ -355,7 +358,7 @@ export function ProjectVariantsWorkspace({
             ) : null}
           </div>
 
-          <div className={cn('surface space-y-4 p-4', 'bg-card/50')}>
+          <PrimaryActionPanel className="space-y-4 p-4">
             <div className="space-y-1.5">
               <label htmlFor="variant-character" className="text-sm font-medium text-foreground">
                 Character (optional)
@@ -427,7 +430,7 @@ export function ProjectVariantsWorkspace({
                 Video analysis is in progress. Generation controls unlock when pipeline finishes.
               </p>
             ) : null}
-          </div>
+          </PrimaryActionPanel>
         </aside>
 
         {/* Right: results */}

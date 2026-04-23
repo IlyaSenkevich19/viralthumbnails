@@ -18,9 +18,11 @@ export function DashboardCreateHub() {
     <section className="surface-dashboard p-6 sm:p-8" aria-labelledby="dashboard-create-heading">
       <CreateHubHeader />
       <CreateHubModeTabs mode={h.mode} onModeChange={h.onModeChange} />
-      <CreateHubRecoveringBanner show={h.recoveringPreviousGeneration} />
+      <div className="mt-3 min-h-7">
+        <CreateHubRecoveringBanner show={h.recoveringPreviousGeneration} />
+      </div>
 
-      <div className="mt-4">
+      <div className="mt-4 min-h-[11.5rem]">
         {h.mode === DASHBOARD_CREATE_HUB_MODE.prompt && (
           <PromptModePanel
             creative={h.creative}
@@ -40,9 +42,8 @@ export function DashboardCreateHub() {
         )}
         {h.mode === DASHBOARD_CREATE_HUB_MODE.video && (
           <VideoModePanel
+            videoFile={h.videoFile}
             onVideoFileChange={h.setVideoFile}
-            videoRemoteUrl={h.videoRemoteUrl}
-            onVideoRemoteUrlChange={h.setVideoRemoteUrl}
           />
         )}
       </div>

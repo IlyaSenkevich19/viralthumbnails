@@ -16,7 +16,7 @@ export async function middleware(request: NextRequest) {
     if (path === AppRoutes.home) {
       if (user) {
         const url = request.nextUrl.clone();
-        url.pathname = AppRoutes.dashboard;
+        url.pathname = AppRoutes.create;
         const redirect = NextResponse.redirect(url);
         copyCookies(sessionResponse, redirect);
         return redirect;
@@ -29,7 +29,15 @@ export async function middleware(request: NextRequest) {
         return sessionResponse;
       }
       const url = request.nextUrl.clone();
-      url.pathname = AppRoutes.dashboard;
+      url.pathname = AppRoutes.create;
+      const redirect = NextResponse.redirect(url);
+      copyCookies(sessionResponse, redirect);
+      return redirect;
+    }
+
+    if (path === AppRoutes.dashboard) {
+      const url = request.nextUrl.clone();
+      url.pathname = AppRoutes.create;
       const redirect = NextResponse.redirect(url);
       copyCookies(sessionResponse, redirect);
       return redirect;

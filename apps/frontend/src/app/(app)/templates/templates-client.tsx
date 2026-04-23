@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo } from 'react';
+import Image from 'next/image';
 import { LayoutTemplate } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -261,8 +262,13 @@ export function TemplatesClient() {
                 <Card key={t.id} className="overflow-hidden">
                   <div className="relative aspect-video bg-muted">
                     {t.preview_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={t.preview_url} alt="" className="h-full w-full object-cover" />
+                      <Image
+                        src={t.preview_url}
+                        alt=""
+                        fill
+                        sizes="(min-width: 1024px) 24rem, (min-width: 640px) 50vw, 100vw"
+                        className="object-cover"
+                      />
                     ) : (
                       <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
                         No preview

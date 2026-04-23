@@ -8,7 +8,7 @@ import { BrandWordmark } from '@/components/layout/brand-wordmark';
 import { useAuth } from '@/contexts/auth-context';
 import { cn } from '@/lib/utils';
 import {
-  LayoutDashboard,
+  PlusSquare,
   FolderKanban,
   LayoutTemplate,
   UserCircle,
@@ -28,7 +28,7 @@ import { Badge } from '@/components/ui/badge';
 import { AppRoutes } from '@/config/routes';
 
 const navItems = [
-  { href: AppRoutes.dashboard, label: 'Dashboard', icon: LayoutDashboard },
+  { href: AppRoutes.create, label: 'Create', icon: PlusSquare },
   { href: AppRoutes.projects, label: 'Projects', icon: FolderKanban },
   { href: AppRoutes.templates, label: 'Templates', icon: LayoutTemplate },
   { href: AppRoutes.avatars, label: 'My faces', icon: UserCircle },
@@ -264,9 +264,9 @@ export function Sidebar({
           className={cn(compact && 'flex w-full justify-center')}
         >
           <Link
-            href={AppRoutes.dashboard}
+            href={AppRoutes.create}
             onClick={() => {
-              if (inDrawer && pathname === AppRoutes.dashboard) onClose?.();
+              if (inDrawer && pathname === AppRoutes.create) onClose?.();
             }}
             className={cn('flex min-w-0 items-center', compact && 'justify-center')}
           >
@@ -294,7 +294,7 @@ export function Sidebar({
             if (adminOnly && (adminStatusPending || !isAdmin)) return null;
             const active =
               effectivePath === href ||
-              (href !== AppRoutes.dashboard && effectivePath.startsWith(`${href}/`));
+              (href !== AppRoutes.create && effectivePath.startsWith(`${href}/`));
             const tooltipLabel = soon
               ? `${label} (soon)`
               : adminOnly

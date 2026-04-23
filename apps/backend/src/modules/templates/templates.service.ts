@@ -238,7 +238,13 @@ export class TemplatesService {
       BUCKET_THUMBNAIL_TEMPLATES,
       'storage_path',
       'preview_url',
-      { nullUrlOnSignError: true },
+      {
+        nullUrlOnSignError: true,
+        transform: {
+          width: 1280,
+          quality: 88,
+        },
+      },
     );
   }
 }

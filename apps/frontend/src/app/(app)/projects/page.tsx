@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { FolderOpen, Loader2, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
@@ -142,8 +143,8 @@ export default function ProjectsListPage() {
               <p className="mx-auto max-w-sm text-sm leading-relaxed text-muted-foreground">
                 Create a project, then pick a template and face and generate thumbnails on the next screen. For a
                 one-step run from a prompt, YouTube link, or video, use the{' '}
-                <Link href={AppRoutes.dashboard} className="font-medium text-primary underline-offset-2 hover:underline">
-                  Dashboard
+                <Link href={AppRoutes.create} className="font-medium text-primary underline-offset-2 hover:underline">
+                  Create
                 </Link>
                 .
               </p>
@@ -217,12 +218,15 @@ export default function ProjectsListPage() {
                       <td className="px-4 py-2">
                         <div className="h-12 w-20 overflow-hidden rounded-md bg-muted">
                           {p.cover_thumbnail_url ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={p.cover_thumbnail_url}
-                              alt={`Preview: ${p.title}`}
-                              className="h-full w-full object-cover"
-                            />
+                            <div className="relative h-full w-full">
+                              <Image
+                                src={p.cover_thumbnail_url}
+                                alt={`Preview: ${p.title}`}
+                                fill
+                                sizes="80px"
+                                className="object-cover"
+                              />
+                            </div>
                           ) : null}
                         </div>
                       </td>
@@ -284,12 +288,15 @@ export default function ProjectsListPage() {
                   <CardContent className="flex gap-3 p-4">
                     <div className="h-16 w-28 shrink-0 overflow-hidden rounded-lg bg-muted">
                       {p.cover_thumbnail_url ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={p.cover_thumbnail_url}
-                          alt={`Preview: ${p.title}`}
-                          className="h-full w-full object-cover"
-                        />
+                        <div className="relative h-full w-full">
+                          <Image
+                            src={p.cover_thumbnail_url}
+                            alt={`Preview: ${p.title}`}
+                            fill
+                            sizes="112px"
+                            className="object-cover"
+                          />
+                        </div>
                       ) : null}
                     </div>
                     <div className="min-w-0 flex-1 space-y-2">

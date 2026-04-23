@@ -27,7 +27,9 @@ import { ProjectVariantsResults } from '@/components/projects/project-variants-r
 import { ProjectVariantsSourceCard } from '@/components/projects/project-variants-source-card';
 import { ProjectVariantsTemplatePicker } from '@/components/projects/project-variants-template-picker';
 import {
-  GENERATE_COUNT,
+  PROJECT_GENERATE_COUNT_DEFAULT,
+  PROJECT_GENERATE_COUNT_MAX,
+  PROJECT_GENERATE_COUNT_MIN,
   TEMPLATE_FACE_FILTER,
   isLikelyFacelessTemplate,
   type TemplateFaceFilter,
@@ -110,6 +112,7 @@ export function ProjectVariantsWorkspace({
   const [selectedAvatarId, setSelectedAvatarId] = useState<string>('');
   const appliedUrlSelection = useRef(false);
   const [prioritizeFace, setPrioritizeFace] = useState(false);
+  const [generateCount, setGenerateCount] = useState(PROJECT_GENERATE_COUNT_DEFAULT);
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
   const [variantToDelete, setVariantToDelete] = useState<string | null>(null);
 
@@ -143,14 +146,24 @@ export function ProjectVariantsWorkspace({
     variants.forEach((v, i) => map.set(v.id, labels[i]));
     return map;
   }, [variants]);
-  const selectedStyleLabel = selectedVariant ? styleByVariantId.get(selectedVariant.id) : null;
+  const selectedStyleLabel: string | null =
+    selectedVariant != null ? (styleByVariantId.get(selectedVariant.id) ?? null) : null;
+
+  const clampedGenerateCount = useMemo(
+    () =>
+      Math.min(
+        PROJECT_GENERATE_COUNT_MAX,
+        Math.max(PROJECT_GENERATE_COUNT_MIN, Math.floor(generateCount) || PROJECT_GENERATE_COUNT_DEFAULT),
+      ),
+    [generateCount],
+  );
 
   const handleGenerate = useCallback(() => {
     if (!accessToken) {
       toast.error('Not signed in');
       return;
     }
-    if (!assertSufficientCredits({ balance: credits?.balance, cost: GENERATE_COUNT })) return;
+    if (!assertSufficientCredits({ balance: credits?.balance, cost: clampedGenerateCount })) return;
     const faceInThumbnail =
       templateFaceFilter === TEMPLATE_FACE_FILTER.withFace
         ? 'with_face'
@@ -158,7 +171,7 @@ export function ProjectVariantsWorkspace({
           ? 'faceless'
           : 'default';
     generate.mutate({
-      count: GENERATE_COUNT,
+      count: clampedGenerateCount,
       template_id: selectedTemplateId ?? undefined,
       avatar_id: selectedAvatarId.trim() || undefined,
       prioritize_face: prioritizeFace,
@@ -168,13 +181,15 @@ export function ProjectVariantsWorkspace({
     accessToken,
     credits?.balance,
     generate,
+    clampedGenerateCount,
     prioritizeFace,
     selectedAvatarId,
     selectedTemplateId,
     templateFaceFilter,
   ]);
 
-  const previewUrl = selectedVariant?.generated_image_url ?? null;
+  const previewUrl: string | null =
+    selectedVariant != null ? (selectedVariant.generated_image_url ?? null) : null;
   const sourceData = project.source_data ?? {};
   const sourceVideoUrl =
     typeof sourceData.video_url === 'string' && sourceData.video_url.trim().length > 0
@@ -188,7 +203,7 @@ export function ProjectVariantsWorkspace({
   const pipelineFailed = pipelineJob?.status === 'failed';
 
   const canGenerate = Boolean(
-    accessToken && (credits == null || credits.balance >= GENERATE_COUNT) && !pipelineBusy,
+    accessToken && (credits == null || credits.balance >= clampedGenerateCount) && !pipelineBusy,
   );
 
   return (
@@ -268,6 +283,12 @@ export function ProjectVariantsWorkspace({
             prioritizeFace={prioritizeFace}
             onPrioritizeFaceChange={setPrioritizeFace}
             templateFaceFilter={templateFaceFilter}
+            generateCount={clampedGenerateCount}
+            onGenerateCountChange={(n) =>
+              setGenerateCount(
+                Math.min(PROJECT_GENERATE_COUNT_MAX, Math.max(PROJECT_GENERATE_COUNT_MIN, Math.floor(n))),
+              )
+            }
             onGenerate={handleGenerate}
             generatePending={generate.isPending}
             pipelineBusy={pipelineBusy}
@@ -277,7 +298,7 @@ export function ProjectVariantsWorkspace({
         </aside>
 
         <ProjectVariantsResults
-          projectTitle={project.title}
+          projectTitle={project.title ?? ''}
           variants={variants}
           styleByVariantId={styleByVariantId}
           selectedVariantId={selectedVariantId}

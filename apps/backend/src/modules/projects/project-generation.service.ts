@@ -6,6 +6,7 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { ProjectVariantImageService } from '../project-thumbnail-generation/project-variant-image.service';
 import { BillingService } from '../billing/billing.service';
 import type { ThumbnailFaceInImage } from '../../common/thumbnail-prompt-guidelines';
+import type { ThumbnailImageModelTier } from '../../config/openrouter-models';
 
 /**
  * Orchestrates thumbnail variant creation, OpenRouter image generation, billing refunds, and project status updates.
@@ -28,6 +29,7 @@ export class ProjectGenerationService {
     avatarId?: string,
     prioritizeFace?: boolean,
     faceInThumbnail?: ThumbnailFaceInImage,
+    imageModelTier?: ThumbnailImageModelTier,
   ) {
     const n = Math.floor(Number(count));
     const safeCount = Math.min(5, Math.max(1, Number.isFinite(n) ? n : 1));
@@ -75,6 +77,7 @@ export class ProjectGenerationService {
           avatarId,
           prioritizeFace,
           faceInThumbnail,
+          imageModelTier: imageModelTier ?? 'default',
           styleVariantIndex: i,
           totalVariants: safeCount,
         });

@@ -1,3 +1,4 @@
+import type { ThumbnailImageModelTier } from '../../../config/openrouter-models';
 import type { PipelineVideoContext } from '../../video-thumbnails/types/video-pipeline-video-context';
 import type { ThumbnailPipelineAnalysis } from '../schemas/thumbnail-pipeline-analysis.schema';
 
@@ -15,6 +16,8 @@ export type ThumbnailPipelineRunInput = {
   variantCount?: number;
   /** When false, only structured analysis is returned (no image API calls). */
   generateImages?: boolean;
+  /** `default` = FLUX.2 Pro; `premium` = FLUX.2 Max (slugs in `openrouter-models`). */
+  imageModelTier?: ThumbnailImageModelTier;
   prioritizeFace?: boolean;
   /** Base image for the editing layer (`data:image/...;base64,...`). */
   baseImageDataUrl?: string;

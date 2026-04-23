@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import type { ThumbnailImageModelTier } from '../../../config/openrouter-models';
 import { ProjectVariantImageService } from '../../project-thumbnail-generation/project-variant-image.service';
 import type { PipelineVideoContext } from '../../video-thumbnails/types/video-pipeline-video-context';
 import { ThumbnailPipelineRunDto } from '../dto/thumbnail-pipeline-run.dto';
@@ -39,6 +40,9 @@ export class ThumbnailPipelineExecutionService {
         ? [resolvedRefs.dataUrls[resolvedRefs.dataUrls.length - 1]]
         : [];
 
+    const imageModelTier: ThumbnailImageModelTier =
+      body.image_model_tier === 'premium' ? 'premium' : 'default';
+
     const runInput = {
       userId,
       projectId: body.project_id,
@@ -50,6 +54,7 @@ export class ThumbnailPipelineExecutionService {
       faceReferenceDataUrls: [...resolvedFaceRefs, ...(body.face_reference_data_urls ?? [])],
       variantCount: body.variant_count,
       generateImages: Boolean(body.generate_images),
+      imageModelTier,
       prioritizeFace: Boolean(body.prioritize_face),
       baseImageDataUrl: body.base_image_data_url,
       editInstruction: body.edit_instruction,

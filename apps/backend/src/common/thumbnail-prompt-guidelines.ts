@@ -44,7 +44,7 @@ export const THUMBNAIL_STYLE_PRESETS: ReadonlyArray<ThumbnailStylePreset> = [
 ] as const;
 
 export const THUMBNAIL_PROMPT_QUALITY_GUARDRAILS =
-  'Hard requirements: output 16:9 only; one dominant subject; very high contrast; ultra-legible on-image text (max 3-5 words, very large). Keep composition clean with safe margins for mobile crops. Avoid clutter, tiny text, watermark/logo hallucinations, unreadable gibberish text, and low-contrast overlays.';
+  'Hard requirements: output 16:9 only; one dominant subject; very high contrast; ultra-legible on-image text (max 3-5 words, very large). YouTube energy: bold hook, punchy focal point, not a slide deck or tiny distant figure. If a person appears: tight close-up or strong medium shot so the face is large; sharp eyes and natural skin texture; single clear key light; avoid plastic, wax, or doll-like skin, and avoid a tiny face lost in the frame. Keep clean safe margins for mobile crops. Avoid clutter, micro-text, watermark/logo hallucinations, unreadable gibberish, and low-contrast overlays.';
 
 /** How strongly the result should show an on-camera person (project "Generate" flow). */
 export type ThumbnailFaceInImage = 'default' | 'with_face' | 'faceless';
@@ -71,7 +71,7 @@ export function resolveFaceInThumbnailInstruction(mode: ThumbnailFaceInImage | u
     return '';
   }
   if (mode === 'with_face') {
-    return 'On-camera subject: include a clear human with a prominent, readable face at thumbnail size. Face should be well-lit, expressive, and central to the hook.';
+    return 'On-camera subject: tight framing — one person’s face must be large in frame, well-lit, sharp, photoreal skin (not waxy or doll-like), strong emotion matching the topic; eyes and mouth readable at small YouTube size.';
   }
   return 'Faceless mode: do not depict any people or recognizable human faces (no portraits). Prefer bold text, product or screen-focused staging, environment, or abstract/illustration look. If a layout reference image shows a person, reinterpret the same composition with non-human focal elements while keeping the same energy.';
 }

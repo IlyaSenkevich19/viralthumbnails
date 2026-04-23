@@ -114,9 +114,15 @@ export function SetupHealthPanel() {
               </p>
             </div>
             <div className="rounded-xl border border-white/10 bg-background/40 p-3.5">
-              <p className="text-xs text-muted-foreground">Image generation</p>
+              <p className="text-xs text-muted-foreground">Image generation (default tier)</p>
               <p className="mt-1.5 text-sm font-medium text-foreground/95">
-                {data.pipelineModels.imageGeneration}
+                {data.pipelineModels.imageGenerationDefault}
+              </p>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-background/40 p-3.5">
+              <p className="text-xs text-muted-foreground">Image generation (premium tier)</p>
+              <p className="mt-1.5 text-sm font-medium text-foreground/95">
+                {data.pipelineModels.imageGenerationPremium}
               </p>
             </div>
             <div className="rounded-xl border border-white/10 bg-background/40 p-3.5 sm:col-span-2">

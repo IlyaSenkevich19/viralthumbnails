@@ -1,6 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PIPELINE_STEP_MODELS } from '../../config/openrouter-models';
+import {
+  type ThumbnailImageModelTier,
+  getOpenRouterThumbnailImageModel,
+} from '../../config/openrouter-models';
 import { getOpenRouterConfig } from '../../config/openrouter.config';
 import {
   type ThumbnailFaceInImage,
@@ -150,6 +153,7 @@ export class ProjectVariantImageService {
     avatarId?: string;
     prioritizeFace?: boolean;
     faceInThumbnail?: ThumbnailFaceInImage;
+    imageModelTier?: ThumbnailImageModelTier;
     styleVariantIndex?: number;
     totalVariants?: number;
   }): Promise<GenerateThumbnailResult> {
@@ -207,6 +211,7 @@ export class ProjectVariantImageService {
         prompt,
         variantId: params.variantId,
         referenceDataUrls: refImages,
+        imageModelTier: params.imageModelTier ?? 'default',
       });
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Image generation failed';
@@ -464,13 +469,14 @@ export class ProjectVariantImageService {
     prompt: string;
     variantId: string;
     referenceDataUrls: string[];
+    imageModelTier: ThumbnailImageModelTier;
   }): Promise<GeneratedImage> {
     if (!this.openRouter.getApiKey()) {
       return { kind: 'external', url: this.placeholderThumbnailUrl(opts.variantId) };
     }
 
     const or = getOpenRouterConfig(this.config);
-    const model = PIPELINE_STEP_MODELS.imageGeneration;
+    const model = getOpenRouterThumbnailImageModel(opts.imageModelTier);
 
     const header =
       'Generate a single 16:9 YouTube thumbnail image. After this paragraph, reference images appear in order (template first, then face if present).';

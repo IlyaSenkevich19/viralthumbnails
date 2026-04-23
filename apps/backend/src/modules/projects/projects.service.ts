@@ -11,6 +11,7 @@ import {
 } from '../storage/storage.service';
 import { ProjectGenerationService } from './project-generation.service';
 import { CreateProjectDto } from './dto/create-project.dto';
+import { inferProjectTitle } from './infer-project-title';
 import { UpdateProjectDto } from './dto/update-project.dto';
 
 @Injectable()
@@ -23,11 +24,15 @@ export class ProjectsService {
 
   async create(userId: string, dto: CreateProjectDto) {
     const client = this.supabase.getAdminClient();
+    const title = inferProjectTitle({
+      explicitTitle: dto.title,
+      sourceData: dto.source_data ?? {},
+    });
     const { data, error } = await client
       .from('projects')
       .insert({
         user_id: userId,
-        title: dto.title ?? 'Untitled project',
+        title,
         platform: dto.platform ?? 'youtube',
         source_type: dto.source_type,
         source_data: dto.source_data,
@@ -214,7 +219,10 @@ export class ProjectsService {
     count: number,
     avatarId?: string,
     prioritizeFace?: boolean,
-    opts?: { faceInThumbnail?: 'default' | 'with_face' | 'faceless' },
+    opts?: {
+      faceInThumbnail?: 'default' | 'with_face' | 'faceless';
+      imageModelTier?: 'default' | 'premium';
+    },
   ) {
     const project = await this.getByIdForUser(projectId, userId);
     const wasDraft = (project as { status?: string }).status === 'draft';
@@ -230,6 +238,7 @@ export class ProjectsService {
         avatarId,
         prioritizeFace,
         opts?.faceInThumbnail,
+        opts?.imageModelTier,
       );
       const done = result.results.filter((r) => r.status === 'done').length;
       if (wasDraft && done === 0) {

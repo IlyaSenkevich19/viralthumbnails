@@ -11,6 +11,7 @@ export type PipelineVideoRunRequest = {
   template_id?: string;
   avatar_id?: string;
   prioritize_face?: boolean;
+  image_model_tier?: 'default' | 'premium';
 };
 
 /** @deprecated use `PipelineVideoRunRequest` */
@@ -28,6 +29,7 @@ export type PipelineRunRequest = {
   variant_count?: number;
   generate_images?: boolean;
   prioritize_face?: boolean;
+  image_model_tier?: 'default' | 'premium';
   base_image_data_url?: string;
   edit_instruction?: string;
   persist_project?: boolean;
@@ -168,7 +170,18 @@ export async function runThumbnailPipelineVideo(
   token: string | null,
   params: PipelineVideoRunRequest,
 ): Promise<PipelineJobSubmitResponse> {
-  const { file, videoUrl, project_id, count, style, prompt, template_id, avatar_id, prioritize_face } = params;
+  const {
+    file,
+    videoUrl,
+    project_id,
+    count,
+    style,
+    prompt,
+    template_id,
+    avatar_id,
+    prioritize_face,
+    image_model_tier,
+  } = params;
   const form = new FormData();
   if (file) form.append('file', file);
   if (videoUrl?.trim()) form.append('videoUrl', videoUrl.trim());
@@ -179,6 +192,7 @@ export async function runThumbnailPipelineVideo(
   if (template_id?.trim()) form.append('template_id', template_id.trim());
   if (avatar_id?.trim()) form.append('avatar_id', avatar_id.trim());
   if (prioritize_face === true) form.append('prioritize_face', 'true');
+  if (image_model_tier) form.append('image_model_tier', image_model_tier);
   return fetchMultipart<PipelineJobSubmitResponse>(ApiRoutes.thumbnails.pipelineRunVideo, token, form);
 }
 

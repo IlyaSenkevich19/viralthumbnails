@@ -12,7 +12,8 @@ import {
 } from '@/components/ui/select';
 import { PrimaryActionPanel } from '@/components/ui/primary-action-panel';
 import {
-  GENERATE_COUNT,
+  PROJECT_GENERATE_COUNT_MAX,
+  PROJECT_GENERATE_COUNT_MIN,
   TEMPLATE_FACE_FILTER,
   type TemplateFaceFilter,
 } from '@/components/projects/project-variants-workspace.constants';
@@ -26,6 +27,8 @@ type ProjectVariantsGeneratePanelProps = {
   prioritizeFace: boolean;
   onPrioritizeFaceChange: (value: boolean) => void;
   templateFaceFilter: TemplateFaceFilter;
+  generateCount: number;
+  onGenerateCountChange: (count: number) => void;
   onGenerate: () => void;
   generatePending: boolean;
   pipelineBusy: boolean;
@@ -40,6 +43,8 @@ export function ProjectVariantsGeneratePanel({
   prioritizeFace,
   onPrioritizeFaceChange,
   templateFaceFilter,
+  generateCount,
+  onGenerateCountChange,
   onGenerate,
   generatePending,
   pipelineBusy,
@@ -49,8 +54,37 @@ export function ProjectVariantsGeneratePanel({
   const faceless = templateFaceFilter === TEMPLATE_FACE_FILTER.faceless;
   const hasAvatar = Boolean(selectedAvatarId.trim());
 
+  const countOptions = Array.from(
+    { length: PROJECT_GENERATE_COUNT_MAX - PROJECT_GENERATE_COUNT_MIN + 1 },
+    (_, i) => PROJECT_GENERATE_COUNT_MIN + i,
+  );
+
   return (
     <PrimaryActionPanel className="space-y-4 p-4">
+      <div className="space-y-1.5">
+        <label htmlFor="variant-generate-count" className="text-sm font-medium text-foreground">
+          Thumbnails to generate
+        </label>
+        <Select
+          value={String(generateCount)}
+          onValueChange={(v) => onGenerateCountChange(Number.parseInt(v, 10) || PROJECT_GENERATE_COUNT_MIN)}
+        >
+          <SelectTrigger id="variant-generate-count" className="h-10">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {countOptions.map((n) => (
+              <SelectItem key={n} value={String(n)}>
+                {n} variant{n === 1 ? '' : 's'}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground">
+          Each variant uses a slightly different style direction in the prompt (same topic and template).
+        </p>
+      </div>
+
       <div className="space-y-1.5">
         <label htmlFor="variant-character" className="text-sm font-medium text-foreground">
           Character (optional)
@@ -103,7 +137,7 @@ export function ProjectVariantsGeneratePanel({
       >
         {generateLabel}
         <span className="ml-auto text-xs font-normal opacity-90">
-          {GENERATE_COUNT} credit{GENERATE_COUNT === 1 ? '' : 's'}
+          {generateCount} credit{generateCount === 1 ? '' : 's'}
         </span>
       </Button>
       {faceless ? (

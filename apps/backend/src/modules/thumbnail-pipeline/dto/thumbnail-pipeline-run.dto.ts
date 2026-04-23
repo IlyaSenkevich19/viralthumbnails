@@ -2,6 +2,7 @@ import { Type } from 'class-transformer';
 import {
   IsArray,
   IsBoolean,
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -61,6 +62,11 @@ export class ThumbnailPipelineRunDto {
   @IsOptional()
   @IsBoolean()
   generate_images?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @IsIn(['default', 'premium'])
+  image_model_tier?: 'default' | 'premium';
 
   @IsOptional()
   @IsBoolean()

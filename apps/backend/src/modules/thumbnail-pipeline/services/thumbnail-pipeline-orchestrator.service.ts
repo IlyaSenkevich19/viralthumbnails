@@ -105,10 +105,12 @@ export class ThumbnailPipelineOrchestratorService {
           total: imagePromptsUsed.length,
           percent: 0,
         });
-        modelsUsed.imageGeneration = this.thumbnailGen.imageModel();
+        const imageTier = input.imageModelTier ?? 'default';
+        modelsUsed.imageGeneration = this.thumbnailGen.imageModel(imageTier);
         variants = await this.thumbnailGen.generateVariants({
           prompts: imagePromptsUsed,
           reference: refBundle,
+          imageModelTier: imageTier,
           onProgress: onProgress
             ? async (progress) => {
                 await onProgress({

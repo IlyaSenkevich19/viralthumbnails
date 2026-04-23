@@ -1,7 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { getOpenRouterConfig } from '../../../config/openrouter.config';
-import { PIPELINE_STEP_MODELS } from '../../../config/openrouter-models';
+import {
+  type ThumbnailImageModelTier,
+  getOpenRouterThumbnailImageModel,
+} from '../../../config/openrouter-models';
 import { OpenRouterApiError } from '../../openrouter/openrouter-api.error';
 import { OpenRouterClient } from '../../openrouter/openrouter.client';
 import { requestOpenRouterSingleThumbnailImage } from '../../openrouter/openrouter-requests';
@@ -28,20 +31,21 @@ export class PipelineThumbnailGenerationService {
     private readonly openRouter: OpenRouterClient,
   ) {}
 
-  imageModel(): string {
-    return PIPELINE_STEP_MODELS.imageGeneration;
+  imageModel(tier: ThumbnailImageModelTier = 'default'): string {
+    return getOpenRouterThumbnailImageModel(tier);
   }
 
   async generateVariants(params: {
     prompts: string[];
     reference?: ReferenceBundle;
+    imageModelTier?: ThumbnailImageModelTier;
     onProgress?: (progress: { current: number; total: number; percent: number }) => Promise<void>;
   }): Promise<GeneratedPipelineImage[]> {
     if (!this.openRouter.getApiKey()) {
       throw new Error('OPENROUTER_API_KEY is not set');
     }
 
-    const model = this.imageModel();
+    const model = this.imageModel(params.imageModelTier ?? 'default');
     const refUrls = params.reference?.dataUrls ?? [];
     const useMultimodal = refUrls.length > 0;
     const timeoutMs = getOpenRouterConfig(this.config).projectGenTimeoutMs;

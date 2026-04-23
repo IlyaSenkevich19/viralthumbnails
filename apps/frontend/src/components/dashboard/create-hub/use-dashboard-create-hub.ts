@@ -23,6 +23,8 @@ import {
   creditsRequiredForMode,
   buildYoutubeUserPrompt,
   normalizeVideoVariantCount,
+  titleFromFirstLine,
+  titleFromVideoFileName,
 } from '../dashboard-create-hub.utils';
 
 export function useDashboardCreateHub() {
@@ -136,6 +138,7 @@ export function useDashboardCreateHub() {
       let createdProjectId: string | null = null;
       try {
         const project = await projectsApi.createProject(accessToken, {
+          title: titleFromVideoFileName(videoFile.name),
           source_type: 'video',
           source_data: {
             file_name: videoFile?.name,
@@ -205,7 +208,12 @@ export function useDashboardCreateHub() {
       setCreatingProject(true);
       let createdProjectId: string | null = null;
       try {
+        const ytTitle =
+          videoMeta?.title != null && String(videoMeta.title).trim()
+            ? String(videoMeta.title).trim().slice(0, 200)
+            : undefined;
         const project = await projectsApi.createProject(accessToken, {
+          ...(ytTitle ? { title: ytTitle } : {}),
           source_type: 'youtube_url',
           source_data: {
             video_url: finalUrl,
@@ -267,6 +275,7 @@ export function useDashboardCreateHub() {
     setCreatingProject(true);
     try {
       const project = await projectsApi.createProject(accessToken, {
+        title: titleFromFirstLine(hint) || undefined,
         source_type: 'text',
         source_data: { text: hint },
       });

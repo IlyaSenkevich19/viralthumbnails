@@ -97,7 +97,7 @@ Slug’и — идентификаторы на [OpenRouter](https://openrouter.
 
 | Сценарий | Эндпоинт / этап | Где задаются модели |
 |----------|-----------------|---------------------|
-| Картинка варианта проекта | `POST /api/projects/:id/generate` | `PIPELINE_STEP_MODELS.imageGeneration` + timeout из `OPENROUTER_STACK` |
+| Картинка варианта проекта | `POST /api/projects/:id/generate` | `getOpenRouterThumbnailImageModel` (tier `default` / `premium`, см. env) + timeout из `OPENROUTER_STACK` |
 | Модульный пайплайн (JSON) | `POST /api/thumbnails/pipeline/run` | `PIPELINE_STEP_MODELS` |
 | Модульный пайплайн (video ingest) | `POST /api/thumbnails/pipeline/run-video` | `PIPELINE_STEP_MODELS` |
 

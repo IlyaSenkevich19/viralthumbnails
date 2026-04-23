@@ -59,6 +59,7 @@ export async function generateThumbnails(
     count?: number;
     /** `default` = no extra prompt constraint; `with_face` / `faceless` append explicit instructions. */
     face_in_thumbnail?: 'default' | 'with_face' | 'faceless';
+    image_model_tier?: 'default' | 'premium';
   },
 ): Promise<GenerateThumbnailsResponse> {
   return fetchJson<GenerateThumbnailsResponse>(ApiRoutes.projects.generate(projectId), token, {

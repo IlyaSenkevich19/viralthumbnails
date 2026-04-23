@@ -18,7 +18,8 @@ export type SetupHealthResponse = {
     vlPrimary: string;
     vlFallback: string | null;
     textRefinement: string | null;
-    imageGeneration: string;
+    imageGenerationDefault: string;
+    imageGenerationPremium: string;
     imageEdit: string;
   };
   timestamp: string;

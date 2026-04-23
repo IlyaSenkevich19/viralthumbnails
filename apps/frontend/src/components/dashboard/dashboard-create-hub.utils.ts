@@ -49,6 +49,23 @@ export function normalizeVideoVariantCount(rawCount: number): number {
   return Math.min(12, Math.max(1, Math.floor(rawCount) || DEFAULT_VIDEO_THUMBNAIL_COUNT));
 }
 
+const MAX_PROJECT_TITLE_LEN = 200;
+
+/** First non-empty line, collapsed whitespace, capped for `projects.title`. */
+export function titleFromFirstLine(raw: string, maxLen = MAX_PROJECT_TITLE_LEN): string {
+  const line = raw.trim().split(/\r?\n/)[0]?.trim() ?? '';
+  if (!line) return '';
+  const collapsed = line.replace(/\s+/g, ' ').trim();
+  if (collapsed.length <= maxLen) return collapsed;
+  return `${collapsed.slice(0, maxLen - 1).trimEnd()}…`;
+}
+
+export function titleFromVideoFileName(fileName: string, maxLen = MAX_PROJECT_TITLE_LEN): string {
+  const base = fileName.replace(/\.[^.]+$/i, '').trim();
+  const t = titleFromFirstLine(base, maxLen);
+  return t || 'Video';
+}
+
 export function creditsRequiredForMode(params: {
   mode: HubMode;
   videoCount: number;

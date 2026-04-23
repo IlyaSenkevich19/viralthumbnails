@@ -83,6 +83,7 @@ export class ThumbnailPipelineController {
         template_id: { type: 'string' },
         avatar_id: { type: 'string', format: 'uuid' },
         prioritize_face: { type: 'boolean' },
+        image_model_tier: { type: 'string', enum: ['default', 'premium'] },
         project_id: { type: 'string', format: 'uuid' },
       },
     },
@@ -121,6 +122,7 @@ export class ThumbnailPipelineController {
         variant_count: body.count,
         generate_images: true,
         prioritize_face: Boolean(body.prioritize_face),
+        image_model_tier: body.image_model_tier,
         persist_project: true,
         project_id: body.project_id,
       };

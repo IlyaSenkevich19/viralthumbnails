@@ -2,6 +2,7 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import { IsBoolean, IsIn, IsInt, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
 import type { ThumbnailFaceInImage } from '../../../common/thumbnail-prompt-guidelines';
+import type { ThumbnailImageModelTier } from '../../../config/openrouter-models';
 
 function toOptionalBool(value: unknown): boolean | undefined {
   if (value === undefined || value === null || value === '') return undefined;
@@ -47,4 +48,13 @@ export class GenerateThumbnailsDto {
   @IsString()
   @IsIn(['default', 'with_face', 'faceless'] satisfies ThumbnailFaceInImage[])
   face_in_thumbnail?: ThumbnailFaceInImage;
+
+  @ApiPropertyOptional({
+    enum: ['default', 'premium'],
+    description: 'Still-image model tier: default = FLUX.2 Pro, premium = FLUX.2 Max (slugs in openrouter-models).',
+  })
+  @IsOptional()
+  @IsString()
+  @IsIn(['default', 'premium'] satisfies ThumbnailImageModelTier[])
+  image_model_tier?: ThumbnailImageModelTier;
 }

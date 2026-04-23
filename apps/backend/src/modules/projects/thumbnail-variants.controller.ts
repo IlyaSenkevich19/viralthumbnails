@@ -38,6 +38,7 @@ export class ThumbnailVariantsController {
     const count = dto.count ?? 1;
     return this.projects.generateVariants(id, userId, dto.template_id, count, dto.avatar_id, dto.prioritize_face, {
       faceInThumbnail: dto.face_in_thumbnail,
+      imageModelTier: dto.image_model_tier,
     });
   }
 

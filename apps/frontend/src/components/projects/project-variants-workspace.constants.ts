@@ -1,6 +1,9 @@
 import type { ThumbnailTemplateRow } from '@/lib/api/templates';
 
-export const GENERATE_COUNT = 1;
+/** Matches backend `POST …/generate` cap (see `ProjectGenerationService`). */
+export const PROJECT_GENERATE_COUNT_MIN = 1;
+export const PROJECT_GENERATE_COUNT_MAX = 5;
+export const PROJECT_GENERATE_COUNT_DEFAULT = 1;
 
 export const TEMPLATE_FACE_FILTER = {
   all: 'all',

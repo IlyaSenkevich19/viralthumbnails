@@ -1,7 +1,7 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiControllerPaths } from '../../common/constants/api-controller-paths';
 import { ApiTags } from '@nestjs/swagger';
-import { PIPELINE_STEP_MODELS } from '../../config/openrouter-models';
+import { getPipelineSetupModelSnapshot } from '../../config/openrouter-models';
 import { getOpenRouterConfig } from '../../config/openrouter.config';
 import { ConfigService } from '@nestjs/config';
 
@@ -31,13 +31,7 @@ export class HealthController {
         appTitle: or.appTitle,
         projectGenTimeoutMs: or.projectGenTimeoutMs,
       },
-      pipelineModels: {
-        vlPrimary: PIPELINE_STEP_MODELS.vlPrimary,
-        vlFallback: PIPELINE_STEP_MODELS.vlFallback ?? null,
-        textRefinement: PIPELINE_STEP_MODELS.textRefinement ?? null,
-        imageGeneration: PIPELINE_STEP_MODELS.imageGeneration,
-        imageEdit: PIPELINE_STEP_MODELS.imageEdit,
-      },
+      pipelineModels: getPipelineSetupModelSnapshot(),
       timestamp: new Date().toISOString(),
     };
   }

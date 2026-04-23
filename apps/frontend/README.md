@@ -21,7 +21,7 @@
 | App shell (sidebar) | `/dashboard`, `/projects`, `/projects/[id]`, `/projects/[id]/variants`, `/templates`, `/avatars`, `/credits`, `/settings` (+ admin `/admin/youtube-inspiration`) |
 
 Protected routes rely on **middleware** + Supabase session (`src/middleware.ts`, `src/lib/supabase/middleware.ts`).  
-`/projects/new` is rewritten to `/dashboard?openNewProject=1` (see middleware).
+`/projects/new` is rewritten to `/dashboard` (see middleware).
 
 ## How API calls work
 

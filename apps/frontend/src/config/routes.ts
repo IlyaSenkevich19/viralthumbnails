@@ -6,7 +6,7 @@ export const AppRoutes = {
   home: '/',
   dashboard: '/dashboard',
   projects: '/projects',
-  /** Legacy URL; root middleware redirects to dashboard with {@link AppSearchParams.openNewProject}. */
+  /** Legacy URL; root middleware redirects to dashboard. */
   projectsNew: '/projects/new',
   templates: '/templates',
   /** YouTube inspiration (admin-only; env `ADMIN_USER_IDS`). */
@@ -19,11 +19,6 @@ export const AppRoutes = {
     forgotPassword: '/auth/forgot-password',
     updatePassword: '/auth/update-password',
   },
-} as const;
-
-/** Query keys used with app navigation. */
-export const AppSearchParams = {
-  openNewProject: 'openNewProject',
 } as const;
 
 export function projectVariantsPath(projectId: string): string {

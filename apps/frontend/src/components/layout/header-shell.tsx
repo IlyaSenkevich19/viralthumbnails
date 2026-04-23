@@ -96,7 +96,9 @@ export function HeaderShell({
               <span className="min-w-0 truncate">{pipelineJob.label}</span>
             </p>
           ) : null}
-          <HeaderCreditsLink className="max-w-[10rem] sm:max-w-[12rem] lg:max-w-none" />
+          <div className="w-[5.5rem] sm:w-[6rem] lg:w-[6.5rem]">
+            <HeaderCreditsLink className="h-full w-full max-w-none" />
+          </div>
           <button
             type="button"
             onClick={onMobileMenuClick}

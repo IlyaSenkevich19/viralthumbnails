@@ -3,9 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
-import { useNewProject } from '@/contexts/new-project-context';
 import { DEFAULT_NEW_PROJECT_VARIANT_COUNT } from '@/config/credits';
-import { projectVariantsPath, projectVariantsSearchParams } from '@/config/routes';
+import { projectVariantsPath } from '@/config/routes';
 import { isLikelyYoutubeUrl } from '@/lib/format';
 import { thumbnailsApi } from '@/lib/api';
 import {
@@ -35,7 +34,6 @@ import {
   creditsRequiredForMode,
   buildYoutubeUserPrompt,
   normalizeVideoVariantCount,
-  notifyReferenceResolution,
   plannedStyleCountForMode,
 } from '../dashboard-create-hub.utils';
 
@@ -43,7 +41,6 @@ export function useDashboardCreateHub() {
   const router = useRouter();
   const { user, accessToken, isLoading: authLoading } = useAuth();
   const canLoadAssets = !authLoading && Boolean(user?.id && accessToken);
-  const { openNewProject } = useNewProject();
   const runPipeline = useThumbnailPipelineMutation({
     recoveryKey: DASHBOARD_RUN_RECOVERY_KEY,
   });
@@ -57,14 +54,10 @@ export function useDashboardCreateHub() {
   const [youtubeUrl, setYoutubeUrl] = useState('');
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoRemoteUrl, setVideoRemoteUrl] = useState('');
-  const [videoCount, setVideoCount] = useState(DEFAULT_VIDEO_THUMBNAIL_COUNT);
-  const [videoStyle, setVideoStyle] = useState('');
-  const [videoPrompt, setVideoPrompt] = useState('');
-  const [videoPrioritizeFace, setVideoPrioritizeFace] = useState(false);
+  const videoCount = DEFAULT_VIDEO_THUMBNAIL_COUNT;
   const [videoResult, setVideoResult] = useState<PipelineVideoResponse | null>(null);
   const [videoPreparing, setVideoPreparing] = useState(false);
   const [moreOptionsOpen, setMoreOptionsOpen] = useState(false);
-  const [videoStylingOpen, setVideoStylingOpen] = useState(false);
 
   const [urlError, setUrlError] = useState('');
   const [describeError, setDescribeError] = useState('');
@@ -90,12 +83,6 @@ export function useDashboardCreateHub() {
       setMoreOptionsOpen(true);
     }
   }, [selectedTemplateId, selectedAvatarId]);
-
-  useEffect(() => {
-    if (videoStyle.trim() || videoPrompt.trim()) {
-      setVideoStylingOpen(true);
-    }
-  }, [videoStyle, videoPrompt]);
 
   const busyProject =
     mode === DASHBOARD_CREATE_HUB_MODE.prompt || mode === DASHBOARD_CREATE_HUB_MODE.youtube
@@ -195,22 +182,10 @@ export function useDashboardCreateHub() {
           file: fileToSend,
           videoUrl: hasFile ? undefined : url || undefined,
           count: n,
-          style: videoStyle.trim() || undefined,
-          prompt: videoPrompt.trim() || undefined,
-          template_id: templateId,
-          avatar_id: avatarId,
-          prioritize_face: videoPrioritizeFace && Boolean(avatarId) ? true : undefined,
-        });
-        notifyReferenceResolution({
-          templateId,
-          avatarId,
-          resolved: data.resolvedReferences,
         });
         setVideoResult(data);
         toast.success(`${data.thumbnails.length} thumbnail(s) ready. Opening project…`);
-        router.push(
-          projectVariantsPath(data.projectId) + projectVariantsSearchParams({ templateId, avatarId }),
-        );
+        router.push(projectVariantsPath(data.projectId));
       } catch {
         // handled by mutation onError
       }
@@ -321,11 +296,8 @@ export function useDashboardCreateHub() {
     videoFile,
     videoRemoteUrl,
     videoCount,
-    videoStyle,
-    videoPrompt,
     templateId,
     avatarId,
-    videoPrioritizeFace,
     credits?.balance,
     creative,
     youtubeUrl,
@@ -366,7 +338,6 @@ export function useDashboardCreateHub() {
 
   return {
     canLoadAssets,
-    openNewProject,
     mode,
     onModeChange,
     creative,
@@ -379,19 +350,10 @@ export function useDashboardCreateHub() {
     videoRemoteUrl,
     setVideoRemoteUrl,
     videoCount,
-    setVideoCount,
-    videoStyle,
-    setVideoStyle,
-    videoPrompt,
-    setVideoPrompt,
-    videoPrioritizeFace,
-    setVideoPrioritizeFace,
     videoResult,
     videoPreparing,
     moreOptionsOpen,
     setMoreOptionsOpen,
-    videoStylingOpen,
-    setVideoStylingOpen,
     urlError,
     setUrlError,
     describeError,

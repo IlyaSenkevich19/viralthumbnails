@@ -45,33 +45,24 @@ export function DashboardCreateHub() {
             onVideoFileChange={h.setVideoFile}
             videoRemoteUrl={h.videoRemoteUrl}
             onVideoRemoteUrlChange={h.setVideoRemoteUrl}
-            videoCount={h.videoCount}
-            onVideoCountChange={h.setVideoCount}
-            videoStyle={h.videoStyle}
-            onVideoStyleChange={h.setVideoStyle}
-            videoPrompt={h.videoPrompt}
-            onVideoPromptChange={h.setVideoPrompt}
-            videoStylingOpen={h.videoStylingOpen}
-            onVideoStylingToggle={h.setVideoStylingOpen}
           />
         )}
       </div>
 
-      <MoreOptionsSection
-        moreOptionsOpen={h.moreOptionsOpen}
-        onMoreOptionsToggle={h.setMoreOptionsOpen}
-        mode={h.mode}
-        assetsBusy={h.assetsBusy}
-        canLoadAssets={h.canLoadAssets}
-        templates={h.templates}
-        avatars={h.avatars}
-        selectedTemplateId={h.selectedTemplateId}
-        onTemplateIdChange={h.setSelectedTemplateId}
-        selectedAvatarId={h.selectedAvatarId}
-        onAvatarIdChange={h.setSelectedAvatarId}
-        videoPrioritizeFace={h.videoPrioritizeFace}
-        onVideoPrioritizeFaceChange={h.setVideoPrioritizeFace}
-      />
+      {h.mode !== DASHBOARD_CREATE_HUB_MODE.video ? (
+        <MoreOptionsSection
+          moreOptionsOpen={h.moreOptionsOpen}
+          onMoreOptionsToggle={h.setMoreOptionsOpen}
+          assetsBusy={h.assetsBusy}
+          canLoadAssets={h.canLoadAssets}
+          templates={h.templates}
+          avatars={h.avatars}
+          selectedTemplateId={h.selectedTemplateId}
+          onTemplateIdChange={h.setSelectedTemplateId}
+          selectedAvatarId={h.selectedAvatarId}
+          onAvatarIdChange={h.setSelectedAvatarId}
+        />
+      ) : null}
 
       {h.mode === DASHBOARD_CREATE_HUB_MODE.video && h.videoResult && h.videoResult.thumbnails.length > 0 ? (
         <VideoResultGrid result={h.videoResult} />
@@ -81,7 +72,6 @@ export function DashboardCreateHub() {
 
       <CreateHubFooter
         canLoadAssets={h.canLoadAssets}
-        openNewProject={h.openNewProject}
         onGenerate={() => void h.handleGenerate()}
         primaryBusy={h.primaryBusy}
         videoPreparing={h.videoPreparing}

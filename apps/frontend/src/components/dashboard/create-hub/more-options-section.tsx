@@ -10,16 +10,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { DASHBOARD_CREATE_HUB_MODE } from '../dashboard-create-hub.utils';
-import type { HubMode } from '../dashboard-create-hub.utils';
-
 type TemplateItem = { id: string; name: string };
 type AvatarItem = { id: string; name?: string | null };
 
 type Props = {
   moreOptionsOpen: boolean;
   onMoreOptionsToggle: (open: boolean) => void;
-  mode: HubMode;
   assetsBusy: boolean;
   canLoadAssets: boolean;
   templates: TemplateItem[];
@@ -28,14 +24,11 @@ type Props = {
   onTemplateIdChange: (id: string) => void;
   selectedAvatarId: string;
   onAvatarIdChange: (id: string) => void;
-  videoPrioritizeFace: boolean;
-  onVideoPrioritizeFaceChange: (v: boolean) => void;
 };
 
 export const MoreOptionsSection = memo(function MoreOptionsSection({
   moreOptionsOpen,
   onMoreOptionsToggle,
-  mode,
   assetsBusy,
   canLoadAssets,
   templates,
@@ -44,8 +37,6 @@ export const MoreOptionsSection = memo(function MoreOptionsSection({
   onTemplateIdChange,
   selectedAvatarId,
   onAvatarIdChange,
-  videoPrioritizeFace,
-  onVideoPrioritizeFaceChange,
 }: Props) {
   return (
     <details
@@ -57,7 +48,7 @@ export const MoreOptionsSection = memo(function MoreOptionsSection({
         <span>
           <span className="text-sm font-medium text-foreground">More options</span>
           <span className="mt-0.5 block text-xs text-muted-foreground">
-            Template & face — optional for every mode; face checkbox applies to Video
+            Template & face — optional for prompt and YouTube flows
           </span>
         </span>
         <ChevronDown
@@ -112,22 +103,6 @@ export const MoreOptionsSection = memo(function MoreOptionsSection({
             </Select>
           </div>
         </div>
-        {mode === DASHBOARD_CREATE_HUB_MODE.video && selectedAvatarId ? (
-          <label className="flex cursor-pointer items-start gap-2 text-sm text-foreground">
-            <input
-              type="checkbox"
-              className="mt-0.5 h-4 w-4 rounded border-input"
-              checked={videoPrioritizeFace}
-              onChange={(e) => onVideoPrioritizeFaceChange(e.target.checked)}
-            />
-            <span>
-              <span className="font-medium">Prioritize face likeness</span>
-              <span className="block text-xs text-muted-foreground">
-                Stronger match to your face reference in thumbnails.
-              </span>
-            </span>
-          </label>
-        ) : null}
         <p className="text-xs text-muted-foreground">
           <Link href={AppRoutes.templates} className="underline-offset-2 hover:underline">
             All templates

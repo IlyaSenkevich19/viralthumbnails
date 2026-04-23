@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { AppRoutes, AppSearchParams } from '@/config/routes';
+import { AppRoutes } from '@/config/routes';
 import { updateSession } from '@/lib/supabase/middleware';
 
 function copyCookies(from: NextResponse, to: NextResponse) {
@@ -30,7 +30,6 @@ export async function middleware(request: NextRequest) {
       }
       const url = request.nextUrl.clone();
       url.pathname = AppRoutes.dashboard;
-      url.searchParams.set(AppSearchParams.openNewProject, '1');
       const redirect = NextResponse.redirect(url);
       copyCookies(sessionResponse, redirect);
       return redirect;

@@ -6,12 +6,16 @@ import { useAuth } from '@/contexts/auth-context';
 import { useGenerationCredits } from '@/lib/hooks';
 import { cn } from '@/lib/utils';
 import { AppRoutes } from '@/config/routes';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export function HeaderCreditsLink({ className }: { className?: string }) {
   const { user, accessToken, isLoading: authLoading } = useAuth();
   const { data, isPending } = useGenerationCredits();
 
-  if (authLoading || !user?.id || !accessToken) return null;
+  if (authLoading) {
+    return <Skeleton className={cn('h-9 w-full rounded-full lg:h-10', className)} aria-hidden />;
+  }
+  if (!user?.id || !accessToken) return null;
 
   const balance = data?.balance;
   const balanceLoading = isPending && balance == null;

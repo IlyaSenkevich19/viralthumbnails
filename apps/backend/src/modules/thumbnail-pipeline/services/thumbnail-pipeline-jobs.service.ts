@@ -207,5 +207,49 @@ export class ThumbnailPipelineJobsService {
     }
     return (data as ThumbnailPipelineJobRow | null) ?? null;
   }
+
+  async updateProjectPipelineState(params: {
+    userId: string;
+    projectId: string;
+    status?: 'pending' | 'generating' | 'done' | 'failed';
+    pipelineJobId?: string;
+    progress?: ThumbnailPipelineJobProgress | null;
+    errorMessage?: string | null;
+    sourceDataPatch?: Record<string, unknown>;
+  }): Promise<void> {
+    const client = this.supabase.getAdminClient();
+    const { data: existing, error: readErr } = await client
+      .from('projects')
+      .select('source_data')
+      .eq('id', params.projectId)
+      .eq('user_id', params.userId)
+      .maybeSingle();
+    if (readErr || !existing) {
+      throw new Error(readErr?.message ?? 'Failed to read project for pipeline state update');
+    }
+
+    const nextSourceData: Record<string, unknown> = {
+      ...((existing.source_data as Record<string, unknown> | null) ?? {}),
+      ...(params.sourceDataPatch ?? {}),
+    };
+    if (params.pipelineJobId) nextSourceData.pipeline_job_id = params.pipelineJobId;
+    nextSourceData.pipeline_progress = params.progress ?? null;
+    nextSourceData.pipeline_error = params.errorMessage ?? null;
+
+    const patch: Record<string, unknown> = {
+      source_data: nextSourceData,
+      updated_at: new Date().toISOString(),
+    };
+    if (params.status) patch.status = params.status;
+
+    const { error: updateErr } = await client
+      .from('projects')
+      .update(patch)
+      .eq('id', params.projectId)
+      .eq('user_id', params.userId);
+    if (updateErr) {
+      throw new Error(`Failed to update pipeline-linked project: ${updateErr.message}`);
+    }
+  }
 }
 

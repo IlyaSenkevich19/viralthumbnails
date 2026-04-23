@@ -33,6 +33,22 @@ export async function createProject(
   });
 }
 
+export async function updateProject(
+  token: string | null,
+  id: string,
+  body: {
+    title?: string;
+    status?: ProjectWithVariants['status'];
+    source_data?: Record<string, unknown>;
+    cover_thumbnail_url?: string | null;
+  },
+): Promise<ProjectRow> {
+  return fetchJson<ProjectRow>(ApiRoutes.projects.one(id), token, {
+    method: 'PUT',
+    body: JSON.stringify(body),
+  });
+}
+
 export async function generateThumbnails(
   token: string | null,
   projectId: string,

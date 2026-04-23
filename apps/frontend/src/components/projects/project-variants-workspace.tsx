@@ -44,6 +44,7 @@ import {
 import { TemplatesGridSkeleton } from '@/components/templates/templates-grid-skeleton';
 import { TemplatesPagination } from '@/components/templates/templates-pagination';
 import { pickThumbnailStyles } from '@/lib/thumbnail-style-matrix';
+import type { PipelineJobStatusResponse } from '@/lib/api/thumbnails';
 
 const GENERATE_COUNT = 1;
 
@@ -52,6 +53,7 @@ type ProjectVariantsWorkspaceProps = {
   projectId: string;
   onRefresh: () => Promise<unknown>;
   refreshing: boolean;
+  pipelineJob?: PipelineJobStatusResponse;
   /** Applied once on mount when arriving from dashboard / deep link */
   initialTemplateId?: string | null;
   initialAvatarId?: string | null;
@@ -62,6 +64,7 @@ export function ProjectVariantsWorkspace({
   projectId,
   onRefresh,
   refreshing,
+  pipelineJob,
   initialTemplateId = null,
   initialAvatarId = null,
 }: ProjectVariantsWorkspaceProps) {
@@ -165,6 +168,17 @@ export function ProjectVariantsWorkspace({
   }, [accessToken, credits?.balance, generate, prioritizeFace, selectedAvatarId, selectedTemplateId]);
 
   const previewUrl = selectedVariant?.generated_image_url ?? null;
+  const sourceData = project.source_data ?? {};
+  const sourceVideoUrl =
+    typeof sourceData.video_url === 'string' && sourceData.video_url.trim().length > 0
+      ? sourceData.video_url
+      : null;
+  const sourceFileName =
+    typeof sourceData.file_name === 'string' && sourceData.file_name.trim().length > 0
+      ? sourceData.file_name
+      : null;
+  const pipelineBusy = pipelineJob?.status === 'queued' || pipelineJob?.status === 'running';
+  const pipelineFailed = pipelineJob?.status === 'failed';
 
   return (
     <>
@@ -211,6 +225,44 @@ export function ProjectVariantsWorkspace({
           </div>
 
           <div className="space-y-3">
+            {sourceVideoUrl || sourceFileName ? (
+              <Card>
+                <CardContent className="space-y-2 p-4">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Source
+                  </p>
+                  {sourceVideoUrl ? (
+                    <p className="truncate text-sm text-foreground" title={sourceVideoUrl}>
+                      {sourceVideoUrl}
+                    </p>
+                  ) : null}
+                  {sourceFileName ? (
+                    <p className="truncate text-sm text-foreground" title={sourceFileName}>
+                      {sourceFileName}
+                    </p>
+                  ) : null}
+                  {pipelineJob ? (
+                    <p
+                      className={cn(
+                        'text-xs',
+                        pipelineBusy
+                          ? 'text-primary'
+                          : pipelineFailed
+                            ? 'text-destructive'
+                            : 'text-muted-foreground',
+                      )}
+                    >
+                      {pipelineJob.progress?.label ??
+                        (pipelineBusy
+                          ? 'Analyzing source'
+                          : pipelineFailed
+                            ? pipelineJob.error?.message || 'Pipeline failed'
+                            : 'Pipeline completed')}
+                    </p>
+                  ) : null}
+                </CardContent>
+              </Card>
+            ) : null}
             <h2 className="text-lg font-semibold tracking-tight text-foreground">Choose a template</h2>
             {niches.length > 0 ? (
               <div className="flex flex-wrap gap-2">
@@ -355,6 +407,7 @@ export function ProjectVariantsWorkspace({
               onClick={handleGenerate}
               disabled={
                 generate.isPending ||
+                pipelineBusy ||
                 !accessToken ||
                 (credits != null && credits.balance < GENERATE_COUNT)
               }
@@ -367,6 +420,11 @@ export function ProjectVariantsWorkspace({
             {selectedAvatarId ? (
               <p className="text-xs text-muted-foreground">
                 Your face reference is sent with each generation so the model can match likeness when possible.
+              </p>
+            ) : null}
+            {pipelineBusy ? (
+              <p className="text-xs text-muted-foreground">
+                Video analysis is in progress. Generation controls unlock when pipeline finishes.
               </p>
             ) : null}
           </div>

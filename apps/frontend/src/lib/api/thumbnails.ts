@@ -4,6 +4,7 @@ import { fetchJson, fetchMultipart } from './fetch-json';
 export type PipelineVideoRunRequest = {
   file?: File;
   videoUrl?: string;
+  project_id?: string;
   count?: number;
   style?: string;
   prompt?: string;
@@ -17,6 +18,7 @@ export type FromVideoRequest = PipelineVideoRunRequest;
 
 export type PipelineRunRequest = {
   user_prompt: string;
+  project_id?: string;
   style?: string;
   video_url?: string;
   template_reference_data_urls?: string[];
@@ -166,10 +168,11 @@ export async function runThumbnailPipelineVideo(
   token: string | null,
   params: PipelineVideoRunRequest,
 ): Promise<PipelineJobSubmitResponse> {
-  const { file, videoUrl, count, style, prompt, template_id, avatar_id, prioritize_face } = params;
+  const { file, videoUrl, project_id, count, style, prompt, template_id, avatar_id, prioritize_face } = params;
   const form = new FormData();
   if (file) form.append('file', file);
   if (videoUrl?.trim()) form.append('videoUrl', videoUrl.trim());
+  if (project_id?.trim()) form.append('project_id', project_id.trim());
   if (count !== undefined) form.append('count', String(count));
   if (style?.trim()) form.append('style', style.trim());
   if (prompt?.trim()) form.append('prompt', prompt.trim());

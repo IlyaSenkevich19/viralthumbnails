@@ -52,13 +52,22 @@ export class PipelineProjectPersistenceService {
         });
       }
 
-      const projectId = await this.insertProject({
-        userId: params.userId,
-        runInput: params.runInput,
-        runResult: params.runResult,
-        videoContext: params.videoContext,
-        coverThumbnailStoragePath: uploaded[0]?.storagePath ?? null,
-      });
+      const projectId = params.runInput.projectId
+        ? await this.updateExistingProject({
+            projectId: params.runInput.projectId,
+            userId: params.userId,
+            runInput: params.runInput,
+            runResult: params.runResult,
+            videoContext: params.videoContext,
+            coverThumbnailStoragePath: uploaded[0]?.storagePath ?? null,
+          })
+        : await this.insertProject({
+            userId: params.userId,
+            runInput: params.runInput,
+            runResult: params.runResult,
+            videoContext: params.videoContext,
+            coverThumbnailStoragePath: uploaded[0]?.storagePath ?? null,
+          });
 
       await this.insertVariants(projectId, uploaded);
 
@@ -118,6 +127,53 @@ export class PipelineProjectPersistenceService {
       throw new Error(error?.message ?? 'Failed to create project from pipeline run');
     }
     return project.id as string;
+  }
+
+  private async updateExistingProject(params: {
+    projectId: string;
+    userId: string;
+    runInput: ThumbnailPipelineRunInput;
+    runResult: ThumbnailPipelineRunResult;
+    videoContext?: PipelineVideoContext;
+    coverThumbnailStoragePath: string | null;
+  }): Promise<string> {
+    const client = this.supabase.getAdminClient();
+    const sceneSummary = params.runResult.analysis.sceneSummary.trim();
+    const sourceDataPatch = {
+      pipeline_run_id: params.runResult.runId,
+      generated_models: params.runResult.modelsUsed,
+      scene_summary_excerpt: sceneSummary.slice(0, 500),
+      video_context: params.videoContext ?? undefined,
+      pipeline_error: null,
+    };
+    const { data: existing, error: readErr } = await client
+      .from('projects')
+      .select('source_data')
+      .eq('id', params.projectId)
+      .eq('user_id', params.userId)
+      .maybeSingle();
+    if (readErr || !existing) {
+      throw new Error(readErr?.message ?? 'Failed to load existing project for pipeline persistence');
+    }
+    const mergedSourceData = {
+      ...((existing.source_data as Record<string, unknown> | null) ?? {}),
+      ...sourceDataPatch,
+    };
+    const { error } = await client
+      .from('projects')
+      .update({
+        source_data: mergedSourceData,
+        status: 'done',
+        cover_thumbnail_storage_path: params.coverThumbnailStoragePath,
+        cover_thumbnail_url: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', params.projectId)
+      .eq('user_id', params.userId);
+    if (error) {
+      throw new Error(error.message);
+    }
+    return params.projectId;
   }
 
   private async insertVariants(projectId: string, variants: PersistedPipelineVariant[]): Promise<void> {

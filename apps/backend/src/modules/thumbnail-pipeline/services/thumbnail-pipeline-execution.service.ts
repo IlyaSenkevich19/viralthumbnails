@@ -41,6 +41,7 @@ export class ThumbnailPipelineExecutionService {
 
     const runInput = {
       userId,
+      projectId: body.project_id,
       userPrompt: body.user_prompt,
       style: body.style,
       videoUrl: body.video_url,

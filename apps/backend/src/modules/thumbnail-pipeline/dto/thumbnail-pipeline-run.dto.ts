@@ -5,6 +5,7 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  IsUUID,
   Max,
   MaxLength,
   Min,
@@ -79,4 +80,9 @@ export class ThumbnailPipelineRunDto {
   @IsOptional()
   @IsBoolean()
   persist_project?: boolean;
+
+  /** Optional existing project id to persist outputs into. */
+  @IsOptional()
+  @IsUUID()
+  project_id?: string;
 }

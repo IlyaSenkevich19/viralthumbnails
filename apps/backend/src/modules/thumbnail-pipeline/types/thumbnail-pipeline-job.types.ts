@@ -26,6 +26,7 @@ export type ThumbnailPipelineJobPayload = {
   body: ThumbnailPipelineRunDto;
   videoContext?: PipelineVideoContext;
   cleanupTempStoragePath?: string;
+  projectId?: string;
 };
 
 export type ThumbnailPipelineJobRow = {

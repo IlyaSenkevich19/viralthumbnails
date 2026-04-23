@@ -59,13 +59,14 @@ export class ThumbnailPipelineJobsRunnerService implements OnModuleInit, OnModul
   private async runJob(job: ThumbnailPipelineJobRow): Promise<void> {
     const startedAt = Date.now();
     const queuedForMs = Math.max(0, startedAt - new Date(job.created_at).getTime());
+    const payload = (job.request_payload ?? {}) as {
+      source?: 'run' | 'run-video';
+      body?: ThumbnailPipelineRunDto;
+      videoContext?: PipelineVideoContext;
+      cleanupTempStoragePath?: string;
+      projectId?: string;
+    };
     try {
-      const payload = (job.request_payload ?? {}) as {
-        source?: 'run' | 'run-video';
-        body?: ThumbnailPipelineRunDto;
-        videoContext?: PipelineVideoContext;
-        cleanupTempStoragePath?: string;
-      };
       const body = payload.body;
       if (!body?.user_prompt) {
         throw new Error('Invalid job payload: missing body.user_prompt');
@@ -74,13 +75,45 @@ export class ThumbnailPipelineJobsRunnerService implements OnModuleInit, OnModul
         stage: 'resolving_references',
         label: 'Preparing inputs',
       });
+      if (payload.projectId) {
+        await this.jobs.updateProjectPipelineState({
+          userId: job.user_id,
+          projectId: payload.projectId,
+          status: 'generating',
+          pipelineJobId: job.id,
+          progress: { stage: 'resolving_references', label: 'Preparing inputs' },
+          errorMessage: null,
+        });
+      }
       const result = await this.execution.execute(
         job.user_id,
         body,
         payload.videoContext,
-        async (progress) => this.jobs.updateProgress(job.id, progress),
+        async (progress) => {
+          await this.jobs.updateProgress(job.id, progress);
+          if (payload.projectId) {
+            await this.jobs.updateProjectPipelineState({
+              userId: job.user_id,
+              projectId: payload.projectId,
+              status: 'generating',
+              pipelineJobId: job.id,
+              progress,
+              errorMessage: null,
+            });
+          }
+        },
       );
       await this.jobs.markSucceeded(job.id, result);
+      if (payload.projectId) {
+        await this.jobs.updateProjectPipelineState({
+          userId: job.user_id,
+          projectId: payload.projectId,
+          status: 'done',
+          pipelineJobId: job.id,
+          progress: { stage: 'completed', label: 'Completed', percent: 100 },
+          errorMessage: null,
+        });
+      }
       const elapsed = Date.now() - startedAt;
       this.logger.log(
         `Pipeline job succeeded id=${job.id} source=${payload.source ?? 'run'} attempts=${job.attempt_count} queuedMs=${queuedForMs} execMs=${elapsed}`,
@@ -99,6 +132,16 @@ export class ThumbnailPipelineJobsRunnerService implements OnModuleInit, OnModul
         );
       } else {
         await this.jobs.markFailed(job.id, { message: err.message });
+        if (payload.projectId) {
+          await this.jobs.updateProjectPipelineState({
+            userId: job.user_id,
+            projectId: payload.projectId,
+            status: 'failed',
+            pipelineJobId: job.id,
+            progress: { stage: 'failed', label: err.message },
+            errorMessage: err.message,
+          });
+        }
         const elapsed = Date.now() - startedAt;
         this.logger.warn(
           `Pipeline job failed id=${job.id} attempts=${job.attempt_count} queuedMs=${queuedForMs} execMs=${elapsed} retryable=${retryable} reason=${err.message}`,

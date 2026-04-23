@@ -83,6 +83,7 @@ export class ThumbnailPipelineController {
         template_id: { type: 'string' },
         avatar_id: { type: 'string', format: 'uuid' },
         prioritize_face: { type: 'boolean' },
+        project_id: { type: 'string', format: 'uuid' },
       },
     },
   })
@@ -121,16 +122,27 @@ export class ThumbnailPipelineController {
         generate_images: true,
         prioritize_face: Boolean(body.prioritize_face),
         persist_project: true,
+        project_id: body.project_id,
       };
     const job = await this.jobs.enqueue({
       userId,
       payload: {
         source: 'run-video',
         body: runBody,
+        projectId: body.project_id,
         videoContext,
         cleanupTempStoragePath: resolved.tempStoragePath ?? undefined,
       },
     });
+    if (body.project_id) {
+      await this.jobs.updateProjectPipelineState({
+        userId,
+        projectId: body.project_id,
+        status: 'generating',
+        pipelineJobId: job.id,
+        progress: { stage: 'queued', label: 'Queued' },
+      });
+    }
     return {
       job_id: job.id,
       status: job.status,
@@ -146,8 +158,17 @@ export class ThumbnailPipelineController {
     });
     const job = await this.jobs.enqueue({
       userId,
-      payload: { source: 'run', body, videoContext },
+      payload: { source: 'run', body, videoContext, projectId: body.project_id },
     });
+    if (body.project_id) {
+      await this.jobs.updateProjectPipelineState({
+        userId,
+        projectId: body.project_id,
+        status: 'generating',
+        pipelineJobId: job.id,
+        progress: { stage: 'queued', label: 'Queued' },
+      });
+    }
     return {
       job_id: job.id,
       status: job.status,

@@ -3,6 +3,7 @@ import type { ThumbnailPipelineAnalysis } from '../schemas/thumbnail-pipeline-an
 
 export type ThumbnailPipelineRunInput = {
   userId: string;
+  projectId?: string;
   userPrompt: string;
   style?: string;
   /** Public HTTPS or signed URL after ingestion. Omit for prompt-only (and optional reference images). */

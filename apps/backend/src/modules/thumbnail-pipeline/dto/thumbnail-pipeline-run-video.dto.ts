@@ -1,5 +1,5 @@
 import { Transform, Type } from 'class-transformer';
-import { IsBoolean, IsInt, IsOptional, IsString, IsUrl, Max, MaxLength, Min } from 'class-validator';
+import { IsBoolean, IsInt, IsOptional, IsString, IsUrl, IsUUID, Max, MaxLength, Min } from 'class-validator';
 
 function toOptionalBool(value: unknown): boolean | undefined {
   if (value === undefined || value === null || value === '') return undefined;
@@ -53,4 +53,9 @@ export class ThumbnailPipelineRunVideoDto {
   @Transform(({ value }) => toOptionalBool(value))
   @IsBoolean()
   prioritize_face?: boolean;
+
+  @IsOptional()
+  @Transform(({ value }) => (value === '' || value === undefined ? undefined : value))
+  @IsUUID()
+  project_id?: string;
 }

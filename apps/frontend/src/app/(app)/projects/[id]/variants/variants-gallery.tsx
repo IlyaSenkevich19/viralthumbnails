@@ -1,11 +1,11 @@
 'use client';
 
-import { Suspense } from 'react';
+import { Suspense, useEffect } from 'react';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
-import { useProjectWithVariants } from '@/lib/hooks';
+import { usePipelineJobStatus, useProjectWithVariants } from '@/lib/hooks';
 import { buttonVariants } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
@@ -44,6 +44,16 @@ function VariantsGalleryInner({ projectId }: { projectId: string }) {
   const { user, accessToken, isLoading: authLoading } = useAuth();
   const hasSession = Boolean(user?.id && accessToken);
   const { data, error, isPending, isError, refetch, isFetching } = useProjectWithVariants(projectId);
+  const pipelineJobId =
+    data && typeof data.source_data?.pipeline_job_id === 'string' ? data.source_data.pipeline_job_id : null;
+  const pipelineJobQuery = usePipelineJobStatus(pipelineJobId);
+
+  useEffect(() => {
+    const status = pipelineJobQuery.data?.status;
+    if (status === 'succeeded' || status === 'failed') {
+      void refetch();
+    }
+  }, [pipelineJobQuery.data?.status, refetch]);
 
   async function handleRefresh() {
     const result = await refetch();
@@ -104,6 +114,7 @@ function VariantsGalleryInner({ projectId }: { projectId: string }) {
         refreshing={refreshing}
         initialTemplateId={initialTemplateId}
         initialAvatarId={initialAvatarId}
+        pipelineJob={pipelineJobQuery.data}
       />
     </>
   );

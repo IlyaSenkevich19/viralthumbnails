@@ -1,31 +1,22 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
-import { DEFAULT_NEW_PROJECT_VARIANT_COUNT } from '@/config/credits';
 import { projectVariantsPath } from '@/config/routes';
 import { isLikelyYoutubeUrl } from '@/lib/format';
-import { thumbnailsApi } from '@/lib/api';
+import { projectsApi, thumbnailsApi } from '@/lib/api';
 import {
-  NICHE_ALL,
-  useAvatarsList,
   useGenerationCredits,
   usePipelineJobSurface,
   usePipelineVideoCreateFlow,
-  useThumbnailPipelineMutation,
-  useTemplatesList,
 } from '@/lib/hooks';
 import { assertSufficientCredits } from '@/lib/paywall-notify';
 import type { PipelineVideoResponse } from '@/lib/types/pipeline-video';
 import { VIDEO_ANALYSIS_MAX_SECONDS } from '@/lib/video/clip-limits';
 import { maybeTrimVideoForThumbnails, TrimVideoError } from '@/lib/video/trim-video-for-thumbnails';
-import { pickThumbnailStyles } from '@/lib/thumbnail-style-matrix';
 import { toast } from 'sonner';
-import { handlePipelineRunSuccess } from '../dashboard-create-hub.handlers';
 import {
-  DASHBOARD_RUN_RECOVERY_KEY,
-  DASHBOARD_TEMPLATES_LIMIT,
   DASHBOARD_VIDEO_RECOVERY_KEY,
   DEFAULT_VIDEO_THUMBNAIL_COUNT,
   DASHBOARD_CREATE_HUB_MODE,
@@ -34,16 +25,12 @@ import {
   creditsRequiredForMode,
   buildYoutubeUserPrompt,
   normalizeVideoVariantCount,
-  plannedStyleCountForMode,
 } from '../dashboard-create-hub.utils';
 
 export function useDashboardCreateHub() {
   const router = useRouter();
   const { user, accessToken, isLoading: authLoading } = useAuth();
   const canLoadAssets = !authLoading && Boolean(user?.id && accessToken);
-  const runPipeline = useThumbnailPipelineMutation({
-    recoveryKey: DASHBOARD_RUN_RECOVERY_KEY,
-  });
   const pipelineSurface = usePipelineJobSurface();
   const pipelineVideoCreate = usePipelineVideoCreateFlow({
     recoveryKey: DASHBOARD_VIDEO_RECOVERY_KEY,
@@ -57,49 +44,27 @@ export function useDashboardCreateHub() {
   const videoCount = DEFAULT_VIDEO_THUMBNAIL_COUNT;
   const [videoResult, setVideoResult] = useState<PipelineVideoResponse | null>(null);
   const [videoPreparing, setVideoPreparing] = useState(false);
-  const [moreOptionsOpen, setMoreOptionsOpen] = useState(false);
+  const [creatingProject, setCreatingProject] = useState(false);
 
   const [urlError, setUrlError] = useState('');
   const [describeError, setDescribeError] = useState('');
-  const [selectedTemplateId, setSelectedTemplateId] = useState('');
-  const [selectedAvatarId, setSelectedAvatarId] = useState('');
   const [youtubeMetaPreview, setYoutubeMetaPreview] = useState<YoutubeMetaPreview | null>(null);
-
-  const { data: templatesData, isPending: templatesPending } = useTemplatesList(
-    NICHE_ALL,
-    1,
-    DASHBOARD_TEMPLATES_LIMIT,
-  );
-  const templates = templatesData?.items ?? [];
-  const { data: avatars = [], isPending: avatarsPending } = useAvatarsList();
   const { data: credits } = useGenerationCredits();
-  const assetsBusy = !canLoadAssets || templatesPending || avatarsPending;
-
-  const templateId = selectedTemplateId || undefined;
-  const avatarId = selectedAvatarId || undefined;
-
-  useEffect(() => {
-    if (selectedTemplateId || selectedAvatarId) {
-      setMoreOptionsOpen(true);
-    }
-  }, [selectedTemplateId, selectedAvatarId]);
 
   const busyProject =
     mode === DASHBOARD_CREATE_HUB_MODE.prompt || mode === DASHBOARD_CREATE_HUB_MODE.youtube
-      ? runPipeline.isPending
+      ? creatingProject
       : false;
   const busyVideo =
     mode === DASHBOARD_CREATE_HUB_MODE.video && (pipelineVideoCreate.isPending || videoPreparing);
-  const primaryBusy = busyProject || busyVideo || pipelineSurface.active;
+  const primaryBusy = busyProject || busyVideo || creatingProject || pipelineSurface.active;
   const requiredCredits = creditsRequiredForMode({ mode, videoCount });
-  const cannotAffordGenerate = credits?.balance != null && credits.balance < requiredCredits;
-  const plannedStyleCount = plannedStyleCountForMode(mode, videoCount);
-  const plannedStyles = useMemo(
-    () => pickThumbnailStyles(plannedStyleCount),
-    [plannedStyleCount],
-  );
+  const cannotAffordGenerate =
+    mode === DASHBOARD_CREATE_HUB_MODE.video &&
+    credits?.balance != null &&
+    credits.balance < requiredCredits;
   const recoveringPreviousGeneration =
-    runPipeline.jobStatusLabel === 'Resuming' || pipelineVideoCreate.jobStatusLabel === 'Resuming';
+    pipelineVideoCreate.jobStatusLabel === 'Resuming';
 
   const clearModeErrors = useCallback(() => {
     setUrlError('');
@@ -217,40 +182,32 @@ export function useDashboardCreateHub() {
       }
 
       if (
-        !assertSufficientCredits({
-          balance: credits?.balance,
-          cost: DEFAULT_NEW_PROJECT_VARIANT_COUNT,
-        })
+        !accessToken
       )
         return;
 
-      runPipeline.mutate(
-        {
-          user_prompt: buildYoutubeUserPrompt({
-            finalUrl,
-            title: videoMeta?.title ? String(videoMeta.title) : undefined,
-            author: videoMeta?.author ? String(videoMeta.author) : undefined,
-          }),
-          style: 'YouTube URL context',
-          video_url: finalUrl,
-          template_id: templateId,
-          avatar_id: avatarId || undefined,
-          variant_count: DEFAULT_NEW_PROJECT_VARIANT_COUNT,
-          generate_images: true,
-          persist_project: true,
-        },
-        {
-          onSuccess: (result) => {
-            handlePipelineRunSuccess({
-              result,
-              push: router.push,
-              templateId,
-              avatarId,
-              expectedCount: DEFAULT_NEW_PROJECT_VARIANT_COUNT,
-            });
+      setCreatingProject(true);
+      try {
+        const project = await projectsApi.createProject(accessToken, {
+          title: videoMeta?.title ? String(videoMeta.title).slice(0, 200) : undefined,
+          source_type: 'youtube_url',
+          source_data: {
+            url: finalUrl,
+            user_prompt: buildYoutubeUserPrompt({
+              finalUrl,
+              title: videoMeta?.title ? String(videoMeta.title) : undefined,
+              author: videoMeta?.author ? String(videoMeta.author) : undefined,
+            }),
+            video_meta: videoMeta ?? undefined,
           },
-        },
-      );
+        });
+        toast.success('Project created. Continue in editor.');
+        router.push(projectVariantsPath(project.id));
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Could not create project');
+      } finally {
+        setCreatingProject(false);
+      }
       return;
     }
 
@@ -260,44 +217,25 @@ export function useDashboardCreateHub() {
       return;
     }
 
-    if (
-      !assertSufficientCredits({
-        balance: credits?.balance,
-        cost: DEFAULT_NEW_PROJECT_VARIANT_COUNT,
-      })
-    )
-      return;
-
-    runPipeline.mutate(
-      {
-        user_prompt: hint,
-        style: 'Prompt-only ideation',
-        template_id: templateId,
-        avatar_id: avatarId || undefined,
-        variant_count: DEFAULT_NEW_PROJECT_VARIANT_COUNT,
-        generate_images: true,
-        persist_project: true,
-      },
-      {
-        onSuccess: (result) => {
-          handlePipelineRunSuccess({
-            result,
-            push: router.push,
-            templateId,
-            avatarId,
-            expectedCount: DEFAULT_NEW_PROJECT_VARIANT_COUNT,
-          });
-        },
-      },
-    );
+    setCreatingProject(true);
+    try {
+      const project = await projectsApi.createProject(accessToken, {
+        source_type: 'text',
+        source_data: { text: hint },
+      });
+      toast.success('Project created. Continue in editor.');
+      router.push(projectVariantsPath(project.id));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not create project');
+    } finally {
+      setCreatingProject(false);
+    }
   }, [
     accessToken,
     mode,
     videoFile,
     videoRemoteUrl,
     videoCount,
-    templateId,
-    avatarId,
     credits?.balance,
     creative,
     youtubeUrl,
@@ -305,7 +243,6 @@ export function useDashboardCreateHub() {
     enrichYoutubeUrl,
     pipelineVideoCreate,
     router,
-    runPipeline,
   ]);
 
   const onModeChange = useCallback(
@@ -352,27 +289,14 @@ export function useDashboardCreateHub() {
     videoCount,
     videoResult,
     videoPreparing,
-    moreOptionsOpen,
-    setMoreOptionsOpen,
     urlError,
     setUrlError,
     describeError,
     setDescribeError,
-    selectedTemplateId,
-    setSelectedTemplateId,
-    selectedAvatarId,
-    setSelectedAvatarId,
     youtubeMetaPreview,
-    templates,
-    avatars,
-    assetsBusy,
     accessToken,
-    templateId,
-    avatarId,
     primaryBusy,
     cannotAffordGenerate,
-    plannedStyleCount,
-    plannedStyles,
     recoveringPreviousGeneration,
     clearModeErrors,
     enrichYoutubeUrl,

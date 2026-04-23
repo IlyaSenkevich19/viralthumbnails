@@ -9,10 +9,7 @@ export const CreateHubHeader = memo(function CreateHubHeader() {
       >
         Create <span className="text-primary">thumbnails</span>
       </h2>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Pick a starting point below. Template, face, and extra video styling stay under{' '}
-        <span className="font-medium text-foreground/90">More options</span> until you need them.
-      </p>
+      <p className="mt-1 text-sm text-muted-foreground">Start with a prompt, YouTube link, or video.</p>
     </div>
   );
 });

@@ -6,10 +6,9 @@ import {
   ArrowLeft,
   Copy,
   Download,
+  ImageIcon,
   Pencil,
   RefreshCw,
-  Sparkles,
-  Wand2,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import {
@@ -360,7 +359,6 @@ export function ProjectVariantsWorkspace({
                 (credits != null && credits.balance < GENERATE_COUNT)
               }
             >
-              <Sparkles className="h-4 w-4" aria-hidden />
               {generate.isPending ? 'Generating…' : 'Generate thumbnails'}
               <span className="ml-auto text-xs font-normal opacity-90">
                 {GENERATE_COUNT} credit{GENERATE_COUNT === 1 ? '' : 's'}
@@ -394,7 +392,7 @@ export function ProjectVariantsWorkspace({
                   className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/15 text-primary ring-1 ring-primary/20"
                   aria-hidden
                 >
-                  <Sparkles className="h-7 w-7" strokeWidth={1.75} />
+                  <ImageIcon className="h-7 w-7" strokeWidth={1.75} />
                 </div>
                 <div className="space-y-2">
                   <p className="text-base font-semibold tracking-tight text-foreground">No variants yet</p>
@@ -467,7 +465,6 @@ export function ProjectVariantsWorkspace({
                     className="gap-2"
                     onClick={() => toast.info('Watermark removal will be available in a future update.')}
                   >
-                    <Wand2 className="h-4 w-4" aria-hidden />
                     Remove watermark
                   </Button>
                   {selectedVariant ? (

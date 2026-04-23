@@ -42,8 +42,7 @@ export const VideoModePanel = memo(function VideoModePanel({
         />
       </div>
       <p className="rounded-lg border border-border/70 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
-        After upload, you will continue on the project page where you can select templates, pick a face, and run
-        additional generations.
+        Upload video and continue to the editor for templates, face selection, and additional generations.
       </p>
     </div>
   );

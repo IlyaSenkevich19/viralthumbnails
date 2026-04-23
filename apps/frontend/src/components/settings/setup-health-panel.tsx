@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertTriangle, CheckCircle2, Sparkles } from 'lucide-react';
+import { AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useBackendSetupHealth } from '@/lib/hooks';
@@ -58,7 +58,7 @@ export function SetupHealthPanel() {
       <CardHeader className="space-y-3 pb-4">
         <CardTitle className="flex items-center justify-between gap-3 text-base">
           <span className="flex items-center gap-2.5">
-            <Sparkles className="h-4 w-4 text-primary" />
+            <CheckCircle2 className="h-4 w-4 text-primary" />
             Pipeline setup
           </span>
           <div

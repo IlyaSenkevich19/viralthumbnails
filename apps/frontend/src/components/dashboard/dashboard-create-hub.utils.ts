@@ -65,12 +65,6 @@ export function creditsRequiredForMode(params: {
   });
 }
 
-export function plannedStyleCountForMode(mode: HubMode, videoCount: number): number {
-  return mode === DASHBOARD_CREATE_HUB_MODE.video
-    ? normalizeVideoVariantCount(videoCount)
-    : DEFAULT_NEW_PROJECT_VARIANT_COUNT;
-}
-
 export function notifyPipelineResultAndNavigate(params: {
   projectId: string;
   templateId?: string;

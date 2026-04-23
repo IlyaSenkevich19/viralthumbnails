@@ -8,8 +8,6 @@ import { CreateHubRecoveringBanner } from './create-hub/create-hub-recovering-ba
 import { PromptModePanel } from './create-hub/prompt-mode-panel';
 import { YoutubeModePanel } from './create-hub/youtube-mode-panel';
 import { VideoModePanel } from './create-hub/video-mode-panel';
-import { MoreOptionsSection } from './create-hub/more-options-section';
-import { PlannedStylesPreview } from './create-hub/planned-styles-preview';
 import { VideoResultGrid } from './create-hub/video-result-grid';
 import { CreateHubFooter } from './create-hub/create-hub-footer';
 
@@ -49,26 +47,9 @@ export function DashboardCreateHub() {
         )}
       </div>
 
-      {h.mode !== DASHBOARD_CREATE_HUB_MODE.video ? (
-        <MoreOptionsSection
-          moreOptionsOpen={h.moreOptionsOpen}
-          onMoreOptionsToggle={h.setMoreOptionsOpen}
-          assetsBusy={h.assetsBusy}
-          canLoadAssets={h.canLoadAssets}
-          templates={h.templates}
-          avatars={h.avatars}
-          selectedTemplateId={h.selectedTemplateId}
-          onTemplateIdChange={h.setSelectedTemplateId}
-          selectedAvatarId={h.selectedAvatarId}
-          onAvatarIdChange={h.setSelectedAvatarId}
-        />
-      ) : null}
-
       {h.mode === DASHBOARD_CREATE_HUB_MODE.video && h.videoResult && h.videoResult.thumbnails.length > 0 ? (
         <VideoResultGrid result={h.videoResult} />
       ) : null}
-
-      <PlannedStylesPreview plannedStyleCount={h.plannedStyleCount} plannedStyles={h.plannedStyles} />
 
       <CreateHubFooter
         canLoadAssets={h.canLoadAssets}

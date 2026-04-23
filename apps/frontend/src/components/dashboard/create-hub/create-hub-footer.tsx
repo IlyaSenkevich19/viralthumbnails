@@ -1,7 +1,5 @@
 import { memo } from 'react';
-import Link from 'next/link';
-import { FolderKanban, Loader2, Sparkles } from 'lucide-react';
-import { AppRoutes } from '@/config/routes';
+import { Loader2 } from 'lucide-react';
 import { DASHBOARD_CREATE_HUB_MODE } from '../dashboard-create-hub.utils';
 import type { HubMode } from '../dashboard-create-hub.utils';
 import { Button } from '@/components/ui/button';
@@ -24,16 +22,7 @@ export const CreateHubFooter = memo(function CreateHubFooter({
   cannotAffordGenerate,
 }: Props) {
   return (
-    <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
-        <Link
-          href={AppRoutes.projects}
-          className="inline-flex items-center gap-1.5 hover:text-foreground"
-        >
-          <FolderKanban className="h-4 w-4" aria-hidden />
-          Projects
-        </Link>
-      </div>
+    <div className="mt-8 flex justify-end">
       <Button
         type="button"
         size="lg"
@@ -43,9 +32,7 @@ export const CreateHubFooter = memo(function CreateHubFooter({
       >
         {primaryBusy ? (
           <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
-        ) : (
-          <Sparkles className="h-5 w-5" aria-hidden />
-        )}
+        ) : null}
         <span className="font-semibold">
           {videoPreparing
             ? 'Preparing video…'
@@ -54,8 +41,8 @@ export const CreateHubFooter = memo(function CreateHubFooter({
                 ? 'Working…'
                 : 'Creating…'
               : mode === DASHBOARD_CREATE_HUB_MODE.video
-                ? 'Analyze video'
-                : 'Generate'}
+                ? 'Create thumbnails'
+                : 'Generate thumbnails'}
         </span>
       </Button>
     </div>

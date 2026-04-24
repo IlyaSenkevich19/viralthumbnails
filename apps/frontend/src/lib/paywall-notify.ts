@@ -1,29 +1,26 @@
 import { toast } from 'sonner';
-import { AppRoutes } from '@/config/routes';
 import { isApiError } from '@/lib/api/api-error';
 import { emitPaywallFunnelEvent } from '@/lib/paywall-funnel';
+import { openInsufficientCreditsPaywall } from '@/components/paywall/insufficient-credits-paywall';
 
 function creditsCtaToast(title: string, description?: string) {
   emitPaywallFunnelEvent('paywall_cta_shown', { title });
-  toast.error(title, {
-    description,
-    action: {
-      label: 'Credit packs',
-      onClick: () => {
-        emitPaywallFunnelEvent('paywall_cta_clicked', { title });
-        window.location.href = AppRoutes.credits;
-      },
-    },
+  openInsufficientCreditsPaywall({
+    title,
+    description:
+      description && description.length > 0
+        ? description
+        : 'Top up credits to continue generating thumbnails without interrupting your workflow.',
   });
 }
 
 /** Server rejected generation (403 INSUFFICIENT_CREDITS). */
 export function toastInsufficientCreditsFromApi(message?: string) {
   creditsCtaToast(
-    'Not enough credits',
+    'Not enough credits to generate',
     message && message.length > 0
       ? message
-      : 'Buy a credit pack to keep generating. One-time packs — no subscription.',
+      : 'Add credits to keep generating. One-time packs, no subscription required.',
   );
 }
 
@@ -40,10 +37,12 @@ export function assertSufficientCredits(params: {
   if (balance === undefined) return true;
   if (balance < cost) {
     emitPaywallFunnelEvent('paywall_precheck_blocked', { need: cost, have: balance });
-    creditsCtaToast(
-      'Not enough credits',
-      `This needs ${cost} credit${cost === 1 ? '' : 's'}. You have ${balance}.`,
-    );
+    openInsufficientCreditsPaywall({
+      title: 'Not enough credits to continue',
+      description: 'This action needs more credits. Top up once and continue immediately.',
+      need: cost,
+      have: balance,
+    });
     return false;
   }
   return true;

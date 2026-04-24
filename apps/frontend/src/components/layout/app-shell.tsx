@@ -8,6 +8,7 @@ import { PageFrameProvider } from '@/contexts/page-frame-context';
 import { Sidebar } from './sidebar';
 import { HeaderShell } from './header-shell';
 import { cn } from '@/lib/utils';
+import { InsufficientCreditsPaywall } from '@/components/paywall/insufficient-credits-paywall';
 
 const STORAGE_KEY = 'vt-sidebar-collapsed';
 const PROJECT_VARIANTS_ROUTE_RE = /^\/projects\/[^/]+\/variants$/;
@@ -96,6 +97,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </div>
             </main>
           </div>
+          <InsufficientCreditsPaywall />
         </PageFrameProvider>
       </div>
 

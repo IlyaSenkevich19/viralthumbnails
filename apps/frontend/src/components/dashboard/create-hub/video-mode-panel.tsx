@@ -58,6 +58,12 @@ export const VideoModePanel = memo(function VideoModePanel({ videoFile, onVideoF
 
   return (
     <div className="flex h-full flex-col">
+      <label htmlFor="dash-video-file" className="mb-1 text-sm font-medium text-foreground">
+        Source video
+      </label>
+      <p className="mb-2 text-xs text-muted-foreground">
+        Upload a short clip for context-aware thumbnail analysis before generation.
+      </p>
       <div className="space-y-1.5">
         <input
           ref={inputRef}

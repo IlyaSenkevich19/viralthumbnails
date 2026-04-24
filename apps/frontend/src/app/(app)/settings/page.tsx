@@ -11,7 +11,18 @@ export default function SettingsPage() {
 
       <PrimaryActionPanel>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">App connection</CardTitle>
+          <CardTitle className="text-base">Workspace preferences</CardTitle>
+          <p className="text-sm text-muted-foreground">Personal settings for your editor and generation workflow.</p>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm text-muted-foreground">
+          <p>Preference controls will appear here in upcoming updates.</p>
+          <p>Currently available: diagnostics below to verify backend and model setup.</p>
+        </CardContent>
+      </PrimaryActionPanel>
+
+      <PrimaryActionPanel>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Diagnostics</CardTitle>
           <p className="text-sm text-muted-foreground">Whether the app can reach the API server.</p>
         </CardHeader>
         <CardContent className="flex flex-wrap items-center gap-3">

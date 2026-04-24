@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Clock, DollarSign, FlaskConical, MousePointerClick, Paintbrush } from 'lucide-react';
@@ -50,7 +50,6 @@ export default function RegisterPage() {
   const [registered, setRegistered] = useState(false);
   const router = useRouter();
   const signUp = useSignUpMutation();
-  const advanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const leadSessionId = useMemo(() => {
     if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
       return crypto.randomUUID();
@@ -64,12 +63,6 @@ export default function RegisterPage() {
     setAttribution(collectLeadAttribution());
   }, []);
 
-  useEffect(() => {
-    return () => {
-      if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
-    };
-  }, []);
-
   const totalSteps = 5;
   const progressPercent = (step / totalSteps) * 100;
 
@@ -78,20 +71,8 @@ export default function RegisterPage() {
   }, [totalSteps]);
 
   const prevStep = useCallback(() => {
-    if (advanceTimerRef.current) {
-      clearTimeout(advanceTimerRef.current);
-      advanceTimerRef.current = null;
-    }
     setStep((prev) => (prev > 1 ? ((prev - 1) as typeof prev) : prev));
   }, []);
-
-  function scheduleNextStep(delayMs: number) {
-    if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
-    advanceTimerRef.current = setTimeout(() => {
-      advanceTimerRef.current = null;
-      nextStep();
-    }, delayMs);
-  }
 
   async function completeChannelStep() {
     const normalized = normalizeHttpUrl(channelUrl);
@@ -189,7 +170,7 @@ export default function RegisterPage() {
                   </h1>
                   <p className="text-sm text-muted-foreground mt-2">
                     {step < 5
-                      ? 'Tap your answers — we move you forward automatically. No long forms.'
+                      ? 'Answer a few quick questions, then continue when you are ready.'
                       : 'Last step: email and password.'}
                   </p>
                 </div>
@@ -232,7 +213,6 @@ export default function RegisterPage() {
                               type="button"
                               onClick={() => {
                                 setBiggestProblem(option.value);
-                                scheduleNextStep(200);
                               }}
                               className={cn(
                                 'flex items-center gap-2 rounded-lg border px-3 py-2.5 text-left text-xs font-medium transition-all duration-200',
@@ -247,9 +227,14 @@ export default function RegisterPage() {
                           ))}
                         </div>
                       </div>
-                      <p className="text-center text-xs text-muted-foreground">
-                        Pick one — next question opens right away.
-                      </p>
+                      <Button
+                        type="button"
+                        className="w-full"
+                        disabled={!biggestProblem}
+                        onClick={nextStep}
+                      >
+                        Continue
+                      </Button>
                     </>
                   ) : step === 2 ? (
                     <>
@@ -263,17 +248,19 @@ export default function RegisterPage() {
                         <LeadCustomSelect
                           id="register-subscribers"
                           value={subscriberCount}
-                          onChange={(v) => {
-                            setSubscriberCount(v);
-                            scheduleNextStep(120);
-                          }}
+                          onChange={setSubscriberCount}
                           options={SUBSCRIBER_OPTIONS}
                           placeholder="Select range"
                         />
                       </div>
-                      <p className="text-center text-xs text-muted-foreground">
-                        Choose a range — we continue automatically.
-                      </p>
+                      <Button
+                        type="button"
+                        className="w-full"
+                        disabled={!subscriberCount}
+                        onClick={nextStep}
+                      >
+                        Continue
+                      </Button>
                       <button
                         type="button"
                         onClick={prevStep}
@@ -291,17 +278,19 @@ export default function RegisterPage() {
                         <LeadCustomSelect
                           id="register-uploads"
                           value={videosPerWeek}
-                          onChange={(v) => {
-                            setVideosPerWeek(v);
-                            scheduleNextStep(120);
-                          }}
+                          onChange={setVideosPerWeek}
                           options={VIDEOS_PER_WEEK_OPTIONS}
                           placeholder="Select frequency"
                         />
                       </div>
-                      <p className="text-center text-xs text-muted-foreground">
-                        Pick frequency — next screen loads on its own.
-                      </p>
+                      <Button
+                        type="button"
+                        className="w-full"
+                        disabled={!videosPerWeek}
+                        onClick={nextStep}
+                      >
+                        Continue
+                      </Button>
                       <button
                         type="button"
                         onClick={prevStep}

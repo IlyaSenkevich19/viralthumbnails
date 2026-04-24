@@ -108,7 +108,7 @@ export function HeaderShell({
               title={pipelineJob.label}
             >
               <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-primary" aria-hidden />
-              <span className="min-w-0 truncate">{pipelineJob.label}</span>
+              <span className="hidden min-w-0 truncate sm:inline">{pipelineJob.label}</span>
             </p>
           ) : null}
           <div className="w-[5.5rem] sm:w-[6rem] lg:w-[6.5rem]">

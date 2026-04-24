@@ -1,7 +1,6 @@
 'use client';
 
-import { Download, ImageIcon, Pencil } from 'lucide-react';
-import { toast } from 'sonner';
+import { Download, ImageIcon } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -94,16 +93,6 @@ export function ProjectVariantsResults({
                   {selectedStyleLabel}
                 </span>
               ) : null}
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="gap-2"
-                onClick={() => toast.info('Editing will open in a future update.')}
-              >
-                <Pencil className="h-4 w-4" aria-hidden />
-                Modify
-              </Button>
               {previewUrl ? (
                 <a
                   href={previewUrl}
@@ -115,14 +104,9 @@ export function ProjectVariantsResults({
                   Download
                 </a>
               ) : null}
-              <Button
-                type="button"
-                size="sm"
-                className="gap-2"
-                onClick={() => toast.info('Watermark removal will be available in a future update.')}
-              >
-                Remove watermark
-              </Button>
+              <span className="inline-flex items-center rounded-md border border-border/70 bg-muted/30 px-2.5 py-1 text-xs text-muted-foreground">
+                Advanced edit tools coming soon
+              </span>
               {selectedVariant ? (
                 <Button
                   type="button"

@@ -9,6 +9,12 @@ type Props = {
 export const PromptModePanel = memo(function PromptModePanel({ creative, onCreativeChange, describeError }: Props) {
   return (
     <div className="flex h-full flex-col">
+      <label htmlFor="dash-prompt" className="mb-1 text-sm font-medium text-foreground">
+        Prompt details
+      </label>
+      <p className="mb-2 text-xs text-muted-foreground">
+        Describe subject, text hook, mood, and layout direction.
+      </p>
       <textarea
         id="dash-prompt"
         rows={5}

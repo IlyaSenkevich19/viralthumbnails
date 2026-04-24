@@ -228,9 +228,11 @@ export function TemplatesClient() {
                 <>
                   <p className="text-base font-semibold tracking-tight text-foreground">No templates yet</p>
                   <p className="mx-auto max-w-md text-sm leading-relaxed text-muted-foreground">
-                    Upload layout images to Storage (root,{' '}
-                    <code className="rounded bg-secondary px-1.5 py-0.5 text-xs">system/</code>, or your user folder) or
-                    add them via <code className="rounded bg-secondary px-1.5 py-0.5 text-xs">POST /api/templates</code>.
+                    Your template library is empty. Add your first template to reuse layouts and style direction
+                    across future generations.
+                  </p>
+                  <p className="mx-auto max-w-md text-xs leading-relaxed text-muted-foreground/90">
+                    For technical setup and API import options, see project documentation.
                   </p>
                 </>
               )}
@@ -252,7 +254,7 @@ export function TemplatesClient() {
                     {t.preview_url ? (
                       <Image
                         src={t.preview_url}
-                        alt=""
+                        alt={`Template preview: ${t.name}`}
                         fill
                         sizes="(min-width: 1024px) 24rem, (min-width: 640px) 50vw, 100vw"
                         className="object-cover"

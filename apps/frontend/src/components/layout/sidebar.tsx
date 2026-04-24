@@ -27,7 +27,13 @@ import { CollapsedSidebarTooltip } from '@/components/layout/collapsed-sidebar-t
 import { Badge } from '@/components/ui/badge';
 import { AppRoutes } from '@/config/routes';
 
-const navItems = [
+const navItems: Array<{
+  href: string;
+  label: string;
+  icon: typeof PlusSquare;
+  soon?: boolean;
+  adminOnly?: boolean;
+}> = [
   { href: AppRoutes.create, label: 'Create', icon: PlusSquare },
   { href: AppRoutes.projects, label: 'Projects', icon: FolderKanban },
   { href: AppRoutes.templates, label: 'Templates', icon: LayoutTemplate },
@@ -38,7 +44,7 @@ const navItems = [
     icon: Youtube,
     adminOnly: true,
   },
-  { href: AppRoutes.settings, label: 'Settings', icon: Settings, soon: true },
+  { href: AppRoutes.settings, label: 'Settings', icon: Settings },
 ];
 
 function SidebarSlidingLabel({

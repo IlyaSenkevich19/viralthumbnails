@@ -17,6 +17,9 @@ import { Trash2, Upload, UserCircle } from 'lucide-react';
 import { prepareAvatarImageFile } from '@/lib/prepare-avatar-image';
 import { SetPageFrame } from '@/components/layout/set-page-frame';
 
+const AVATAR_ACCEPTED_FORMATS = 'PNG, JPG, WEBP';
+const AVATAR_SIZE_HINT_MB = 10;
+
 function fileToBase64(file: File): Promise<{ base64: string; mimeType: string }> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -58,7 +61,11 @@ export function AvatarsClient() {
     e.target.value = '';
     if (!file || !hasSession) return;
     if (!file.type.startsWith('image/')) {
-      toast.error('Choose an image file');
+      toast.error(`Please upload an image (${AVATAR_ACCEPTED_FORMATS}).`);
+      return;
+    }
+    if (file.size > AVATAR_SIZE_HINT_MB * 1024 * 1024) {
+      toast.error(`Image is too large. Please upload up to ${AVATAR_SIZE_HINT_MB} MB.`);
       return;
     }
     setUploading(true);
@@ -73,7 +80,11 @@ export function AvatarsClient() {
       setName('');
       toast.success('Face saved');
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Upload failed');
+      const message =
+        err instanceof Error
+          ? err.message
+          : `Upload failed. Try ${AVATAR_ACCEPTED_FORMATS}, clear portrait, up to ${AVATAR_SIZE_HINT_MB} MB.`;
+      toast.error(message);
     } finally {
       setUploading(false);
     }
@@ -86,6 +97,9 @@ export function AvatarsClient() {
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Add a face</CardTitle>
+          <p className="text-xs text-muted-foreground">
+            Use a clear portrait photo. Accepted: {AVATAR_ACCEPTED_FORMATS}. Up to {AVATAR_SIZE_HINT_MB} MB.
+          </p>
         </CardHeader>
         <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-end">
           <div className="min-w-0 flex-1 space-y-2">
@@ -152,7 +166,7 @@ export function AvatarsClient() {
                 {a.preview_url ? (
                   <Image
                     src={a.preview_url}
-                    alt=""
+                    alt={`Face reference: ${a.name}`}
                     fill
                     sizes="(min-width: 1024px) 20rem, (min-width: 640px) 50vw, 100vw"
                     className="object-cover"

@@ -122,7 +122,7 @@ function VariantsGalleryInner({ projectId }: { projectId: string }) {
 
 export function VariantsGallery({ projectId }: { projectId: string }) {
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<WorkspaceSkeleton />}>
       <VariantsGalleryInner projectId={projectId} />
     </Suspense>
   );

@@ -22,6 +22,12 @@ export const YoutubeModePanel = memo(function YoutubeModePanel({
 }: Props) {
   return (
     <div className="flex h-full flex-col">
+      <label htmlFor="dash-youtube" className="mb-1 text-sm font-medium text-foreground">
+        YouTube URL
+      </label>
+      <p className="mb-2 text-xs text-muted-foreground">
+        Paste any youtube.com or youtu.be link. We will enrich title and channel metadata.
+      </p>
       <Input
         className="mt-0"
         id="dash-youtube"
@@ -45,7 +51,7 @@ export const YoutubeModePanel = memo(function YoutubeModePanel({
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={youtubeMetaPreview.thumbnail}
-                alt=""
+                alt="YouTube video thumbnail preview"
                 className="h-12 w-20 shrink-0 rounded-md object-cover"
               />
             ) : null}

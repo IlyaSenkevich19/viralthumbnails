@@ -72,9 +72,6 @@ export function LoginScreen() {
         <main className="flex flex-1 items-center">
           <div className="w-full max-w-md space-y-8">
             <div>
-              <p className="mb-2 inline-flex rounded-full border border-primary/25 bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
-                Pipeline-first workspace
-              </p>
               <h1 className="text-3xl font-semibold tracking-tight text-foreground">
                 Welcome <span className="text-primary">back</span>
               </h1>

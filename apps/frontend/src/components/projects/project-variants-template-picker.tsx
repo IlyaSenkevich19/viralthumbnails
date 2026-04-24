@@ -116,6 +116,7 @@ export function ProjectVariantsTemplatePicker({
             onClick={() =>
               toast.info('Add a reference template under Templates, then pick it from the grid.')
             }
+            aria-label="How to add a style reference template"
             className="flex aspect-video flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border bg-muted/30 text-center text-xs text-muted-foreground transition-colors hover:border-primary/40 hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <Copy className="h-6 w-6 opacity-60" aria-hidden />
@@ -128,6 +129,7 @@ export function ProjectVariantsTemplatePicker({
                 key={t.id}
                 type="button"
                 onClick={() => onToggleTemplate(t.id, active)}
+                aria-label={`Template: ${t.name}${active ? ' (selected)' : ''}`}
                 className={cn(
                   'overflow-hidden rounded-xl border-2 bg-card text-left transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                   active
@@ -139,7 +141,7 @@ export function ProjectVariantsTemplatePicker({
                   {t.preview_url ? (
                     <Image
                       src={t.preview_url}
-                      alt=""
+                      alt={`Template preview: ${t.name}`}
                       fill
                       sizes="(min-width: 1024px) 22vw, (min-width: 640px) 33vw, 50vw"
                       className="object-cover"

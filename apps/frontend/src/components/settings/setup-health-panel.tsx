@@ -23,7 +23,7 @@ export function SetupHealthPanel() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Pipeline setup</CardTitle>
+          <CardTitle className="text-base">Pipeline diagnostics</CardTitle>
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground">Checking backend setup…</CardContent>
       </Card>
@@ -36,7 +36,7 @@ export function SetupHealthPanel() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <AlertTriangle className="h-4 w-4 text-red-300" />
-            Pipeline setup
+            Pipeline diagnostics
           </CardTitle>
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground">
@@ -60,7 +60,7 @@ export function SetupHealthPanel() {
         <CardTitle className="flex items-center justify-between gap-3 text-base">
           <span className="flex items-center gap-2.5">
             <CheckCircle2 className="h-4 w-4 text-primary" />
-            Pipeline setup
+            Pipeline diagnostics
           </span>
           <div
             className={cn(

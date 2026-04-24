@@ -177,12 +177,6 @@ export default function ProjectsListPage() {
                     Title
                   </th>
                   <th scope="col" className="px-4 py-3 font-medium">
-                    Platform
-                  </th>
-                  <th scope="col" className="px-4 py-3 font-medium">
-                    Source
-                  </th>
-                  <th scope="col" className="px-4 py-3 font-medium">
                     Status
                   </th>
                   <th scope="col" className="px-4 py-3 font-medium">
@@ -231,10 +225,13 @@ export default function ProjectsListPage() {
                         </div>
                       </td>
                       <th scope="row" className="px-4 py-2 text-left font-medium text-foreground">
-                        {p.title}
+                        <span className="line-clamp-1">{p.title}</span>
+                        <span className="mt-0.5 block text-xs font-normal text-muted-foreground">
+                          <span className="capitalize">{p.platform}</span>
+                          <span aria-hidden> · </span>
+                          <span>{humanizeKey(p.source_type)}</span>
+                        </span>
                       </th>
-                      <td className="px-4 py-2 capitalize text-muted-foreground">{p.platform}</td>
-                      <td className="px-4 py-2 text-muted-foreground">{humanizeKey(p.source_type)}</td>
                       <td className="px-4 py-2">
                         <Badge variant="default" className={cn(statusToneClass(p.status))}>
                           {projectStatusLabel(p.status)}

@@ -226,8 +226,8 @@ export function ProjectVariantsWorkspace({
         }}
       />
 
-      <div className="flex min-h-0 flex-col gap-8 lg:flex-row lg:items-start lg:gap-10">
-        <aside className="w-full shrink-0 space-y-6 lg:sticky lg:top-6 lg:max-h-[calc(100vh-4rem)] lg:w-[min(100%,44rem)] lg:overflow-y-auto lg:pr-2">
+      <div className="flex min-h-0 flex-col gap-8 lg:flex-row lg:items-start lg:gap-8">
+        <aside className="w-full shrink-0 space-y-6 lg:sticky lg:top-6 lg:max-h-[calc(100vh-4rem)] lg:w-[min(100%,34rem)] lg:overflow-y-auto lg:pr-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <Link
               href={AppRoutes.projects}

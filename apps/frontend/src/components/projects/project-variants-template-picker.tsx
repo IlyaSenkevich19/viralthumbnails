@@ -6,8 +6,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { TemplatesGridSkeleton } from '@/components/templates/templates-grid-skeleton';
-import { TemplatesPagination } from '@/components/templates/templates-pagination';
-import { NICHE_ALL, TEMPLATE_PAGE_SIZE_OPTIONS } from '@/lib/hooks';
+import { NICHE_ALL } from '@/lib/hooks';
 import type { TemplateNicheOption, ThumbnailTemplateRow } from '@/lib/api/templates';
 import {
   TEMPLATE_FACE_FILTER,
@@ -21,13 +20,11 @@ type ProjectVariantsTemplatePickerProps = {
   templateFaceFilter: TemplateFaceFilter;
   onTemplateFaceFilterChange: (filter: TemplateFaceFilter) => void;
   templatesLoading: boolean;
-  templatesPaginationBusy: boolean;
+  templatesFetching: boolean;
   filteredTemplates: ThumbnailTemplateRow[];
   templatesTotal: number;
-  templatePage: number;
-  templatesLimit: number;
-  onTemplatePageChange: (page: number) => void;
-  onTemplatePageSizeChange: (limit: number) => void;
+  onLoadMore: () => void;
+  canLoadMore: boolean;
   selectedTemplateId: string | null;
   onToggleTemplate: (templateId: string, currentlyActive: boolean) => void;
 };
@@ -39,13 +36,11 @@ export function ProjectVariantsTemplatePicker({
   templateFaceFilter,
   onTemplateFaceFilterChange,
   templatesLoading,
-  templatesPaginationBusy,
+  templatesFetching,
   filteredTemplates,
   templatesTotal,
-  templatePage,
-  templatesLimit,
-  onTemplatePageChange,
-  onTemplatePageSizeChange,
+  onLoadMore,
+  canLoadMore,
   selectedTemplateId,
   onToggleTemplate,
 }: ProjectVariantsTemplatePickerProps) {
@@ -85,7 +80,7 @@ export function ProjectVariantsTemplatePicker({
           className="rounded-full"
           onClick={() => onTemplateFaceFilterChange(TEMPLATE_FACE_FILTER.all)}
         >
-          All templates
+          Any face
         </Button>
         <Button
           type="button"
@@ -113,7 +108,7 @@ export function ProjectVariantsTemplatePicker({
         <div
           className={cn(
             'grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4',
-            templatesPaginationBusy && 'pointer-events-none opacity-55 transition-opacity',
+            templatesFetching && 'opacity-80 transition-opacity',
           )}
         >
           <button
@@ -162,19 +157,19 @@ export function ProjectVariantsTemplatePicker({
         </div>
       )}
       {!templatesLoading && filteredTemplates.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No templates match this face filter on the current page.</p>
+        <p className="text-sm text-muted-foreground">No templates match this face filter.</p>
       ) : null}
       {!templatesLoading && templatesTotal > 0 ? (
-        <TemplatesPagination
-          page={templatePage}
-          total={templatesTotal}
-          limit={templatesLimit}
-          onPageChange={onTemplatePageChange}
-          pageSizeOptions={TEMPLATE_PAGE_SIZE_OPTIONS}
-          onPageSizeChange={onTemplatePageSizeChange}
-          isNavBusy={templatesPaginationBusy}
-          className="pt-1"
-        />
+        <div className="flex items-center justify-between gap-3 pt-1">
+          <p className="text-sm text-muted-foreground">
+            Showing {filteredTemplates.length} of {templatesTotal}
+          </p>
+          {canLoadMore ? (
+            <Button type="button" variant="outline" size="sm" onClick={onLoadMore} disabled={templatesFetching}>
+              {templatesFetching ? 'Loading…' : 'Load more'}
+            </Button>
+          ) : null}
+        </div>
       ) : null}
     </div>
   );

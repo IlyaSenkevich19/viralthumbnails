@@ -10,9 +10,11 @@ import { HeaderShell } from './header-shell';
 import { cn } from '@/lib/utils';
 
 const STORAGE_KEY = 'vt-sidebar-collapsed';
+const PROJECT_VARIANTS_ROUTE_RE = /^\/projects\/[^/]+\/variants$/;
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const isProjectVariantsRoute = PROJECT_VARIANTS_ROUTE_RE.test(pathname ?? '');
   const creatingProject = useIsMutating({ mutationKey: createProjectAndGenerateMutationKey }) > 0;
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -30,6 +32,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     }
     setHydrated(true);
   }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    if (isProjectVariantsRoute) {
+      // On project detail, prioritize preview canvas width.
+      setSidebarCollapsed(true);
+      return;
+    }
+    try {
+      setSidebarCollapsed(localStorage.getItem(STORAGE_KEY) === '1');
+    } catch {
+      /* ignore */
+    }
+  }, [hydrated, isProjectVariantsRoute]);
 
   useEffect(() => {
     if (!mobileSidebarOpen) return;

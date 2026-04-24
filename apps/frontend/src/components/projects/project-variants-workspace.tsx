@@ -6,12 +6,10 @@ import { ArrowLeft, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import {
   NICHE_ALL,
-  TEMPLATES_DEFAULT_PAGE_SIZE,
   useAvatarsList,
   useDeleteVariantMutation,
   useGenerateThumbnailsMutation,
   useGenerationCredits,
-  usePrefetchAdjacentTemplates,
   useTemplateNiches,
   useTemplatesList,
 } from '@/lib/hooks';
@@ -35,6 +33,7 @@ import {
   type TemplateFaceFilter,
 } from '@/components/projects/project-variants-workspace.constants';
 import type { ProjectVariantsWorkspaceProps } from '@/components/projects/project-variants-workspace.types';
+import type { ThumbnailTemplateRow } from '@/lib/api/templates';
 
 export type { ProjectVariantsWorkspaceProps } from '@/components/projects/project-variants-workspace.types';
 
@@ -61,11 +60,8 @@ export function ProjectVariantsWorkspace({
   const [selectedNiche, setSelectedNiche] = useState<string | typeof NICHE_ALL>(NICHE_ALL);
   const [templateFaceFilter, setTemplateFaceFilter] = useState<TemplateFaceFilter>(TEMPLATE_FACE_FILTER.all);
   const [templatePage, setTemplatePage] = useState(1);
-  const [templateLimit, setTemplateLimit] = useState(TEMPLATES_DEFAULT_PAGE_SIZE);
-
-  useEffect(() => {
-    setTemplatePage(1);
-  }, [selectedNiche]);
+  const TEMPLATE_PAGE_SIZE = 24;
+  const [loadedTemplates, setLoadedTemplates] = useState<ThumbnailTemplateRow[]>([]);
 
   useEffect(() => {
     if (templateFaceFilter === TEMPLATE_FACE_FILTER.faceless) {
@@ -73,19 +69,13 @@ export function ProjectVariantsWorkspace({
     }
   }, [templateFaceFilter]);
 
-  const handleTemplatePageSize = useCallback((n: number) => {
-    setTemplateLimit(n);
-    setTemplatePage(1);
-  }, []);
-
   const {
     data: templatesData,
     isPending: templatesPending,
     isFetching: templatesFetching,
-    isPlaceholderData: templatesPlaceholder,
-  } = useTemplatesList(selectedNiche, templatePage, templateLimit);
+  } = useTemplatesList(selectedNiche, templatePage, TEMPLATE_PAGE_SIZE);
   const templatesLoading = templatesPending && !templatesData;
-  const templates = useMemo(() => templatesData?.items ?? [], [templatesData]);
+  const templates = useMemo(() => loadedTemplates, [loadedTemplates]);
   const filteredTemplates = useMemo(() => {
     if (templateFaceFilter === TEMPLATE_FACE_FILTER.all) return templates;
     return templates.filter((template) => {
@@ -94,18 +84,28 @@ export function ProjectVariantsWorkspace({
     });
   }, [templateFaceFilter, templates]);
   const templatesTotal = templatesData?.total ?? 0;
-  const templatesLimit = templatesData?.limit ?? templateLimit;
-  const templatesPaginationBusy = Boolean(templatesFetching && templatesPlaceholder);
-
-  usePrefetchAdjacentTemplates(selectedNiche, templatePage, templateLimit, templatesData?.total);
+  const canLoadMore = templatePage * TEMPLATE_PAGE_SIZE < templatesTotal;
 
   useEffect(() => {
-    if (!templatesData || templatesPending) return;
-    const totalPages = Math.max(1, Math.ceil(templatesData.total / templatesData.limit));
-    if (templatePage > totalPages) {
-      setTemplatePage(totalPages);
+    setTemplatePage(1);
+    setLoadedTemplates([]);
+  }, [selectedNiche]);
+
+  useEffect(() => {
+    if (!templatesData?.items) return;
+    if (templatePage <= 1) {
+      setLoadedTemplates(templatesData.items);
+      return;
     }
-  }, [templatesData, templatesPending, templatePage]);
+    setLoadedTemplates((prev) => {
+      const seen = new Set(prev.map((t) => t.id));
+      const next = [...prev];
+      for (const item of templatesData.items) {
+        if (!seen.has(item.id)) next.push(item);
+      }
+      return next;
+    });
+  }, [templatesData, templatePage]);
 
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const { data: avatars = [] } = useAvatarsList();
@@ -226,8 +226,8 @@ export function ProjectVariantsWorkspace({
         }}
       />
 
-      <div className="flex min-h-0 flex-col gap-8 lg:flex-row lg:items-start lg:gap-8">
-        <aside className="w-full shrink-0 space-y-6 lg:sticky lg:top-6 lg:max-h-[calc(100vh-4rem)] lg:w-[min(100%,34rem)] lg:overflow-y-auto lg:pr-2">
+      <div className="flex min-h-0 flex-col gap-8 xl:flex-row xl:items-start xl:gap-8">
+        <aside className="w-full shrink-0 space-y-6 xl:sticky xl:top-6 xl:max-h-[calc(100vh-4rem)] xl:w-[min(100%,34rem)] xl:overflow-y-auto xl:pr-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <Link
               href={AppRoutes.projects}
@@ -264,13 +264,11 @@ export function ProjectVariantsWorkspace({
               templateFaceFilter={templateFaceFilter}
               onTemplateFaceFilterChange={setTemplateFaceFilter}
               templatesLoading={templatesLoading}
-              templatesPaginationBusy={templatesPaginationBusy}
+              templatesFetching={templatesFetching}
               filteredTemplates={filteredTemplates}
               templatesTotal={templatesTotal}
-              templatePage={templatePage}
-              templatesLimit={templatesLimit}
-              onTemplatePageChange={setTemplatePage}
-              onTemplatePageSizeChange={handleTemplatePageSize}
+              onLoadMore={() => setTemplatePage((p) => p + 1)}
+              canLoadMore={canLoadMore}
               selectedTemplateId={selectedTemplateId}
               onToggleTemplate={(id, active) => setSelectedTemplateId(active ? null : id)}
             />

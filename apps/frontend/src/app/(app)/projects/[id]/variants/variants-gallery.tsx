@@ -16,8 +16,8 @@ import { ProjectVariantsWorkspace } from '@/components/projects/project-variants
 
 function WorkspaceSkeleton() {
   return (
-    <div className="flex flex-col gap-8 lg:flex-row">
-      <div className="w-full space-y-4 lg:w-[44rem]">
+    <div className="flex flex-col gap-8 xl:flex-row">
+      <div className="w-full space-y-4 xl:w-[34rem]">
         <Skeleton className="h-8 w-32" />
         <Skeleton className="h-10 w-full max-w-xs" />
         <Skeleton className="h-6 w-48" />

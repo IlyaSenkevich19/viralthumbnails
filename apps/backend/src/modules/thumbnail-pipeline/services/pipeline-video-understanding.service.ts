@@ -10,7 +10,10 @@ import {
 } from '../../openrouter/multipart-user-content';
 import type { OpenRouterMessage } from '../../openrouter/openrouter.types';
 import type { PipelineVideoContext } from '../../video-thumbnails/types/video-pipeline-video-context';
-import { VideoFrameSampleService } from '../../video-thumbnails/services/video-frame-sample.service';
+import {
+  type VideoFrameSampleCandidate,
+  VideoFrameSampleService,
+} from '../../video-thumbnails/services/video-frame-sample.service';
 import {
   ThumbnailPipelineAnalysis,
   ThumbnailPipelineAnalysisJsonPrompt,
@@ -31,11 +34,14 @@ export type VideoUnderstandingParams = {
   faceReferenceDataUrls?: string[];
   /** Phase 2: set internally when ffmpeg frame sampling succeeds (replaces `video_url` in VL payload). */
   sampledFrameDataUrls?: string[];
+  sampledFrameCandidates?: VideoFrameSampleCandidate[];
 };
 
 export type VideoUnderstandingResult = {
   analysis: ThumbnailPipelineAnalysis;
   modelUsed: string;
+  sampledFrames?: Array<{ frameIndex: number; timeSec: number; selected?: boolean }>;
+  selectedFramePreviewDataUrl?: string;
 };
 
 @Injectable()
@@ -67,13 +73,17 @@ export class PipelineVideoUnderstandingService {
 
     let vlParams: VideoUnderstandingParams = { ...params };
     if (hasVideo && params.videoUrl?.trim()) {
-      const sampled = await this.frameSample.trySampleFrames({
+      const sampled = await this.frameSample.trySampleFrameCandidates({
         videoUrl: params.videoUrl.trim(),
         durationSeconds: params.videoContext?.duration_seconds ?? null,
         logContext: 'pipeline-vl',
       });
       if (sampled.length > 0) {
-        vlParams = { ...params, sampledFrameDataUrls: sampled };
+        vlParams = {
+          ...params,
+          sampledFrameDataUrls: sampled.map((frame) => frame.dataUrl),
+          sampledFrameCandidates: sampled,
+        };
         this.logger.log(`Pipeline VL: vl_input_mode=frames frames=${sampled.length}`);
       } else {
         this.logger.log('Pipeline VL: vl_input_mode=video_url');
@@ -88,7 +98,13 @@ export class PipelineVideoUnderstandingService {
     for (const model of models) {
       try {
         const analysis = await this.analyzeWithModel(model, vlParams);
-        return { analysis, modelUsed: model };
+        const selectedFramePreviewDataUrl = this.resolveSelectedFramePreview(vlParams, analysis.selectedFrameIndex);
+        return {
+          analysis,
+          modelUsed: model,
+          sampledFrames: this.buildSampledFrameSummary(vlParams, analysis.selectedFrameIndex),
+          selectedFramePreviewDataUrl,
+        };
       } catch (e) {
         lastErr = e instanceof Error ? e : new Error(String(e));
         this.logger.warn(`Pipeline VL model=${model} failed: ${lastErr.message}`);
@@ -139,7 +155,13 @@ ${ThumbnailPipelineAnalysisJsonPrompt}`;
     const templateUrls = params.templateReferenceDataUrls ?? [];
     const faceUrls = params.faceReferenceDataUrls ?? [];
     const sampled = params.sampledFrameDataUrls ?? [];
+    const sampledCandidates = params.sampledFrameCandidates ?? [];
     const useFrames = sampled.length > 0;
+    const frameList = sampledCandidates.length
+      ? `\n\nSampled frame timeline (1-based order matching attached images):\n${sampledCandidates
+          .map((frame) => `Frame ${frame.frameIndex}: ${this.formatTime(frame.timeSec)}`)
+          .join('\n')}`
+      : '';
 
     const refNote =
       templateUrls.length || faceUrls.length || useFrames
@@ -149,9 +171,9 @@ ${ThumbnailPipelineAnalysisJsonPrompt}`;
         : '';
 
     const videoNote = useFrames
-      ? `The video is represented by ${sampled.length} evenly spaced still frames from the start of the recording (analyzed window). Ground timing fields in what you see in these frames.`
+      ? `The video is represented by ${sampled.length} sampled still frames from the analyzed window. Act as a YouTube thumbnail creative director: understand the video's promise, rank the most clickable frames/moments, set selectedFrameIndex to the best attached frame number, and explain why it is clickable.${frameList}`
       : params.videoUrl?.trim()
-        ? 'A video is attached; ground timing fields in what you see.'
+        ? 'A video is attached; understand the first analyzed minutes, choose the most clickable thumbnail moment, and ground timing fields in what you see.'
         : 'No video is attached; infer carefully from the text prompt and any reference images. Use startSec 0 when unknown.';
 
     const transcriptLine = params.transcriptSnippet?.trim()
@@ -217,5 +239,33 @@ ${ThumbnailPipelineAnalysisJsonPrompt}`;
     }
 
     throw lastErr ?? new Error('Pipeline video understanding failed');
+  }
+
+  private resolveSelectedFramePreview(
+    params: VideoUnderstandingParams,
+    selectedFrameIndex: number | undefined,
+  ): string | undefined {
+    if (!selectedFrameIndex) return undefined;
+    return params.sampledFrameCandidates?.find((frame) => frame.frameIndex === selectedFrameIndex)?.dataUrl;
+  }
+
+  private buildSampledFrameSummary(
+    params: VideoUnderstandingParams,
+    selectedFrameIndex: number | undefined,
+  ): Array<{ frameIndex: number; timeSec: number; selected?: boolean }> | undefined {
+    const frames = params.sampledFrameCandidates;
+    if (!frames?.length) return undefined;
+    return frames.map((frame) => ({
+      frameIndex: frame.frameIndex,
+      timeSec: frame.timeSec,
+      selected: selectedFrameIndex === frame.frameIndex || undefined,
+    }));
+  }
+
+  private formatTime(totalSec: number): string {
+    const s = Math.max(0, Math.round(totalSec));
+    const m = Math.floor(s / 60);
+    const rest = s % 60;
+    return `${m}:${String(rest).padStart(2, '0')}`;
   }
 }

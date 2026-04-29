@@ -7,10 +7,10 @@ import {
 import { getOpenRouterConfig } from '../../config/openrouter.config';
 import {
   type ThumbnailFaceInImage,
-  THUMBNAIL_PROMPT_QUALITY_GUARDRAILS,
   resolveFaceInThumbnailInstruction,
   resolveThumbnailStyleInstruction,
 } from '../../common/thumbnail-prompt-guidelines';
+import { generateOptimizedThumbnailPrompt } from '../../common/optimized-thumbnail-prompt';
 import { userContentTextThenReferenceImages } from '../openrouter/multipart-user-content';
 import { OpenRouterClient } from '../openrouter/openrouter.client';
 import { requestOpenRouterSingleThumbnailImage } from '../openrouter/openrouter-requests';
@@ -328,17 +328,78 @@ export class ProjectVariantImageService {
         ? ''
         : ` ${resolveThumbnailStyleInstruction(undefined, styleVariantIndex)} Variation ${styleVariantIndex + 1}${typeof totalVariants === 'number' ? ` of ${totalVariants}` : ''}; keep output distinct from other variations.`;
 
-    return [
-      `YouTube thumbnail concept for topic "${title}".`,
-      THUMBNAIL_PROMPT_QUALITY_GUARDRAILS,
-      faceModeLine,
-      styleVariantLine.trim(),
-      `Source context (${sourceType}): ${await excerpt}.`,
-      templateText.trim(),
-      faceText.trim(),
-    ]
-      .filter(Boolean)
-      .join(' ');
+    const sourceExcerpt = await excerpt;
+    const keyMessage = this.deriveThumbnailHook({
+      title,
+      sourceType,
+      sourceData,
+    });
+    const optimizedPrompt = generateOptimizedThumbnailPrompt({
+      description: `YouTube thumbnail concept for topic "${title}". Source context (${sourceType}): ${sourceExcerpt}.`,
+      keyMessage,
+      niche: sourceType,
+      style: [faceModeLine, styleVariantLine.trim()].filter(Boolean).join(' '),
+      variantFocus:
+        styleVariantIndex === undefined
+          ? undefined
+          : styleVariantIndex % 3 === 0
+            ? 'face-focus'
+            : styleVariantIndex % 3 === 1
+              ? 'text-focus'
+              : 'symbol-focus',
+    });
+
+    return [optimizedPrompt, templateText.trim(), faceText.trim()].filter(Boolean).join(' ');
+  }
+
+  private deriveThumbnailHook(params: {
+    title: string;
+    sourceType: string;
+    sourceData: Record<string, unknown>;
+  }): string {
+    const title = this.normalizeComparableText(params.title);
+    const candidateKeys = [
+      'thumbnail_text',
+      'text_overlay',
+      'key_message',
+      'hook',
+      'prompt',
+      'text',
+      'script',
+    ];
+
+    for (const key of candidateKeys) {
+      const raw = params.sourceData[key];
+      if (typeof raw !== 'string') continue;
+      const line = this.firstMeaningfulLine(raw);
+      if (!line) continue;
+      const short = line.split(/\s+/).slice(0, 4).join(' ');
+      if (this.normalizeComparableText(short) && this.normalizeComparableText(short) !== title) {
+        return short;
+      }
+    }
+
+    if (params.sourceType === 'youtube_url' || params.sourceType === 'video') {
+      return 'THIS CHANGES EVERYTHING';
+    }
+    return 'WATCH THIS';
+  }
+
+  private firstMeaningfulLine(raw: string): string {
+    return (
+      raw
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .find((line) => line.length > 0) ?? ''
+    ).slice(0, 80);
+  }
+
+  private normalizeComparableText(raw: string): string {
+    return raw
+      .toLowerCase()
+      .replace(/[^a-z0-9а-яё]+/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 
   private async buildSourceExcerpt(

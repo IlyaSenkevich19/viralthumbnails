@@ -18,6 +18,13 @@ const FRAME_EXTRACT_TIMEOUT_MS = 45_000;
 const SIGNATURE_SIZE = 32;
 const MIN_TIME_SEC = 0.05;
 
+export type VideoFrameSampleCandidate = {
+  /** 1-based index matching the order sent to the VL model. */
+  frameIndex: number;
+  timeSec: number;
+  dataUrl: string;
+};
+
 function dataUrlFromJpegBuffer(buf: Buffer): string {
   return `data:image/jpeg;base64,${buf.toString('base64')}`;
 }
@@ -233,6 +240,15 @@ export class VideoFrameSampleService {
     durationSeconds: number | null | undefined;
     logContext: string;
   }): Promise<string[]> {
+    const candidates = await this.trySampleFrameCandidates(params);
+    return candidates.map((frame) => frame.dataUrl);
+  }
+
+  async trySampleFrameCandidates(params: {
+    videoUrl: string;
+    durationSeconds: number | null | undefined;
+    logContext: string;
+  }): Promise<VideoFrameSampleCandidate[]> {
     const url = params.videoUrl?.trim();
     if (!url) return [];
     const cacheKey = `${url}|dur=${params.durationSeconds ?? 'na'}|w=${VIDEO_PIPELINE_ANALYZE_WINDOW_SECONDS}|k=${VIDEO_PIPELINE_FRAME_SAMPLE_COUNT}|q=${VIDEO_PIPELINE_MIN_FRAME_BRIGHTNESS},${VIDEO_PIPELINE_MIN_FRAME_STDDEV},${VIDEO_PIPELINE_MIN_FRAME_EDGE_ENERGY}|d=${VIDEO_PIPELINE_FRAME_DEDUP_DISTANCE_THRESHOLD}`;
@@ -243,7 +259,11 @@ export class VideoFrameSampleService {
       this.logger.debug(
         `[${params.logContext}] frame sample cache hit frames=${cached.frames.length}`,
       );
-      return cached.frames;
+      return cached.frames.map((dataUrl, index) => ({
+        frameIndex: index + 1,
+        timeSec: this.estimateCachedFrameTime(index, cached.frames.length, params.durationSeconds),
+        dataUrl,
+      }));
     }
 
     let duration = params.durationSeconds ?? null;
@@ -259,7 +279,7 @@ export class VideoFrameSampleService {
 
     const windowSec = Math.min(duration, VIDEO_PIPELINE_ANALYZE_WINDOW_SECONDS);
     const times = buildCandidateTimes(windowSec, VIDEO_PIPELINE_FRAME_SAMPLE_COUNT);
-    const out: string[] = [];
+    const out: VideoFrameSampleCandidate[] = [];
     const acceptedSignatures: FrameSignature[] = [];
     let droppedLowQuality = 0;
     let droppedDuplicates = 0;
@@ -300,7 +320,11 @@ export class VideoFrameSampleService {
       }
 
       acceptedSignatures.push(signature);
-      out.push(dataUrlFromJpegBuffer(buf));
+      out.push({
+        frameIndex: out.length + 1,
+        timeSec: t,
+        dataUrl: dataUrlFromJpegBuffer(buf),
+      });
     }
 
     if (out.length < VIDEO_PIPELINE_MIN_USABLE_FRAME_COUNT) {
@@ -313,7 +337,16 @@ export class VideoFrameSampleService {
     this.logger.log(
       `[${params.logContext}] sampled ${out.length}/${times.length} usable frames (window=${windowSec.toFixed(1)}s of ${duration.toFixed(1)}s, droppedLowQuality=${droppedLowQuality}, droppedDuplicates=${droppedDuplicates}, extractionFailures=${extractionFailures})`,
     );
-    this.cache.set(cacheKey, { expiresAt: now + VIDEO_PIPELINE_CACHE_TTL_MS, frames: out });
+    this.cache.set(cacheKey, { expiresAt: now + VIDEO_PIPELINE_CACHE_TTL_MS, frames: out.map((frame) => frame.dataUrl) });
     return out;
+  }
+
+  private estimateCachedFrameTime(index: number, count: number, durationSeconds: number | null | undefined): number {
+    const duration =
+      typeof durationSeconds === 'number' && Number.isFinite(durationSeconds) && durationSeconds > 0
+        ? durationSeconds
+        : VIDEO_PIPELINE_ANALYZE_WINDOW_SECONDS;
+    const windowSec = Math.min(duration, VIDEO_PIPELINE_ANALYZE_WINDOW_SECONDS);
+    return computeSampleTimesWithinWindow(windowSec, count)[index] ?? 0;
   }
 }

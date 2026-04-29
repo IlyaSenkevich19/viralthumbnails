@@ -1,26 +1,26 @@
-# Pipeline Hardening Runbook
+# Runbook по устойчивости pipeline
 
-This runbook verifies failure handling and operational limits for:
+Этот runbook проверяет обработку ошибок и операционные лимиты для:
 
 - `POST /api/thumbnails/pipeline/run` (JSON)
 - `POST /api/thumbnails/pipeline/run-video` (multipart)
-- `GET /api/thumbnails/pipeline/jobs/:jobId` (polling for async runs)
+- `GET /api/thumbnails/pipeline/jobs/:jobId` (поллинг асинхронных запусков)
 
-Use a valid bearer token (`$TOKEN`) and backend base URL (`$API`, e.g. `http://localhost:3001/api`).
+Используйте валидный bearer-токен (`$TOKEN`) и базовый URL backend (`$API`, например `http://localhost:3001/api`).
 
-## 0) Preconditions
+## 0) Предусловия
 
-- Backend is running.
-- Supabase migrations are applied.
-- Test user has credits (`GET /billing/credits`).
-- You have:
-  - one valid video URL and one invalid URL,
-  - one valid template id and avatar id (optional),
-  - one small local video file and one oversized file (>80MB).
+- Backend запущен.
+- Миграции Supabase применены.
+- У тестового пользователя есть кредиты (`GET /billing/credits`).
+- У вас есть:
+  - один валидный video URL и один невалидный URL,
+  - один валидный `template_id` и `avatar_id` (опционально),
+  - один небольшой локальный видеофайл и один слишком большой файл (>80MB).
 
-## 1) Baseline success checks
+## 1) Базовые проверки успешного сценария
 
-### 1.1 JSON pipeline enqueue + polling
+### 1.1 JSON pipeline: enqueue + поллинг
 
 ```bash
 curl -sS -X POST "$API/thumbnails/pipeline/run" \
@@ -34,22 +34,22 @@ curl -sS -X POST "$API/thumbnails/pipeline/run" \
   }'
 ```
 
-Expect:
+Ожидаем:
 
 - `200` enqueue response
 - `job_id`
 - `status=queued|running`
 
-Then poll:
+Затем опрашиваем статус:
 
 ```bash
 curl -sS "$API/thumbnails/pipeline/jobs/<JOB_ID>" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
-Expect transition to `status=succeeded` and `result.persisted_project.project_id`.
+Ожидаем переход в `status=succeeded` и наличие `result.persisted_project.project_id`.
 
-### 1.2 Video pipeline enqueue + polling (multipart)
+### 1.2 Video pipeline: enqueue + поллинг (multipart)
 
 ```bash
 curl -sS -X POST "$API/thumbnails/pipeline/run-video" \
@@ -59,42 +59,42 @@ curl -sS -X POST "$API/thumbnails/pipeline/run-video" \
   -F "prompt=Emphasize facial reaction and bold text"
 ```
 
-Expect:
+Ожидаем:
 
 - `200` enqueue response with `job_id`
 - polling reaches `status=succeeded`
 - `result.persisted_project.project_id` exists
 
-## 2) Negative cases
+## 2) Негативные сценарии
 
-### 2.1 OpenRouter failure
+### 2.1 Сбой OpenRouter
 
-Temporarily set invalid `OPENROUTER_API_KEY` and restart backend.
+Временно установите невалидный `OPENROUTER_API_KEY` и перезапустите backend.
 
-Run 1.1 again and expect:
+Повторите сценарий 1.1 и ожидайте:
 
 - job eventually reaches `failed`,
 - failure reason appears in job `error`,
-- no unhandled crash.
+- отсутствие необработанного падения процесса.
 
-Then restore key.
+После проверки верните корректный ключ.
 
-### 2.2 Storage failure
+### 2.2 Сбой Storage
 
-Break Storage write (wrong service role key or deny bucket write policy in test env).
+Сломайте запись в Storage (неверный service role key или запрет записи в bucket policy в тестовом окружении).
 
-Run 1.1 and expect:
+Запустите 1.1 и ожидайте:
 
 - non-2xx,
 - pipeline fails during persistence/upload,
-- no orphaned partial DB rows (or they are compensatingly removed, depending on current behavior),
-- backend logs include storage error context.
+- отсутствие «осиротевших» частичных строк в БД (либо они компенсирующе удаляются — в зависимости от текущей реализации),
+- в логах backend есть контекст storage-ошибки.
 
-Restore storage config/policies after check.
+После проверки восстановите конфиг/политики storage.
 
-### 2.3 Unavailable references
+### 2.3 Недоступные референсы
 
-Use fake IDs:
+Используйте фейковые ID:
 
 ```bash
 curl -sS -X POST "$API/thumbnails/pipeline/run" \
@@ -110,7 +110,7 @@ curl -sS -X POST "$API/thumbnails/pipeline/run" \
   }'
 ```
 
-Expect:
+Ожидаем:
 
 - request can still succeed,
 - response includes:
@@ -118,47 +118,47 @@ Expect:
   - `resolved_references.face_from_id=false`
   - `warnings[]` entries for unresolved refs.
 
-### 2.4 Billing refund on failure
+### 2.4 Возврат кредитов при ошибке
 
-Procedure:
+Порядок действий:
 
-1. Read credits balance (before).
-2. Trigger deterministic failure after reservation (for example with broken storage as in 2.2).
-3. Read credits balance (after).
+1. Считать баланс кредитов (до).
+2. Вызвать детерминированную ошибку после резерва (например, через сломанный storage как в 2.2).
+3. Считать баланс кредитов (после).
 
-Expect:
+Ожидаем:
 
-- net balance delta is `0` for failed run (reserved credits refunded).
+- итоговая дельта баланса `0` для упавшего запуска (зарезервированные кредиты возвращены).
 
-## 3) Throttling checks
+## 3) Проверка throttling
 
-`THROTTLE_PIPELINE_RUN` currently applies to pipeline run endpoints:
+`THROTTLE_PIPELINE_RUN` сейчас применяется к эндпоинтам pipeline:
 
 - limit: `8`
 - window: `1h`
 
-Quick check:
+Быстрая проверка:
 
-- send 9 requests rapidly to `pipeline/run` (or `pipeline/run-video`),
-- expect 9th request returns `429`.
+- отправьте 9 быстрых запросов в `pipeline/run` (или `pipeline/run-video`),
+- ожидайте, что 9-й запрос вернет `429`.
 
-## 4) Payload limit checks
+## 4) Проверка лимитов payload
 
-### 4.1 JSON body limit
+### 4.1 Лимит JSON body
 
-Global JSON body limit in backend is `15mb`.
+Глобальный лимит JSON body в backend — `15mb`.
 
-Send oversized JSON to `pipeline/run` (huge `base_image_data_url`).
+Отправьте oversized JSON в `pipeline/run` (большой `base_image_data_url`).
 
-Expect:
+Ожидаем:
 
 - `413 Payload Too Large` (or framework-specific 4xx payload error).
 
-### 4.2 Multipart file limit (`run-video`)
+### 4.2 Лимит multipart-файла (`run-video`)
 
 `run-video` uses `FileInterceptor` limit `80MB`.
 
-Upload a file >80MB:
+Загрузите файл >80MB:
 
 ```bash
 curl -sS -X POST "$API/thumbnails/pipeline/run-video" \
@@ -167,25 +167,25 @@ curl -sS -X POST "$API/thumbnails/pipeline/run-video" \
   -F "count=4"
 ```
 
-Expect:
+Ожидаем:
 
-- `413` or multer file-size rejection.
+- `413` или отказ multer по лимиту размера файла.
 
-## 5) Observability checks
+## 5) Проверка наблюдаемости (observability)
 
-For each negative case, verify logs include:
+Для каждого негативного сценария проверьте, что в логах есть:
 
-- endpoint and status,
-- root cause hints (OpenRouter/storage/validation),
-- no process crash or stuck request.
+- эндпоинт и статус,
+- подсказки по корневой причине (OpenRouter/storage/validation),
+- отсутствие падения процесса и «зависших» запросов.
 
-## 6) Sign-off checklist
+## 6) Чеклист финального подтверждения
 
-- [ ] JSON pipeline success path confirmed
-- [ ] multipart video pipeline success path confirmed
-- [ ] OpenRouter failure handled
-- [ ] Storage failure handled
-- [ ] unresolved refs surfaced in response warnings
-- [ ] billing refund verified on failed run
-- [ ] throttling enforced (429 on overflow)
-- [ ] payload limits enforced (JSON + multipart)
+- [ ] Подтвержден успешный сценарий JSON pipeline
+- [ ] Подтвержден успешный сценарий multipart video pipeline
+- [ ] Подтверждена корректная обработка сбоя OpenRouter
+- [ ] Подтверждена корректная обработка сбоя Storage
+- [ ] Неразрешенные референсы отражаются в `warnings` ответа
+- [ ] Подтвержден возврат кредитов при ошибке запуска
+- [ ] Подтвержден throttling (429 при превышении)
+- [ ] Подтверждены лимиты payload (JSON + multipart)

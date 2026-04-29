@@ -1,12 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import {
-  THUMBNAIL_PROMPT_QUALITY_GUARDRAILS,
   resolveThumbnailStyleInstruction,
 } from '../../../common/thumbnail-prompt-guidelines';
+import { generateOptimizedThumbnailPrompt } from '../../../common/optimized-thumbnail-prompt';
 import type { ThumbnailPipelineAnalysis } from '../schemas/thumbnail-pipeline-analysis.schema';
 
 export type ReferenceBundle = {
   dataUrls: string[];
+  hasVideoFrame?: boolean;
   hasTemplateImage: boolean;
   hasFaceImage: boolean;
   prioritizeFace: boolean;
@@ -41,8 +42,25 @@ export class PipelinePromptBuilderService {
       const hook = hooks[i % hooks.length];
       const comp = compositions[i % compositions.length];
       const styleInstruction = resolveThumbnailStyleInstruction(style, i);
+      const keyMessage = title.split(/\s+/).slice(0, 4).join(' ');
+      const description = [
+        `Main subject: ${analysis.mainSubject}`,
+        `Scene: ${analysis.sceneSummary}`,
+        `Emotion: ${analysis.emotion}`,
+        `Concept: ${seed}`,
+        `Visual hook: ${hook}`,
+        `Composition: ${comp}`,
+        `Creator notes: ${userPrompt.slice(0, 500)}`,
+      ].join('. ');
       out.push(
-        `YouTube thumbnail 16:9, professional quality. ${THUMBNAIL_PROMPT_QUALITY_GUARDRAILS} ${styleInstruction} ${styleLine} ${neg} Main subject: ${analysis.mainSubject}. Emotion: ${analysis.emotion}. Concept: ${seed}. On-image title idea (max 3-5 words, very large readable text): "${title}". Visual hook: ${hook}. Composition: ${comp}. Keep one primary subject and avoid clutter. Creator notes: ${userPrompt.slice(0, 500)}`,
+        generateOptimizedThumbnailPrompt({
+          description,
+          keyMessage,
+          niche: style?.trim() || 'YouTube thumbnail',
+          style: [styleInstruction, styleLine].filter(Boolean).join(' '),
+          avoid: analysis.negativeCues,
+          variantFocus: i % 3 === 0 ? 'face-focus' : i % 3 === 1 ? 'text-focus' : 'symbol-focus',
+        }) + (neg ? `\n\nNEGATIVE CUES: ${neg}` : ''),
       );
     }
     return out;
@@ -50,9 +68,14 @@ export class PipelinePromptBuilderService {
 
   referenceInstructionLine(refs?: ReferenceBundle): string {
     if (!refs?.dataUrls?.length) return '';
-    const { hasTemplateImage, hasFaceImage, prioritizeFace } = refs;
+    const { hasVideoFrame, hasTemplateImage, hasFaceImage, prioritizeFace } = refs;
+    const frameText = hasVideoFrame
+      ? ' The first attached image is the model-selected video frame: use it as the main visual truth for subject, scene, emotion, and composition.'
+      : '';
     const templateText = hasTemplateImage
-      ? ' The first attached image(s) are layout/style template reference(s): match composition, safe margins, typography energy, and structure; adapt colors to the topic.'
+      ? hasVideoFrame
+        ? ' Template reference(s) follow the selected frame: borrow layout energy, safe margins, typography, and structure without overriding the selected moment.'
+        : ' The first attached image(s) are layout/style template reference(s): match composition, safe margins, typography energy, and structure; adapt colors to the topic.'
       : '';
     const faceText =
       hasFaceImage && hasTemplateImage
@@ -64,6 +87,6 @@ export class PipelinePromptBuilderService {
             ? ' The attached face reference: prioritize recognizable likeness as the main human subject.'
             : ' The attached face reference: keep the person recognizable and well-lit.'
           : '';
-    return `${templateText}${faceText}`;
+    return `${frameText}${templateText}${faceText}`;
   }
 }

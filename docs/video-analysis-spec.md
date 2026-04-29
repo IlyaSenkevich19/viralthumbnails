@@ -1,65 +1,66 @@
-# Video analysis for thumbnails — specification (reference)
+# Анализ видео для превью — спецификация (reference)
 
-This document keeps the **product goal**, **current shipped behavior**, **target ideas not yet built**, and **where the code lives**.  
-Day-to-day **release scope, checklists, and deferrals** live in [video-analysis-release-roadmap.md](./video-analysis-release-roadmap.md).
-
----
-
-## 1. Problem statement
-
-Full-length uploads (e.g. hour-long videos) are a poor fit for “send the whole video to a VL model once”:
-
-- Cost and latency scale with provider processing of long `video_url` inputs.
-- For a small set of thumbnail variants, returns diminish after bounded context (metadata + short transcript slice + a handful of frames).
-
-**Product principle:** deliver strong thumbnail *ideas* with **bounded** cost and latency, not semantic understanding of every second of the file.
+Этот документ фиксирует **продуктовую цель**, **текущее реализованное поведение**, **целевые идеи, которые еще не внедрены**, и **где находится код**.  
+Для конкретной runtime-последовательности (по этапам) см. [video-analysis-pipeline-how-it-works.md](./video-analysis-pipeline-how-it-works.md).
 
 ---
 
-## 2. Current implementation (shipped)
+## 1. Постановка проблемы
 
-| Area | Behavior |
+Полные загрузки (например, часовые видео) плохо подходят для подхода «отправить всё видео в VL-модель одним запросом»:
+
+- Стоимость и задержка растут пропорционально обработке длинных `video_url` у провайдера.
+- Для небольшого числа вариантов превью отдача снижается после ограниченного контекста (метаданные + короткий фрагмент транскрипта + несколько кадров).
+
+**Принцип продукта:** давать сильные *идеи* для превью при **ограниченных** стоимости и задержке, а не добиваться семантического понимания каждой секунды файла.
+
+---
+
+## 2. Текущая реализация (уже в проде)
+
+| Область | Поведение |
 |------|----------|
-| **Endpoints** | `POST /api/thumbnails/pipeline/run` (JSON) and `POST /api/thumbnails/pipeline/run-video` (multipart) **enqueue** async jobs; poll `GET /api/thumbnails/pipeline/jobs/:jobId`. Alias: `POST /api/thumbnails/pipeline/jobs` (same body as `pipeline/run`). |
-| **Ingest** | File → temporary Supabase upload → signed URL as `video_url`; remote `videoUrl` when used. |
-| **Duration** | Gate + `video_context` (Phase 1 metadata) via `VideoPipelineDurationGateService`. |
-| **VL** | Prefer **K** JPEG stills (`image_url` data URLs) from **ffmpeg** in a bounded window; else **`video_url`** fallback. Optional YouTube **caption snippet** in text. |
-| **Downstream** | Prompt builder → image generation → optional project persistence. |
-| **Jobs** | DB table `thumbnail_pipeline_jobs`, in-process runner, lease expiry, capped transient retries. |
-| **Client** | YouTube meta enrichment in UI; browser trim helper for uploads (`trim-video-for-thumbnails`) — not server-side trim. |
+| **Эндпоинты** | `POST /api/thumbnails/pipeline/run` (JSON) и `POST /api/thumbnails/pipeline/run-video` (multipart) ставят async jobs в очередь; статус опрашивается через `GET /api/thumbnails/pipeline/jobs/:jobId`. Алиас: `POST /api/thumbnails/pipeline/jobs` (тот же body, что у `pipeline/run`). |
+| **Ingest** | Файл -> временная загрузка в Supabase -> signed URL как `video_url`; также поддерживается удаленный `videoUrl`. |
+| **Duration** | Ограничение длительности + `video_context` (метаданные Phase 1) через `VideoPipelineDurationGateService`. |
+| **VL** | Предпочтение **K** JPEG-кадрам (`image_url` data URL) из **ffmpeg** в ограниченном окне; иначе fallback на **`video_url`**. Опционально добавляется YouTube **caption snippet** в текст. |
+| **Downstream** | Построение промпта -> генерация изображений -> опциональное сохранение проекта. |
+| **Jobs** | Таблица БД `thumbnail_pipeline_jobs`, in-process runner, lease expiry, ограниченные transient retries. |
+| **Клиент** | Обогащение YouTube-метаданных в UI; browser helper для trim загрузок (`trim-video-for-thumbnails`) — это не server-side trim. |
 
-**Remaining gaps vs stretch goals:** non-YouTube ASR transcript; mid/long coverage sampling beyond first window; stronger perceptual dedup; shared cache (Redis/KV); dedicated worker fleet; richer UX for “no captions”.
-
----
-
-## 3. Target architecture (north star)
-
-Stages we still treat as **design reference** (not all implemented):
-
-1. Input — URL or upload (done).
-2. Cheap metadata — duration, title, channel (partially done).
-3. Duration policy — hard max + analyzed window (done for policy; sampling still start-window biased).
-4. Transcript — optional, budgeted (YouTube captions MVP done).
-5. Frame sampling — bounded window + K frames + cheap filters (done MVP).
-6. Pre-filter — dedup/quality (done MVP; not full pHash pipeline).
-7. LLM context — compact multimodal package (done MVP).
-8. Image generation — separate from VL (done).
-
-Trade-offs and UX expectations (estimated credits, progress states, failure copy) stay as product guidance; operational checks: [pipeline-hardening-runbook.md](./pipeline-hardening-runbook.md).
+**Оставшиеся gap’ы относительно stretch goals:** ASR-транскрипт не только для YouTube; покрытие середины/длины видео за пределами первого окна; более сильный perceptual dedup; общий кэш (Redis/KV); выделенный парк воркеров; более богатый UX для сценария “no captions”.
 
 ---
 
-## 4. Related code
+## 3. Целевая архитектура (north star)
+
+Этапы, которые пока рассматриваются как **design reference** (реализованы не полностью):
+
+1. Вход — URL или upload (сделано).
+2. Недорогие метаданные — длительность, title, channel (частично сделано).
+3. Политика длительности — жесткий максимум + analyzed window (политика сделана; sampling пока смещен к началу).
+4. Транскрипт — опционально, в рамках бюджета (MVP YouTube captions сделан).
+5. Sampling кадров — ограниченное окно + K кадров + дешевые фильтры (MVP сделан).
+6. Предфильтрация — dedup/quality (MVP сделан; не полный pHash pipeline).
+7. LLM-контекст — компактный мультимодальный пакет (MVP сделан).
+8. Генерация изображений — отдельно от VL (сделано).
+
+Trade-offs и UX-ожидания (оценка кредитов, статусы прогресса, тексты ошибок) остаются в зоне продуктового guidance; операционные проверки: [pipeline-hardening-runbook.md](./pipeline-hardening-runbook.md).
+
+---
+
+## 4. Связанный код
 
 - Pipeline: `apps/backend/src/modules/thumbnail-pipeline/` (`thumbnail-pipeline-execution.service.ts`, `thumbnail-pipeline-jobs*.ts`, `thumbnail-pipeline.controller.ts`)
 - VL payload: `apps/backend/src/modules/thumbnail-pipeline/services/pipeline-video-understanding.service.ts`, `apps/backend/src/modules/openrouter/multipart-user-content.ts`
-- Frames / duration helpers: `apps/backend/src/modules/video-thumbnails/services/video-frame-sample.service.ts`, `video-duration-ffprobe.ts`
-- Transcript: `apps/backend/src/modules/video-thumbnails/services/youtube-transcript.service.ts`
-- Config: `apps/backend/src/config/video-pipeline.config.ts`
+- Helpers для кадров/длительности: `apps/backend/src/modules/video-thumbnails/services/video-frame-sample.service.ts`, `video-duration-ffprobe.ts`
+- Транскрипт: `apps/backend/src/modules/video-thumbnails/services/youtube-transcript.service.ts`
+- Конфиг: `apps/backend/src/config/video-pipeline.config.ts`
 
 ---
 
-## 5. Document history
+## 5. История документа
 
-- **2026-04-16** — Initial long-form phased spec.
-- **2026-04-17** — Trimmed: removed duplicate phase-by-phase implementation narrative; ship state and release checklist live in `video-analysis-release-roadmap.md`.
+- **2026-04-16** — Первичная длинная фазовая спецификация.
+- **2026-04-17** — Укорочено фазовое повествование, фокус на уровне спецификации.
+- **2026-04-24** — Добавлена ссылка на runtime-документ `video-analysis-pipeline-how-it-works.md`.

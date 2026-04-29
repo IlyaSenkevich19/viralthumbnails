@@ -1,167 +1,167 @@
-# UI/UX Release Candidate Checklist
+# Чеклист релиз-кандидата UI/UX
 
-Use this checklist before shipping frontend changes.
+Используйте этот чеклист перед выпуском изменений фронтенда.
 
-Rules:
-- Mark each item as `PASS` or `FAIL`.
-- A screen is release-ready only when all **Critical** items pass.
-- For any `FAIL`, add a short note with screenshot/video reference.
-
----
-
-## 1) Global Visual System
-
-### Critical
-- [ ] `PASS/FAIL` Color tokens look consistent across `background`, `card`, `sidebar`, `muted`, `border`.
-- [ ] `PASS/FAIL` Primary accent color is used intentionally (CTA and key highlights only).
-- [ ] `PASS/FAIL` Text contrast is readable for body and muted text on all primary surfaces.
-- [ ] `PASS/FAIL` No obvious visual noise from competing badges/glows/shadows on one viewport.
-
-### Quality
-- [ ] `PASS/FAIL` Radius, spacing, and border thickness feel consistent between cards and controls.
-- [ ] `PASS/FAIL` Hover/focus/active states are present and subtle (not distracting).
+Правила:
+- Отмечайте каждый пункт как `PASS` или `FAIL`.
+- Экран считается готовым к релизу, только если пройдены все пункты **Critical**.
+- Для каждого `FAIL` добавляйте короткий комментарий и ссылку на скриншот/видео.
 
 ---
 
-## 2) Header + Navigation
+## 1) Глобальная визуальная система
 
-### Critical
-- [ ] `PASS/FAIL` Sidebar nav labels match reality (no outdated `Soon` markers on live pages).
-- [ ] `PASS/FAIL` Header controls remain usable on small widths (no clipping/overlap).
-- [ ] `PASS/FAIL` Current route is clearly visible in sidebar active state.
+### Критично
+- [ ] `PASS/FAIL` Цветовые токены выглядят консистентно между `background`, `card`, `sidebar`, `muted`, `border`.
+- [ ] `PASS/FAIL` Основной акцентный цвет используется осознанно (только CTA и ключевые акценты).
+- [ ] `PASS/FAIL` Контраст текста достаточный для основного и приглушенного текста на всех главных поверхностях.
+- [ ] `PASS/FAIL` Нет визуального шума от конкурирующих бейджей/свечений/теней в одном viewport.
 
-### Quality
-- [ ] `PASS/FAIL` Mobile menu open/close state is clear and prevents background interaction.
-- [ ] `PASS/FAIL` Credits indicator and status messages do not dominate page hierarchy.
-
----
-
-## 3) Create Page (`/create`)
-
-### Critical
-- [ ] `PASS/FAIL` Main CTA wording is consistent and clear (`Generate thumbnails`).
-- [ ] `PASS/FAIL` Mode switching (Prompt / YouTube / Video) is obvious and stable.
-- [ ] `PASS/FAIL` Form controls have clear labels and error states.
-- [ ] `PASS/FAIL` Busy/loading states are visible and prevent duplicate submissions.
-
-### Quality
-- [ ] `PASS/FAIL` Empty/default state guides user in one sentence.
-- [ ] `PASS/FAIL` No redundant controls competing with primary action.
+### Качество
+- [ ] `PASS/FAIL` Скругления, отступы и толщина границ консистентны между карточками и контролами.
+- [ ] `PASS/FAIL` Состояния hover/focus/active присутствуют и ненавязчивы.
 
 ---
 
-## 4) Projects List (`/projects`)
+## 2) Header + навигация
 
-### Critical
-- [ ] `PASS/FAIL` Row/card scan is fast: title, status, updated time readable within 2-3 seconds.
-- [ ] `PASS/FAIL` Click targets are unambiguous (open project vs row menu actions).
-- [ ] `PASS/FAIL` Empty state provides a clear next action.
+### Критично
+- [ ] `PASS/FAIL` Лейблы в sidebar соответствуют реальному состоянию (без устаревших `Soon` на live-страницах).
+- [ ] `PASS/FAIL` Контролы в header остаются usable на малой ширине (без обрезки/перекрытия).
+- [ ] `PASS/FAIL` Текущий роут явно виден в active-состоянии sidebar.
 
-### Quality
-- [ ] `PASS/FAIL` Desktop table and mobile cards present equivalent key info.
-- [ ] `PASS/FAIL` Preview thumbnails have meaningful alt text.
+### Качество
+- [ ] `PASS/FAIL` Состояние открытия/закрытия mobile-меню очевидно и блокирует фоновые взаимодействия.
+- [ ] `PASS/FAIL` Индикатор кредитов и статус-сообщения не доминируют в иерархии страницы.
 
 ---
 
-## 5) Project Details / Variants (`/projects/:id/variants`)
+## 3) Страница Create (`/create`)
 
-### Critical
-- [ ] `PASS/FAIL` Result preview has visual priority over control panels.
-- [ ] `PASS/FAIL` On `lg/md/sm`, layout does not shrink preview excessively.
-- [ ] `PASS/FAIL` Template picker controls are understandable (no duplicate semantics).
-- [ ] `PASS/FAIL` Template cards are accessible (`aria-label` / readable names).
-- [ ] `PASS/FAIL` No fake-functional primary controls (coming-soon items are clearly demoted).
+### Критично
+- [ ] `PASS/FAIL` Текст основного CTA консистентный и понятный (`Generate thumbnails`).
+- [ ] `PASS/FAIL` Переключение режимов (Prompt / YouTube / Video) очевидное и стабильное.
+- [ ] `PASS/FAIL` У контролов формы есть понятные лейблы и состояния ошибок.
+- [ ] `PASS/FAIL` Состояния загрузки видимы и предотвращают повторные отправки.
 
-### Quality
-- [ ] `PASS/FAIL` Variants strip is easy to scan and select.
-- [ ] `PASS/FAIL` Credit cost messaging near generate action is clear.
+### Качество
+- [ ] `PASS/FAIL` Empty/default состояние направляет пользователя одной фразой.
+- [ ] `PASS/FAIL` Нет лишних контролов, конкурирующих с основным действием.
+
+---
+
+## 4) Список проектов (`/projects`)
+
+### Критично
+- [ ] `PASS/FAIL` Сканирование строки/карточки быстрое: title, status, updated time читаются за 2-3 секунды.
+- [ ] `PASS/FAIL` Click targets однозначны (открыть проект vs действия из меню строки).
+- [ ] `PASS/FAIL` Empty state дает понятный следующий шаг.
+
+### Качество
+- [ ] `PASS/FAIL` Desktop-таблица и mobile-карточки показывают эквивалентную ключевую информацию.
+- [ ] `PASS/FAIL` У превью thumbnail есть осмысленный alt text.
+
+---
+
+## 5) Детали проекта / Variants (`/projects/:id/variants`)
+
+### Критично
+- [ ] `PASS/FAIL` Превью результата имеет визуальный приоритет над панелями управления.
+- [ ] `PASS/FAIL` На `lg/md/sm` layout не сжимает превью чрезмерно.
+- [ ] `PASS/FAIL` Контролы template picker понятны (без дублирующейся семантики).
+- [ ] `PASS/FAIL` Template cards доступны (`aria-label` / читаемые имена).
+- [ ] `PASS/FAIL` Нет псевдо-рабочих основных контролов (coming-soon элементы явно понижены в приоритете).
+
+### Качество
+- [ ] `PASS/FAIL` Полоса вариантов легко сканируется и выбирается.
+- [ ] `PASS/FAIL` Сообщение о стоимости в кредитах рядом с generate-действием понятное.
 
 ---
 
 ## 6) Templates (`/templates`)
 
-### Critical
-- [ ] `PASS/FAIL` Loading state uses visible skeleton/fallback (no blank screen).
-- [ ] `PASS/FAIL` Empty state is user-first (not developer-jargon-first).
-- [ ] `PASS/FAIL` Template images have meaningful alt text.
+### Критично
+- [ ] `PASS/FAIL` Loading state использует видимый skeleton/fallback (без пустого экрана).
+- [ ] `PASS/FAIL` Empty state ориентирован на пользователя (а не на разработческий жаргон).
+- [ ] `PASS/FAIL` У template images есть осмысленный alt text.
 
-### Quality
-- [ ] `PASS/FAIL` Filtering and pagination controls avoid unnecessary complexity.
+### Качество
+- [ ] `PASS/FAIL` Контролы фильтрации и пагинации без лишней сложности.
 
 ---
 
 ## 7) Avatars (`/avatars`)
 
-### Critical
-- [ ] `PASS/FAIL` Add/delete flows are obvious and reversible where expected (confirmation on delete).
-- [ ] `PASS/FAIL` Avatar image cards have meaningful alt text.
-- [ ] `PASS/FAIL` Upload errors are actionable (format/type guidance).
+### Критично
+- [ ] `PASS/FAIL` Флоу добавления/удаления очевидны и обратимы там, где ожидается (подтверждение удаления).
+- [ ] `PASS/FAIL` Avatar image cards имеют осмысленный alt text.
+- [ ] `PASS/FAIL` Ошибки загрузки дают практичные подсказки (формат/тип файла).
 
 ---
 
 ## 8) Settings (`/settings`)
 
-### Critical
-- [ ] `PASS/FAIL` Page naming and section naming align with actual content (diagnostics vs user settings).
-- [ ] `PASS/FAIL` Critical system checks are readable and status is obvious.
+### Критично
+- [ ] `PASS/FAIL` Названия страницы и секций соответствуют реальному содержимому (diagnostics vs user settings).
+- [ ] `PASS/FAIL` Критичные системные проверки читаемы, а статус очевиден.
 
-### Quality
-- [ ] `PASS/FAIL` Technical data is grouped and not overwhelming for non-technical users.
+### Качество
+- [ ] `PASS/FAIL` Технические данные сгруппированы и не перегружают нетехнического пользователя.
 
 ---
 
 ## 9) Credits (`/credits`)
 
-### Critical
-- [ ] `PASS/FAIL` Most useful information appears first (`Your balance`).
-- [ ] `PASS/FAIL` If checkout is disabled, messaging is explicit and non-confusing.
-- [ ] `PASS/FAIL` Pricing cards clearly communicate availability (`Coming soon`).
+### Критично
+- [ ] `PASS/FAIL` Самая полезная информация показана первой (`Your balance`).
+- [ ] `PASS/FAIL` Если checkout отключен, сообщение об этом явное и недвусмысленное.
+- [ ] `PASS/FAIL` Pricing cards ясно показывают доступность (`Coming soon`).
 
-### Quality
-- [ ] `PASS/FAIL` Ledger table remains readable on smaller screens.
-
----
-
-## 10) Auth (`/auth` screens)
-
-### Critical
-- [ ] `PASS/FAIL` Sign-in and Sign-up hierarchy is clear; no irrelevant promo badges.
-- [ ] `PASS/FAIL` Register wizard progression gives user control (explicit continue/back).
-- [ ] `PASS/FAIL` Error messages are specific and visible near relevant inputs.
+### Качество
+- [ ] `PASS/FAIL` Таблица ledger остается читаемой на небольших экранах.
 
 ---
 
-## 11) Accessibility + Interaction QA (Whole App)
+## 10) Auth (`/auth` экраны)
 
-### Critical
-- [ ] `PASS/FAIL` Full keyboard navigation works on core flows (Create, Projects, Variants, Auth).
-- [ ] `PASS/FAIL` Focus states are always visible.
-- [ ] `PASS/FAIL` All icon-only buttons have `aria-label`.
-- [ ] `PASS/FAIL` Interactive image cards have accessible names.
-
-### Quality
-- [ ] `PASS/FAIL` `prefers-reduced-motion` behavior remains acceptable.
+### Критично
+- [ ] `PASS/FAIL` Иерархия Sign-in и Sign-up ясная; нет нерелевантных promo-бейджей.
+- [ ] `PASS/FAIL` Прогрессия register wizard оставляет контроль пользователю (явные continue/back).
+- [ ] `PASS/FAIL` Сообщения ошибок конкретные и видимы рядом с соответствующими полями.
 
 ---
 
-## 12) Responsive Matrix (Required Devices)
+## 11) Accessibility + Interaction QA (все приложение)
 
-Run the same core checks at:
+### Критично
+- [ ] `PASS/FAIL` Полная клавиатурная навигация работает в ключевых флоу (Create, Projects, Variants, Auth).
+- [ ] `PASS/FAIL` Focus-состояния всегда видимы.
+- [ ] `PASS/FAIL` Все кнопки только с иконками имеют `aria-label`.
+- [ ] `PASS/FAIL` Интерактивные image cards имеют доступные названия.
+
+### Качество
+- [ ] `PASS/FAIL` Поведение с `prefers-reduced-motion` остается приемлемым.
+
+---
+
+## 12) Матрица адаптивности (обязательные устройства)
+
+Проведите одни и те же базовые проверки на:
 - Mobile: `360x800`, `390x844`
 - Tablet: `768x1024`
 - Small laptop: `1366x768`
-- Desktop: `1440x900` (or wider)
+- Desktop: `1440x900` (или шире)
 
-### Critical
-- [ ] `PASS/FAIL` No clipping/overlap in header, CTA rows, modal actions.
-- [ ] `PASS/FAIL` No horizontal scroll on primary content areas.
-- [ ] `PASS/FAIL` Primary CTA remains visible without hunting.
+### Критично
+- [ ] `PASS/FAIL` Нет обрезки/перекрытия в header, CTA-строках и действиях модалок.
+- [ ] `PASS/FAIL` Нет горизонтального скролла в основных областях контента.
+- [ ] `PASS/FAIL` Основной CTA остается заметным без «поиска глазами».
 
 ---
 
-## Release Decision
+## Решение о релизе
 
-- [ ] `PASS/FAIL` All **Critical** items pass.
-- [ ] `PASS/FAIL` Remaining `FAIL` items (quality-only) are documented and accepted.
-- [ ] `PASS/FAIL` Screenshots for final pass are stored in release notes / QA doc.
+- [ ] `PASS/FAIL` Пройдены все пункты **Critical**.
+- [ ] `PASS/FAIL` Оставшиеся `FAIL` (только quality) задокументированы и приняты.
+- [ ] `PASS/FAIL` Скриншоты финального прогона сохранены в release notes / QA doc.
 

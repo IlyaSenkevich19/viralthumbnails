@@ -56,7 +56,8 @@ export class ThumbnailPipelineOrchestratorService {
         ? await this.youtubeTranscript.tryFetchCompactTranscript(input.videoUrl.trim(), 'pipeline-vl')
         : null;
 
-      const { analysis, modelUsed } = await this.videoUnderstanding.analyze({
+      const { analysis, modelUsed, sampledFrames, selectedFramePreviewDataUrl } =
+        await this.videoUnderstanding.analyze({
         userPrompt: refined.text,
         style: input.style,
         videoUrl: input.videoUrl,
@@ -64,6 +65,30 @@ export class ThumbnailPipelineOrchestratorService {
         transcriptSnippet: transcriptSnippet ?? undefined,
         templateReferenceDataUrls: input.templateReferenceDataUrls,
         faceReferenceDataUrls: input.faceReferenceDataUrls,
+      });
+
+      const selectedFrame = sampledFrames?.find((frame) => frame.selected);
+      await onProgress?.({
+        stage: 'analyzing_source',
+        label: selectedFrame
+          ? `Selected thumbnail frame ${selectedFrame.frameIndex}`
+          : 'Source analysis complete',
+        percent: 35,
+        analysis: {
+          main_subject: analysis.mainSubject,
+          scene_summary: analysis.sceneSummary,
+          selected_frame_index: analysis.selectedFrameIndex,
+          selected_frame_time_sec: selectedFrame?.timeSec,
+          selected_frame_why: analysis.selectedFrameWhy ?? analysis.bestThumbnailMoment.why,
+          visual_frame_description: analysis.visualFrameDescription,
+          thumbnail_text_ideas: analysis.thumbnailTextIdeas.slice(0, 3),
+          sampled_frames: sampledFrames?.map((frame) => ({
+            frame_index: frame.frameIndex,
+            time_sec: frame.timeSec,
+            selected: frame.selected,
+          })),
+          selected_frame_preview_data_url: selectedFramePreviewDataUrl,
+        },
       });
 
       await onProgress?.({ stage: 'building_prompts', label: 'Building generation prompts' });
@@ -76,10 +101,12 @@ export class ThumbnailPipelineOrchestratorService {
 
       const templateUrls = input.templateReferenceDataUrls ?? [];
       const faceUrls = input.faceReferenceDataUrls ?? [];
+      const selectedFrameUrls = selectedFramePreviewDataUrl ? [selectedFramePreviewDataUrl] : [];
       const refBundle =
-        templateUrls.length || faceUrls.length
+        selectedFrameUrls.length || templateUrls.length || faceUrls.length
           ? {
-              dataUrls: [...templateUrls, ...faceUrls],
+              dataUrls: [...selectedFrameUrls, ...templateUrls, ...faceUrls],
+              hasVideoFrame: selectedFrameUrls.length > 0,
               hasTemplateImage: templateUrls.length > 0,
               hasFaceImage: faceUrls.length > 0,
               prioritizeFace: Boolean(input.prioritizeFace) && faceUrls.length > 0,
@@ -161,6 +188,13 @@ export class ThumbnailPipelineOrchestratorService {
         runId,
         creditsCharged: actuallyCharged,
         analysis,
+        videoAnalysis:
+          sampledFrames || selectedFramePreviewDataUrl
+            ? {
+                sampledFrames,
+                selectedFramePreviewDataUrl,
+              }
+            : undefined,
         imagePromptsUsed,
         variants,
         edited,

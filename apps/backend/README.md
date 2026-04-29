@@ -42,7 +42,7 @@ Cross-cutting: **HttpExceptionFilter**, **shutdown hooks**.
 flowchart LR
   subgraph proj["Проект"]
     A["POST /projects/:id/generate"] --> B["ProjectVariantImageService"]
-    B --> C["OpenRouter imageModel env"]
+    B --> C["OpenRouter imageModel tier"]
   end
   subgraph pipe["Модульный pipeline"]
     G["POST /thumbnails/pipeline/run(+run-video)"] --> H["Orchestrator"]
@@ -97,7 +97,7 @@ Slug’и — идентификаторы на [OpenRouter](https://openrouter.
 
 | Сценарий | Эндпоинт / этап | Где задаются модели |
 |----------|-----------------|---------------------|
-| Картинка варианта проекта | `POST /api/projects/:id/generate` | `getOpenRouterThumbnailImageModel` (tier `default` / `premium`, см. env) + timeout из `OPENROUTER_STACK` |
+| Картинка варианта проекта | `POST /api/projects/:id/generate` | `getOpenRouterThumbnailImageModel` (tier `default` / `premium`, slug’и заданы в `openrouter-models.ts`) + timeout из `OPENROUTER_STACK` |
 | Модульный пайплайн (JSON) | `POST /api/thumbnails/pipeline/run` | `PIPELINE_STEP_MODELS` |
 | Модульный пайплайн (video ingest) | `POST /api/thumbnails/pipeline/run-video` | `PIPELINE_STEP_MODELS` |
 

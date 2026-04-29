@@ -39,6 +39,10 @@ export type PipelineRunResponse = {
   run_id: string;
   credits_charged: number;
   analysis: Record<string, unknown>;
+  video_analysis?: {
+    sampledFrames?: Array<{ frameIndex: number; timeSec: number; selected?: boolean }>;
+    selectedFramePreviewDataUrl?: string;
+  };
   image_prompts_used: string[];
   models_used: {
     videoUnderstanding: string;
@@ -94,6 +98,17 @@ export type PipelineJobProgress = {
   current?: number;
   total?: number;
   percent?: number;
+  analysis?: {
+    main_subject?: string;
+    scene_summary?: string;
+    selected_frame_index?: number;
+    selected_frame_time_sec?: number;
+    selected_frame_why?: string;
+    visual_frame_description?: string;
+    thumbnail_text_ideas?: string[];
+    sampled_frames?: Array<{ frame_index: number; time_sec: number; selected?: boolean }>;
+    selected_frame_preview_data_url?: string;
+  };
 };
 
 export type PipelineJobStatusResponse = {

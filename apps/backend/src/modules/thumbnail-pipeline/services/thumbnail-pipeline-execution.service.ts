@@ -85,6 +85,7 @@ export class ThumbnailPipelineExecutionService {
       run_id: result.runId,
       credits_charged: result.creditsCharged,
       analysis: result.analysis,
+      video_analysis: result.videoAnalysis,
       image_prompts_used: result.imagePromptsUsed,
       models_used: result.modelsUsed,
       variants: result.variants?.map((v) => ({

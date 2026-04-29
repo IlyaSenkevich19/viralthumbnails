@@ -36,6 +36,10 @@ export type ThumbnailPipelineRunResult = {
   /** Same amount reserved up-front; refunded in full on failure. */
   creditsCharged: number;
   analysis: ThumbnailPipelineAnalysis;
+  videoAnalysis?: {
+    sampledFrames?: Array<{ frameIndex: number; timeSec: number; selected?: boolean }>;
+    selectedFramePreviewDataUrl?: string;
+  };
   imagePromptsUsed: string[];
   variants?: ThumbnailPipelineVariant[];
   edited?: { buffer: Buffer; contentType: string };

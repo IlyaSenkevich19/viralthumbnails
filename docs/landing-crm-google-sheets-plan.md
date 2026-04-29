@@ -1,4 +1,4 @@
-# Landing CRM via Google Sheets (MVP Plan)
+# CRM для лендинга через Google Sheets (MVP-план)
 
 Документ для быстрого подключения CRM на лендинге через Google Sheets.
 Цель: собирать лиды, UTM-атрибуцию и статус обработки без тяжелой CRM на старте.

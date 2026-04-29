@@ -8,7 +8,7 @@ import { ThumbnailPipelineJobsService } from './thumbnail-pipeline-jobs.service'
 import type { ThumbnailPipelineJobRow } from '../types/thumbnail-pipeline-job.types';
 
 const JOB_POLL_INTERVAL_MS = 1500;
-const JOB_LEASE_MS = 2 * 60 * 1000;
+const JOB_LEASE_MS = 15 * 60 * 1000;
 const MAX_RETRIES = 1;
 
 @Injectable()
@@ -73,7 +73,7 @@ export class ThumbnailPipelineJobsRunnerService implements OnModuleInit, OnModul
       }
       await this.jobs.updateProgress(job.id, {
         stage: 'resolving_references',
-        label: 'Preparing inputs',
+        label: 'Preparing video and inputs',
       });
       if (payload.projectId) {
         await this.jobs.updateProjectPipelineState({
@@ -81,7 +81,7 @@ export class ThumbnailPipelineJobsRunnerService implements OnModuleInit, OnModul
           projectId: payload.projectId,
           status: 'generating',
           pipelineJobId: job.id,
-          progress: { stage: 'resolving_references', label: 'Preparing inputs' },
+          progress: { stage: 'resolving_references', label: 'Preparing video and inputs' },
           errorMessage: null,
         });
       }
@@ -90,14 +90,14 @@ export class ThumbnailPipelineJobsRunnerService implements OnModuleInit, OnModul
         body,
         payload.videoContext,
         async (progress) => {
-          await this.jobs.updateProgress(job.id, progress);
+          const timedProgress = await this.jobs.updateProgress(job.id, progress);
           if (payload.projectId) {
             await this.jobs.updateProjectPipelineState({
               userId: job.user_id,
               projectId: payload.projectId,
               status: 'generating',
               pipelineJobId: job.id,
-              progress,
+              progress: timedProgress,
               errorMessage: null,
             });
           }

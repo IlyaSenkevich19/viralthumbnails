@@ -5,7 +5,9 @@ import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import type { ThumbnailVariantRow } from '@/lib/types/project';
+import type { PipelineJobStatusResponse } from '@/lib/api/thumbnails';
 import { VariantStripThumb } from '@/components/projects/project-variant-strip-thumb';
+import { ProjectVariantsPipelineProgress } from '@/components/projects/project-variants-pipeline-progress';
 
 type ProjectVariantsResultsProps = {
   projectTitle: string;
@@ -17,6 +19,9 @@ type ProjectVariantsResultsProps = {
   selectedStyleLabel: string | null;
   previewUrl: string | null;
   onRequestDeleteVariant: (variantId: string) => void;
+  pipelineJob?: PipelineJobStatusResponse;
+  pipelineBusy: boolean;
+  pipelineFailed: boolean;
 };
 
 export function ProjectVariantsResults({
@@ -29,6 +34,9 @@ export function ProjectVariantsResults({
   selectedStyleLabel,
   previewUrl,
   onRequestDeleteVariant,
+  pipelineJob,
+  pipelineBusy,
+  pipelineFailed,
 }: ProjectVariantsResultsProps) {
   return (
     <section className="min-w-0 flex-1 space-y-4">
@@ -44,23 +52,31 @@ export function ProjectVariantsResults({
       </div>
 
       {variants.length === 0 ? (
-        <Card>
-          <CardContent className="flex min-h-[220px] flex-col items-center justify-center gap-4 px-6 py-12 text-center">
-            <div
-              className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/15 text-primary ring-1 ring-primary/20"
-              aria-hidden
-            >
-              <ImageIcon className="h-7 w-7" strokeWidth={1.75} />
-            </div>
-            <div className="space-y-2">
-              <p className="text-base font-semibold tracking-tight text-foreground">No variants yet</p>
-              <p className="mx-auto max-w-sm text-sm leading-relaxed text-muted-foreground">
-                Pick a template on the left (optional), set face if you want, then{' '}
-                <strong className="text-foreground/90">Generate thumbnails</strong>.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        pipelineJob ? (
+          <ProjectVariantsPipelineProgress
+            pipelineJob={pipelineJob}
+            pipelineBusy={pipelineBusy}
+            pipelineFailed={pipelineFailed}
+          />
+        ) : (
+          <Card>
+            <CardContent className="flex min-h-[220px] flex-col items-center justify-center gap-4 px-6 py-12 text-center">
+              <div
+                className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/15 text-primary ring-1 ring-primary/20"
+                aria-hidden
+              >
+                <ImageIcon className="h-7 w-7" strokeWidth={1.75} />
+              </div>
+              <div className="space-y-2">
+                <p className="text-base font-semibold tracking-tight text-foreground">No variants yet</p>
+                <p className="mx-auto max-w-sm text-sm leading-relaxed text-muted-foreground">
+                  Pick a template on the left (optional), set face if you want, then{' '}
+                  <strong className="text-foreground/90">Generate thumbnails</strong>.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )
       ) : (
         <>
           <div className="surface overflow-hidden">

@@ -13,6 +13,12 @@ import { AppRoutes } from '@/config/routes';
 import { toast } from 'sonner';
 import { SetPageFrame } from '@/components/layout/set-page-frame';
 import { ProjectVariantsWorkspace } from '@/components/projects/project-variants-workspace';
+import {
+  clearPipelineRecoveryJob,
+  DASHBOARD_PIPELINE_RUN_RECOVERY_KEY,
+  DASHBOARD_PIPELINE_VIDEO_RECOVERY_KEY,
+  writePipelineRecoveryJob,
+} from '@/lib/pipeline/pipeline-recovery-storage';
 
 function WorkspaceSkeleton() {
   return (
@@ -46,14 +52,24 @@ function VariantsGalleryInner({ projectId }: { projectId: string }) {
   const { data, error, isPending, isError, refetch, isFetching } = useProjectWithVariants(projectId);
   const pipelineJobId =
     data && typeof data.source_data?.pipeline_job_id === 'string' ? data.source_data.pipeline_job_id : null;
+  const pipelineRecoveryKey = data?.source_type === 'video'
+    ? DASHBOARD_PIPELINE_VIDEO_RECOVERY_KEY
+    : DASHBOARD_PIPELINE_RUN_RECOVERY_KEY;
   const pipelineJobQuery = usePipelineJobStatus(pipelineJobId);
 
   useEffect(() => {
     const status = pipelineJobQuery.data?.status;
     if (status === 'succeeded' || status === 'failed') {
+      clearPipelineRecoveryJob(pipelineRecoveryKey);
       void refetch();
     }
-  }, [pipelineJobQuery.data?.status, refetch]);
+  }, [pipelineJobQuery.data?.status, pipelineRecoveryKey, refetch]);
+
+  useEffect(() => {
+    const status = pipelineJobQuery.data?.status;
+    if (!pipelineJobId || (status !== 'queued' && status !== 'running')) return;
+    writePipelineRecoveryJob(pipelineRecoveryKey, pipelineJobId);
+  }, [pipelineJobId, pipelineJobQuery.data?.status, pipelineRecoveryKey]);
 
   async function handleRefresh() {
     const result = await refetch();

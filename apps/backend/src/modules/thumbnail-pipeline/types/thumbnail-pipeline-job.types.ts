@@ -13,12 +13,23 @@ export type ThumbnailPipelineJobStage =
   | 'completed'
   | 'failed';
 
+export type ThumbnailPipelineStageTiming = {
+  stage: ThumbnailPipelineJobStage;
+  label: string;
+  started_at: string;
+  finished_at?: string;
+  duration_ms?: number;
+};
+
 export type ThumbnailPipelineJobProgress = {
   stage: ThumbnailPipelineJobStage;
   label: string;
   current?: number;
   total?: number;
   percent?: number;
+  stage_started_at?: string;
+  elapsed_ms?: number;
+  timings?: ThumbnailPipelineStageTiming[];
   analysis?: {
     main_subject?: string;
     scene_summary?: string;

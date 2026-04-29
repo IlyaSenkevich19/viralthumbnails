@@ -18,6 +18,8 @@ import { toast } from 'sonner';
 import {
   DEFAULT_VIDEO_THUMBNAIL_COUNT,
   DASHBOARD_CREATE_HUB_MODE,
+  DASHBOARD_RUN_RECOVERY_KEY,
+  DASHBOARD_VIDEO_RECOVERY_KEY,
   type HubMode,
   type YoutubeMetaPreview,
   creditsRequiredForMode,
@@ -26,6 +28,7 @@ import {
   titleFromFirstLine,
   titleFromVideoFileName,
 } from '../dashboard-create-hub.utils';
+import { writePipelineRecoveryJob } from '@/lib/pipeline/pipeline-recovery-storage';
 
 export function useDashboardCreateHub() {
   const router = useRouter();
@@ -151,6 +154,7 @@ export function useDashboardCreateHub() {
           count: n,
           project_id: project.id,
         });
+        writePipelineRecoveryJob(DASHBOARD_VIDEO_RECOVERY_KEY, created.job_id);
         await projectsApi.updateProject(accessToken, project.id, {
           source_data: {
             ...(project.source_data ?? {}),
@@ -244,6 +248,7 @@ export function useDashboardCreateHub() {
           persist_project: true,
           project_id: project.id,
         });
+        writePipelineRecoveryJob(DASHBOARD_RUN_RECOVERY_KEY, created.job_id);
         await projectsApi.updateProject(accessToken, project.id, {
           source_data: {
             ...(project.source_data ?? {}),

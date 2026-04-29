@@ -21,7 +21,7 @@ export class ThumbnailPipelineExecutionService {
     videoContext?: PipelineVideoContext,
     onProgress?: (progress: ThumbnailPipelineJobProgress) => Promise<void>,
   ): Promise<Record<string, unknown>> {
-    await onProgress?.({ stage: 'resolving_references', label: 'Resolving template and face references' });
+    await onProgress?.({ stage: 'resolving_references', label: 'Preparing video and inputs' });
     const resolvedRefs =
       body.template_id?.trim() || body.avatar_id?.trim()
         ? await this.projectVariantImage.resolveReferenceDataUrlsForUser({

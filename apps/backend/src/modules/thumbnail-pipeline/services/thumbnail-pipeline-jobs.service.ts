@@ -5,7 +5,10 @@ import type {
   ThumbnailPipelineJobProgress,
   ThumbnailPipelineJobRow,
   ThumbnailPipelineJobStatus,
+  ThumbnailPipelineStageTiming,
 } from '../types/thumbnail-pipeline-job.types';
+
+const RUNNING_LEASE_EXTENSION_MS = 15 * 60 * 1000;
 
 @Injectable()
 export class ThumbnailPipelineJobsService {
@@ -49,26 +52,28 @@ export class ThumbnailPipelineJobsService {
   }
 
   async markSucceeded(jobId: string, resultPayload: unknown): Promise<void> {
+    const progress = await this.buildTimedProgress(jobId, {
+      stage: 'completed',
+      label: 'Completed',
+      percent: 100,
+    });
     await this.patchJob(jobId, 'succeeded', {
       result_payload: resultPayload,
       error_payload: null,
-      progress_payload: {
-        stage: 'completed',
-        label: 'Completed',
-        percent: 100,
-      } satisfies ThumbnailPipelineJobProgress,
+      progress_payload: progress,
       finished_at: new Date().toISOString(),
       lease_expires_at: null,
     });
   }
 
   async markFailed(jobId: string, errorPayload: { code?: string; message: string }): Promise<void> {
+    const progress = await this.buildTimedProgress(jobId, {
+      stage: 'failed',
+      label: errorPayload.message,
+    });
     await this.patchJob(jobId, 'failed', {
       error_payload: errorPayload,
-      progress_payload: {
-        stage: 'failed',
-        label: errorPayload.message,
-      } satisfies ThumbnailPipelineJobProgress,
+      progress_payload: progress,
       finished_at: new Date().toISOString(),
       lease_expires_at: null,
     });
@@ -97,6 +102,17 @@ export class ThumbnailPipelineJobsService {
   async failExpiredRunningJobs(): Promise<number> {
     const client = this.supabase.getAdminClient();
     const nowIso = new Date().toISOString();
+    const { data: expiredRows, error: readError } = await client
+      .from(this.table)
+      .select('id,user_id,request_payload')
+      .eq('status', 'running')
+      .lt('lease_expires_at', nowIso);
+    if (readError) {
+      throw new Error(`Failed to read expired running jobs: ${readError.message}`);
+    }
+    const expired = (expiredRows as Pick<ThumbnailPipelineJobRow, 'id' | 'user_id' | 'request_payload'>[] | null) ?? [];
+    if (expired.length === 0) return 0;
+
     const { data, error } = await client
       .from(this.table)
       .update({
@@ -116,7 +132,26 @@ export class ThumbnailPipelineJobsService {
     if (error) {
       throw new Error(`Failed to fail expired running jobs: ${error.message}`);
     }
-    return data?.length ?? 0;
+    await Promise.all(
+      expired.map(async (job) => {
+        const projectId = job.request_payload?.projectId;
+        if (!projectId) return;
+        try {
+          await this.updateProjectPipelineState({
+            userId: job.user_id,
+            projectId,
+            status: 'failed',
+            pipelineJobId: job.id,
+            progress: { stage: 'failed', label: 'Failed (lease expired)' },
+            errorMessage: 'Pipeline job lease expired before completion',
+          });
+        } catch {
+          // Best-effort: job status is already failed; project state will self-heal on next run.
+        }
+      }),
+    );
+
+    return data?.length ?? expired.length;
   }
 
   async claimNextQueuedJob(leaseMs: number): Promise<ThumbnailPipelineJobRow | null> {
@@ -177,19 +212,22 @@ export class ThumbnailPipelineJobsService {
     }
   }
 
-  async updateProgress(jobId: string, progress: ThumbnailPipelineJobProgress): Promise<void> {
+  async updateProgress(jobId: string, progress: ThumbnailPipelineJobProgress): Promise<ThumbnailPipelineJobProgress> {
     const client = this.supabase.getAdminClient();
+    const timedProgress = await this.buildTimedProgress(jobId, progress);
     const { error } = await client
       .from(this.table)
       .update({
-        progress_payload: progress,
+        progress_payload: timedProgress,
         updated_at: new Date().toISOString(),
+        lease_expires_at: new Date(Date.now() + RUNNING_LEASE_EXTENSION_MS).toISOString(),
       })
       .eq('id', jobId)
       .in('status', ['queued', 'running']);
     if (error) {
       throw new Error(`Failed to update pipeline job progress: ${error.message}`);
     }
+    return timedProgress;
   }
 
   async findActiveForUser(userId: string): Promise<ThumbnailPipelineJobRow | null> {
@@ -250,6 +288,101 @@ export class ThumbnailPipelineJobsService {
     if (updateErr) {
       throw new Error(`Failed to update pipeline-linked project: ${updateErr.message}`);
     }
+  }
+
+  private async buildTimedProgress(
+    jobId: string,
+    next: ThumbnailPipelineJobProgress,
+  ): Promise<ThumbnailPipelineJobProgress> {
+    const current = await this.readProgress(jobId);
+    return this.mergeProgressTiming(current, next, new Date());
+  }
+
+  private async readProgress(jobId: string): Promise<ThumbnailPipelineJobProgress | null> {
+    const client = this.supabase.getAdminClient();
+    const { data, error } = await client
+      .from(this.table)
+      .select('progress_payload')
+      .eq('id', jobId)
+      .maybeSingle();
+    if (error) {
+      throw new Error(`Failed to read pipeline job progress: ${error.message}`);
+    }
+    const raw = (data as { progress_payload?: unknown } | null)?.progress_payload;
+    return raw && typeof raw === 'object' ? (raw as ThumbnailPipelineJobProgress) : null;
+  }
+
+  private mergeProgressTiming(
+    current: ThumbnailPipelineJobProgress | null,
+    next: ThumbnailPipelineJobProgress,
+    now: Date,
+  ): ThumbnailPipelineJobProgress {
+    const nowIso = now.toISOString();
+    const currentStageStartedAt = current?.stage_started_at ?? nowIso;
+    const currentElapsedMs = Math.max(0, now.getTime() - new Date(currentStageStartedAt).getTime());
+    const timings = [...(current?.timings ?? [])];
+
+    if (!current) {
+      return {
+        ...next,
+        stage_started_at: nowIso,
+        elapsed_ms: 0,
+        timings: [{ stage: next.stage, label: next.label, started_at: nowIso }],
+      };
+    }
+
+    if (current.stage === next.stage) {
+      return {
+        ...current,
+        ...next,
+        stage_started_at: currentStageStartedAt,
+        elapsed_ms: currentElapsedMs,
+        timings: this.upsertTiming(timings, {
+          stage: next.stage,
+          label: next.label,
+          started_at: currentStageStartedAt,
+          duration_ms: currentElapsedMs,
+        }),
+      };
+    }
+
+    const closedCurrent: ThumbnailPipelineStageTiming = {
+      stage: current.stage,
+      label: current.label,
+      started_at: currentStageStartedAt,
+      finished_at: nowIso,
+      duration_ms: currentElapsedMs,
+    };
+    const nextTiming: ThumbnailPipelineStageTiming = {
+      stage: next.stage,
+      label: next.label,
+      started_at: nowIso,
+      duration_ms: 0,
+    };
+
+    return {
+      ...next,
+      stage_started_at: nowIso,
+      elapsed_ms: 0,
+      timings: this.upsertTiming(this.upsertTiming(timings, closedCurrent), nextTiming),
+    };
+  }
+
+  private upsertTiming(
+    timings: ThumbnailPipelineStageTiming[],
+    timing: ThumbnailPipelineStageTiming,
+  ): ThumbnailPipelineStageTiming[] {
+    let idx = -1;
+    for (let i = timings.length - 1; i >= 0; i--) {
+      if (timings[i]?.stage === timing.stage) {
+        idx = i;
+        break;
+      }
+    }
+    if (idx === -1) return [...timings, timing];
+    const next = [...timings];
+    next[idx] = { ...next[idx], ...timing };
+    return next;
   }
 }
 

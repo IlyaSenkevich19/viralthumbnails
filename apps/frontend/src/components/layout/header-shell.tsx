@@ -101,15 +101,16 @@ export function HeaderShell({
             </Link>
           ) : null}
           {pipelineJob.active && pipelineJob.label ? (
-            <p
-              className="flex min-w-0 max-w-[6.5rem] items-center gap-1.5 truncate text-xs text-muted-foreground sm:max-w-[10rem]"
+            <div
+              className="flex min-w-0 max-w-[2.5rem] items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1.5 text-xs text-primary shadow-soft sm:max-w-[16rem] sm:px-3"
               role="status"
               aria-live="polite"
               title={pipelineJob.label}
             >
               <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-primary" aria-hidden />
-              <span className="hidden min-w-0 truncate sm:inline">{pipelineJob.label}</span>
-            </p>
+              <span className="hidden shrink-0 font-medium sm:inline">Generating</span>
+              <span className="hidden min-w-0 truncate text-primary/80 sm:inline">{pipelineJob.label}</span>
+            </div>
           ) : null}
           <div className="w-[5.5rem] sm:w-[6rem] lg:w-[6.5rem]">
             <HeaderCreditsLink className="h-full w-full max-w-none" />

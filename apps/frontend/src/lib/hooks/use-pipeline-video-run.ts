@@ -20,29 +20,12 @@ import {
   handleOpenRouterMutationError,
   handlePipelineVideoDurationError,
 } from '@/lib/paywall-notify';
+import { clearPipelineRecoveryJob, writePipelineRecoveryJob } from '@/lib/pipeline/pipeline-recovery-storage';
 
 type PipelineVideoRecoveryOptions = {
   /** When set, job id is persisted for app-shell recovery after reload. */
   recoveryKey?: string;
 };
-
-function writeStoredJobId(key: string | undefined, jobId: string): void {
-  if (!key || typeof window === 'undefined') return;
-  try {
-    window.localStorage.setItem(key, jobId);
-  } catch {
-    // Ignore storage failures; polling still works in-memory.
-  }
-}
-
-function clearStoredJobId(key?: string): void {
-  if (!key || typeof window === 'undefined') return;
-  try {
-    window.localStorage.removeItem(key);
-  } catch {
-    // Ignore storage failures.
-  }
-}
 
 export function usePipelineVideoRunMutation(options?: PipelineVideoRecoveryOptions) {
   const queryClient = useQueryClient();
@@ -55,7 +38,7 @@ export function usePipelineVideoRunMutation(options?: PipelineVideoRecoveryOptio
     mutationFn: async (params: PipelineVideoRunRequest) => {
       if (!accessToken) throw new Error('Not signed in');
       const created = await thumbnailsApi.runThumbnailPipelineVideo(accessToken, params);
-      writeStoredJobId(options?.recoveryKey, created.job_id);
+      writePipelineRecoveryJob(options?.recoveryKey, created.job_id);
       setJobStatusLabel('Queued');
       let attempt = 0;
       let nextWaitMs = getPipelineJobPollWaitMs(0);
@@ -77,19 +60,19 @@ export function usePipelineVideoRunMutation(options?: PipelineVideoRecoveryOptio
           if (!job.result) {
             throw new Error('Video pipeline job finished without result payload');
           }
-          clearStoredJobId(options?.recoveryKey);
+          clearPipelineRecoveryJob(options?.recoveryKey);
           return toPipelineVideoResponse(job.result);
         }
         if (job.status === 'failed') {
           setJobStatusLabel('Failed');
-          clearStoredJobId(options?.recoveryKey);
+          clearPipelineRecoveryJob(options?.recoveryKey);
           throw new Error(job.error?.message || 'Video pipeline job failed');
         }
         setJobStatusLabel(job.progress?.label || (job.status === 'queued' ? 'Queued' : 'Processing'));
         attempt += 1;
         nextWaitMs = getPipelineJobPollWaitMs(attempt);
       }
-      clearStoredJobId(options?.recoveryKey);
+      clearPipelineRecoveryJob(options?.recoveryKey);
       throw new Error('Video pipeline polling timed out');
     },
     onError: (err) => {

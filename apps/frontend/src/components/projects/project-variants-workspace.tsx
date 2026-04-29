@@ -305,6 +305,9 @@ export function ProjectVariantsWorkspace({
           selectedStyleLabel={selectedStyleLabel}
           previewUrl={previewUrl}
           onRequestDeleteVariant={(id) => setVariantToDelete(id)}
+          pipelineJob={pipelineJob}
+          pipelineBusy={pipelineBusy}
+          pipelineFailed={pipelineFailed}
         />
       </div>
     </>

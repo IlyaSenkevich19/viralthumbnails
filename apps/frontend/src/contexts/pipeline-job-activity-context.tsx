@@ -16,6 +16,7 @@ import { queryKeys } from '@/lib/query-keys';
 import {
   DASHBOARD_PIPELINE_RUN_RECOVERY_KEY,
   DASHBOARD_PIPELINE_VIDEO_RECOVERY_KEY,
+  PIPELINE_JOB_RECOVERY_EVENT,
 } from '@/lib/pipeline/pipeline-recovery-storage';
 import {
   getPipelineJobPollWaitMs,
@@ -51,6 +52,13 @@ function clearId(key: string): void {
   } catch {
     /* ignore */
   }
+}
+
+function formatActivityLabel(label: string | undefined, elapsedMs: number | undefined): string {
+  if (!label) return 'Processing';
+  if (typeof elapsedMs !== 'number' || elapsedMs < 1000) return label;
+  const seconds = Math.round(elapsedMs / 1000);
+  return `${label} · ${seconds}s`;
 }
 
 function usePipelineJobAppRecoveryValue(): PipelineJobActivityValue {
@@ -120,7 +128,12 @@ function usePipelineJobAppRecoveryValue(): PipelineJobActivityValue {
           clearId(params.storageKey);
           throw new Error(job.error?.message || 'Pipeline job failed');
         }
-        setActivityLabel(job.progress?.label || (job.status === 'queued' ? 'Queued' : 'Processing'));
+        setActivityLabel(
+          formatActivityLabel(
+            job.progress?.label || (job.status === 'queued' ? 'Queued' : 'Processing'),
+            job.progress?.elapsed_ms,
+          ),
+        );
         successfulPolls += 1;
         nextWaitMs = getPipelineJobPollWaitMs(successfulPolls - 1);
       }
@@ -186,10 +199,13 @@ function usePipelineJobAppRecoveryValue(): PipelineJobActivityValue {
         void tryRecover();
       }
     };
+    const onRecoveryEvent = () => void tryRecover();
     window.addEventListener('storage', onStorage);
+    window.addEventListener(PIPELINE_JOB_RECOVERY_EVENT, onRecoveryEvent);
     return () => {
       cancelled = true;
       window.removeEventListener('storage', onStorage);
+      window.removeEventListener(PIPELINE_JOB_RECOVERY_EVENT, onRecoveryEvent);
     };
   }, [accessToken, userId, runMutationActive, videoMutationActive, queryClient, router]);
 

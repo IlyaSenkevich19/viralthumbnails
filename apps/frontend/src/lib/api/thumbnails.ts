@@ -98,6 +98,15 @@ export type PipelineJobProgress = {
   current?: number;
   total?: number;
   percent?: number;
+  stage_started_at?: string;
+  elapsed_ms?: number;
+  timings?: Array<{
+    stage: PipelineJobProgress['stage'];
+    label: string;
+    started_at: string;
+    finished_at?: string;
+    duration_ms?: number;
+  }>;
   analysis?: {
     main_subject?: string;
     scene_summary?: string;

@@ -6,6 +6,7 @@ import {
   VIDEO_PIPELINE_CACHE_MAX_ENTRIES,
   VIDEO_PIPELINE_CACHE_TTL_MS,
   VIDEO_PIPELINE_FRAME_DEDUP_DISTANCE_THRESHOLD,
+  VIDEO_PIPELINE_FRAME_MAX_WIDTH_PX,
   VIDEO_PIPELINE_FRAME_SAMPLE_COUNT,
   VIDEO_PIPELINE_MIN_FRAME_BRIGHTNESS,
   VIDEO_PIPELINE_MIN_FRAME_EDGE_ENERGY,
@@ -73,9 +74,9 @@ async function extractJpegFrameAtUrl(url: string, timeSec: number): Promise<Buff
       '-frames:v',
       '1',
       '-vf',
-      "scale='min(1280,iw)':-2",
+      `scale='min(${VIDEO_PIPELINE_FRAME_MAX_WIDTH_PX},iw)':-2`,
       '-q:v',
-      '3',
+      '6',
       '-f',
       'image2pipe',
       '-vcodec',
@@ -217,7 +218,8 @@ function signatureDistance(a: Uint8Array, b: Uint8Array): number {
 
 /**
  * Phase 2: sample a bounded number of JPEG stills from a fetchable video URL via ffmpeg.
- * Returns [] on failure (caller falls back to native `video_url` in the VL API).
+ * Returns [] on failure. The caller should avoid native `video_url` fallback unless explicitly
+ * accepted: provider-side video tokens can dominate MVP COGS.
  */
 @Injectable()
 export class VideoFrameSampleService {

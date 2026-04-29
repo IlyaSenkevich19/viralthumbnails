@@ -21,6 +21,7 @@ import {
 } from '../schemas/thumbnail-pipeline-analysis.schema';
 
 const MAX_JSON_RETRIES = 2;
+const VL_MAX_TOKENS = 3072;
 
 export type VideoUnderstandingParams = {
   userPrompt: string;
@@ -35,6 +36,8 @@ export type VideoUnderstandingParams = {
   /** Phase 2: set internally when ffmpeg frame sampling succeeds (replaces `video_url` in VL payload). */
   sampledFrameDataUrls?: string[];
   sampledFrameCandidates?: VideoFrameSampleCandidate[];
+  /** True when a video existed but raw `video_url` was intentionally omitted from VL for cost control. */
+  originalVideoProvided?: boolean;
 };
 
 export type VideoUnderstandingResult = {
@@ -86,7 +89,10 @@ export class PipelineVideoUnderstandingService {
         };
         this.logger.log(`Pipeline VL: vl_input_mode=frames frames=${sampled.length}`);
       } else {
-        this.logger.log('Pipeline VL: vl_input_mode=video_url');
+        // MVP cost guardrail: do not send raw video_url to Gemini/OpenRouter when frame extraction fails.
+        // Provider-side video tokens can be very expensive; text metadata is cheaper and predictable.
+        vlParams = { ...params, videoUrl: undefined, originalVideoProvided: true };
+        this.logger.log('Pipeline VL: vl_input_mode=text_context_no_video_url');
       }
     }
 
@@ -157,6 +163,7 @@ ${ThumbnailPipelineAnalysisJsonPrompt}`;
     const sampled = params.sampledFrameDataUrls ?? [];
     const sampledCandidates = params.sampledFrameCandidates ?? [];
     const useFrames = sampled.length > 0;
+    const hasOriginalVideo = Boolean(params.videoUrl?.trim()) || Boolean(params.originalVideoProvided);
     const frameList = sampledCandidates.length
       ? `\n\nSampled frame timeline (1-based order matching attached images):\n${sampledCandidates
           .map((frame) => `Frame ${frame.frameIndex}: ${this.formatTime(frame.timeSec)}`)
@@ -172,8 +179,8 @@ ${ThumbnailPipelineAnalysisJsonPrompt}`;
 
     const videoNote = useFrames
       ? `The video is represented by ${sampled.length} sampled still frames from the analyzed window. Act as a YouTube thumbnail creative director: understand the video's promise, rank the most clickable frames/moments, set selectedFrameIndex to the best attached frame number, and explain why it is clickable.${frameList}`
-      : params.videoUrl?.trim()
-        ? 'A video is attached; understand the first analyzed minutes, choose the most clickable thumbnail moment, and ground timing fields in what you see.'
+      : hasOriginalVideo
+        ? 'A video URL was provided but raw video upload to the VL model is disabled for cost control. Use the creator prompt, metadata, and transcript if present. If timing is unknown, use startSec 0 and describe the best inferred thumbnail moment.'
         : 'No video is attached; infer carefully from the text prompt and any reference images. Use startSec 0 when unknown.';
 
     const transcriptLine = params.transcriptSnippet?.trim()
@@ -217,7 +224,7 @@ ${ThumbnailPipelineAnalysisJsonPrompt}`;
           model,
           messages,
           temperature: attempt > 0 ? 0.1 : 0.3,
-          maxTokens: 8192,
+          maxTokens: VL_MAX_TOKENS,
         });
 
         this.logger.log(

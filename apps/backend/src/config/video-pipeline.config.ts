@@ -7,13 +7,16 @@ export const VIDEO_PIPELINE_CONFIG_KEY = 'videoPipeline' as const;
 export const VIDEO_PIPELINE_MAX_DURATION_SECONDS = 3600; // 1 hour
 
 /** Phase 2: only the first N seconds are sampled into still frames for VL (bounded cost). */
-export const VIDEO_PIPELINE_ANALYZE_WINDOW_SECONDS = 600; // 10 minutes
+export const VIDEO_PIPELINE_ANALYZE_WINDOW_SECONDS = 240; // 4 minutes
 
-/** Phase 2: number of JPEG stills sent to VL instead of raw `video_url` when extraction succeeds. */
-export const VIDEO_PIPELINE_FRAME_SAMPLE_COUNT = 8;
+/** Phase 2: number of JPEG stills sent to VL. Keep low: image/video tokens dominate COGS. */
+export const VIDEO_PIPELINE_FRAME_SAMPLE_COUNT = 4;
+
+/** Phase 2: maximum width for sampled VL frames. Thumbnail strategy does not need 1280px inputs. */
+export const VIDEO_PIPELINE_FRAME_MAX_WIDTH_PX = 640;
 
 /** Phase 2.1: minimum number of usable frames required to keep image-based VL path. */
-export const VIDEO_PIPELINE_MIN_USABLE_FRAME_COUNT = 3;
+export const VIDEO_PIPELINE_MIN_USABLE_FRAME_COUNT = 2;
 
 /** Phase 2.1: drop frames that are too dark or too flat (very low contrast). */
 export const VIDEO_PIPELINE_MIN_FRAME_BRIGHTNESS = 18; // 0..255

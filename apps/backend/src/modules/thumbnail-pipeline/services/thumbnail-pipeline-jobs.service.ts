@@ -362,6 +362,7 @@ export class ThumbnailPipelineJobsService {
 
     return {
       ...next,
+      analysis: next.analysis ?? current.analysis,
       stage_started_at: nowIso,
       elapsed_ms: 0,
       timings: this.upsertTiming(this.upsertTiming(timings, closedCurrent), nextTiming),

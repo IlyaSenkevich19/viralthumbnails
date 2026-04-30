@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, Circle, ImageIcon, Loader2, Sparkles, Zap } from 'lucide-react';
+import { Check, ImageIcon, Loader2, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { PipelineJobStatusResponse } from '@/lib/api/thumbnails';
 
@@ -54,6 +54,7 @@ export function ProjectVariantsPipelineProgress({
     }));
   const currentStage = progress?.stage;
   const timingByStage = new Map((progress?.timings ?? []).map((timing) => [timing.stage, timing]));
+  const activeStepLabel = stageToSimpleStep(currentStage);
   const heroTitle = pipelineFailed
     ? 'Pipeline needs attention'
     : pipelineBusy
@@ -65,13 +66,13 @@ export function ProjectVariantsPipelineProgress({
   return (
     <div className="relative overflow-hidden rounded-[1.75rem] border border-transparent bg-card/70 p-5 shadow-[0_24px_70px_-42px_rgba(0,0,0,0.95)] ring-1 ring-white/[0.025]">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_0%,rgba(255,255,255,0.055),transparent_34%),radial-gradient(circle_at_82%_10%,rgba(255,59,59,0.13),transparent_30%)]" />
-      <div className="relative space-y-6">
+      <div className="relative space-y-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="space-y-2">
+          <div className="space-y-3">
             <div className="flex flex-wrap gap-2">
               <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary ring-1 ring-primary/15">
                 {pipelineBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-                Video pipeline
+                {activeStepLabel}
               </div>
               <div
                 className={cn(
@@ -98,12 +99,6 @@ export function ProjectVariantsPipelineProgress({
               </p>
             </div>
           </div>
-          {typeof progress?.percent === 'number' ? (
-            <div className="rounded-2xl bg-background/35 px-4 py-3 text-right ring-1 ring-white/[0.035]">
-              <p className="text-2xl font-semibold text-foreground">{progress.percent}%</p>
-              <p className="text-xs text-muted-foreground">complete</p>
-            </div>
-          ) : null}
         </div>
 
         <PipelineSteps
@@ -113,7 +108,7 @@ export function ProjectVariantsPipelineProgress({
           currentElapsedMs={progress?.elapsed_ms}
         />
 
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(17rem,0.85fr)]">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(16rem,0.85fr)]">
           <div className="overflow-hidden rounded-2xl bg-background/35 ring-1 ring-white/[0.035]">
             {selectedPreview ? (
               <div className="relative">
@@ -148,7 +143,7 @@ export function ProjectVariantsPipelineProgress({
 
           <div className="space-y-4 rounded-2xl bg-background/30 p-4 ring-1 ring-white/[0.03]">
             <div className="space-y-1">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Creative decision</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">What the AI picked</p>
               <p className="text-sm font-medium text-foreground">
                 {selectedFrameIndex ? `Frame ${selectedFrameIndex}` : 'Waiting for frame selection'}
                 {typeof selectedFrameTime === 'number' ? ` at ${formatTime(selectedFrameTime)}` : ''}
@@ -158,28 +153,16 @@ export function ProjectVariantsPipelineProgress({
 
             {sampledFrames?.length ? (
               <div className="space-y-2">
-                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Sampled frames</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {sampledFrames.map((frame) => (
-                    <span
-                      key={`${frame.frame_index}-${frame.time_sec}`}
-                      className={cn(
-                        'rounded-full px-2.5 py-1 text-xs ring-1',
-                        frame.selected
-                          ? 'bg-primary/15 text-primary ring-primary/25'
-                          : 'bg-card/55 text-muted-foreground ring-white/[0.04]',
-                      )}
-                    >
-                      F{frame.frame_index} {formatTime(frame.time_sec)}
-                    </span>
-                  ))}
-                </div>
+                <p className="text-xs text-muted-foreground">
+                  Checked {sampledFrames.length} video frame{sampledFrames.length === 1 ? '' : 's'}
+                  {selectedFrameIndex ? ` and selected F${selectedFrameIndex}` : ''}.
+                </p>
               </div>
             ) : null}
 
             {textIdeas.length ? (
               <div className="space-y-2">
-                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Hook ideas</p>
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Text hooks</p>
                 <div className="flex flex-wrap gap-1.5">
                   {textIdeas.map((idea) => (
                     <span
@@ -211,52 +194,59 @@ function PipelineSteps({
   currentElapsedMs?: number;
 }) {
   const stages = [
-    { id: 'queued', label: 'Queued' },
-    { id: 'resolving_references', label: 'Inputs' },
-    { id: 'analyzing_source', label: 'Analyze' },
-    { id: 'building_prompts', label: 'Prompts' },
-    { id: 'generating_images', label: 'Images' },
-    { id: 'persisting_project', label: 'Save' },
-    { id: 'completed', label: 'Done' },
+    {
+      id: 'analyze',
+      label: 'Analyze video',
+      stages: ['queued', 'resolving_references', 'analyzing_source'],
+    },
+    {
+      id: 'concept',
+      label: 'Prepare concept',
+      stages: ['building_prompts'],
+    },
+    {
+      id: 'generate',
+      label: 'Generate thumbnails',
+      stages: ['generating_images', 'persisting_project', 'completed'],
+    },
   ];
   const currentIndex = failed
     ? -1
     : Math.max(
         0,
-        stages.findIndex((stage) => stage.id === currentStage),
+        stages.findIndex((stage) => stage.stages.includes(currentStage ?? '')),
       );
 
   return (
-    <ol className="grid gap-2 sm:grid-cols-7">
+    <ol className="grid gap-2 sm:grid-cols-3">
       {stages.map((stage, index) => {
         const complete = !failed && index < currentIndex;
         const active = !failed && index === currentIndex;
-        const durationMs =
-          timingByStage.get(stage.id)?.duration_ms ?? (active ? currentElapsedMs : undefined);
+        const durationMs = readSimpleStepDuration(stage.stages, timingByStage) ?? (active ? currentElapsedMs : undefined);
         return (
           <li
             key={stage.id}
             className={cn(
-              'relative rounded-2xl px-2.5 py-2.5 transition-colors',
+              'relative rounded-2xl px-3 py-3 transition-colors',
               complete && 'bg-primary/[0.07] text-primary',
               active && 'bg-primary/[0.12] text-primary shadow-soft ring-1 ring-primary/15',
               !complete && !active && 'bg-background/25 text-muted-foreground',
-              failed && stage.id === currentStage && 'bg-destructive/10 text-destructive ring-1 ring-destructive/20',
+              failed && active && 'bg-destructive/10 text-destructive ring-1 ring-destructive/20',
             )}
           >
             {index < stages.length - 1 ? (
               <span
                 className={cn(
-                  'pointer-events-none absolute left-5 top-9 h-[calc(100%-1rem)] w-px bg-white/[0.055] sm:left-[calc(50%+0.75rem)] sm:top-5 sm:h-px sm:w-[calc(100%-1.5rem)]',
+                  'pointer-events-none absolute left-5 top-10 h-[calc(100%-1rem)] w-px bg-white/[0.055] sm:left-[calc(50%+0.75rem)] sm:top-6 sm:h-px sm:w-[calc(100%-1.5rem)]',
                   complete && 'bg-primary/25',
                 )}
                 aria-hidden
               />
             ) : null}
-            <div className="relative flex items-center gap-2 sm:flex-col sm:items-start">
+            <div className="relative flex items-center gap-3">
               <span
                 className={cn(
-                  'flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] ring-1',
+                  'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] ring-1',
                   complete && 'bg-primary text-primary-foreground ring-primary/40',
                   active && 'bg-primary/20 ring-primary/35',
                   !complete && !active && 'bg-card/70 ring-white/[0.06]',
@@ -265,21 +255,47 @@ function PipelineSteps({
                 {complete ? (
                   <Check className="h-3.5 w-3.5" />
                 ) : active ? (
-                  <Zap className="h-3.5 w-3.5" />
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 ) : (
-                  <Circle className="h-2.5 w-2.5 fill-current" />
+                  <span className="h-2 w-2 rounded-full bg-current opacity-50" />
                 )}
               </span>
-              <span className="text-xs font-medium">{stage.label}</span>
-              {typeof durationMs === 'number' && durationMs >= 1000 ? (
-                <span className="text-[10px] text-current/70">{formatDuration(durationMs)}</span>
-              ) : null}
+              <div className="min-w-0">
+                <span className="block text-sm font-medium">{stage.label}</span>
+                {typeof durationMs === 'number' && durationMs >= 1000 ? (
+                  <span className="block text-[11px] text-current/70">{formatDuration(durationMs)}</span>
+                ) : null}
+              </div>
             </div>
           </li>
         );
       })}
     </ol>
   );
+}
+
+function stageToSimpleStep(stage?: string): string {
+  if (stage === 'generating_images' || stage === 'persisting_project' || stage === 'completed') {
+    return 'Generating thumbnails';
+  }
+  if (stage === 'building_prompts') return 'Preparing concept';
+  return 'Analyzing video';
+}
+
+function readSimpleStepDuration(
+  stages: string[],
+  timingByStage: Map<string, { duration_ms?: number }>,
+): number | undefined {
+  let total = 0;
+  let found = false;
+  for (const stage of stages) {
+    const duration = timingByStage.get(stage)?.duration_ms;
+    if (typeof duration === 'number') {
+      total += duration;
+      found = true;
+    }
+  }
+  return found ? total : undefined;
 }
 
 function formatTime(totalSec: number): string {

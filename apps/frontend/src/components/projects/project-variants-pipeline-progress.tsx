@@ -53,12 +53,12 @@ export function ProjectVariantsPipelineProgress({
         : 'Ready to generate';
 
   return (
-    <div className="relative overflow-hidden rounded-[1.75rem] border border-border/70 bg-card/80 p-5 shadow-elevated">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_0%,rgba(255,255,255,0.10),transparent_32%),radial-gradient(circle_at_80%_20%,rgba(116,88,255,0.16),transparent_28%)]" />
+    <div className="relative overflow-hidden rounded-[1.75rem] border border-transparent bg-card/70 p-5 shadow-[0_24px_70px_-42px_rgba(0,0,0,0.95)] ring-1 ring-white/[0.025]">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_0%,rgba(255,255,255,0.055),transparent_34%),radial-gradient(circle_at_82%_10%,rgba(255,59,59,0.13),transparent_30%)]" />
       <div className="relative space-y-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+            <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary ring-1 ring-primary/15">
               {pipelineBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
               Video pipeline
             </div>
@@ -75,7 +75,7 @@ export function ProjectVariantsPipelineProgress({
             </div>
           </div>
           {typeof progress?.percent === 'number' ? (
-            <div className="rounded-2xl border border-border/70 bg-background/60 px-4 py-3 text-right">
+            <div className="rounded-2xl bg-background/35 px-4 py-3 text-right ring-1 ring-white/[0.035]">
               <p className="text-2xl font-semibold text-foreground">{progress.percent}%</p>
               <p className="text-xs text-muted-foreground">complete</p>
             </div>
@@ -90,7 +90,7 @@ export function ProjectVariantsPipelineProgress({
         />
 
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(17rem,0.85fr)]">
-          <div className="overflow-hidden rounded-2xl border border-border/70 bg-background/55">
+          <div className="overflow-hidden rounded-2xl bg-background/35 ring-1 ring-white/[0.035]">
             {selectedPreview ? (
               <div className="relative">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -99,7 +99,7 @@ export function ProjectVariantsPipelineProgress({
                   alt="Selected video frame for thumbnail generation"
                   className="aspect-video w-full object-cover"
                 />
-                <div className="absolute left-3 top-3 rounded-full border border-primary/40 bg-background/80 px-3 py-1 text-xs font-medium text-primary shadow-soft backdrop-blur">
+                <div className="absolute left-3 top-3 rounded-full bg-background/80 px-3 py-1 text-xs font-medium text-primary shadow-soft ring-1 ring-primary/20 backdrop-blur">
                   Selected frame
                   {selectedFrameIndex ? ` F${selectedFrameIndex}` : ''}
                   {typeof selectedFrameTime === 'number' ? ` · ${formatTime(selectedFrameTime)}` : ''}
@@ -107,7 +107,7 @@ export function ProjectVariantsPipelineProgress({
               </div>
             ) : (
               <div className="flex aspect-video flex-col items-center justify-center gap-3 px-6 text-center">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/15 text-primary ring-1 ring-primary/20">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/15 text-primary ring-1 ring-primary/15">
                   <ImageIcon className="h-7 w-7" strokeWidth={1.75} />
                 </div>
                 <div>
@@ -122,7 +122,7 @@ export function ProjectVariantsPipelineProgress({
             )}
           </div>
 
-          <div className="space-y-4 rounded-2xl border border-border/70 bg-background/45 p-4">
+          <div className="space-y-4 rounded-2xl bg-background/30 p-4 ring-1 ring-white/[0.03]">
             <div className="space-y-1">
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Creative decision</p>
               <p className="text-sm font-medium text-foreground">
@@ -140,10 +140,10 @@ export function ProjectVariantsPipelineProgress({
                     <span
                       key={`${frame.frame_index}-${frame.time_sec}`}
                       className={cn(
-                        'rounded-full border px-2.5 py-1 text-xs',
+                        'rounded-full px-2.5 py-1 text-xs ring-1',
                         frame.selected
-                          ? 'border-primary/60 bg-primary/15 text-primary'
-                          : 'border-border bg-card/70 text-muted-foreground',
+                          ? 'bg-primary/15 text-primary ring-primary/25'
+                          : 'bg-card/55 text-muted-foreground ring-white/[0.04]',
                       )}
                     >
                       F{frame.frame_index} {formatTime(frame.time_sec)}
@@ -160,7 +160,7 @@ export function ProjectVariantsPipelineProgress({
                   {textIdeas.map((idea) => (
                     <span
                       key={idea}
-                      className="rounded-full border border-border bg-card/70 px-2.5 py-1 text-xs text-foreground"
+                      className="rounded-full bg-card/55 px-2.5 py-1 text-xs text-foreground ring-1 ring-white/[0.04]"
                     >
                       {idea}
                     </span>
@@ -203,30 +203,39 @@ function PipelineSteps({
       );
 
   return (
-    <div className="grid gap-2 sm:grid-cols-7">
+    <ol className="grid gap-2 sm:grid-cols-7">
       {stages.map((stage, index) => {
         const complete = !failed && index < currentIndex;
         const active = !failed && index === currentIndex;
         const durationMs =
           timingByStage.get(stage.id)?.duration_ms ?? (active ? currentElapsedMs : undefined);
         return (
-          <div
+          <li
             key={stage.id}
             className={cn(
-              'relative rounded-2xl border px-3 py-3 transition-colors',
-              complete && 'border-primary/30 bg-primary/10 text-primary',
-              active && 'border-primary/50 bg-primary/15 text-primary shadow-soft',
-              !complete && !active && 'border-border/70 bg-background/50 text-muted-foreground',
-              failed && stage.id === currentStage && 'border-destructive/40 bg-destructive/10 text-destructive',
+              'relative rounded-2xl px-2.5 py-2.5 transition-colors',
+              complete && 'bg-primary/[0.07] text-primary',
+              active && 'bg-primary/[0.12] text-primary shadow-soft ring-1 ring-primary/15',
+              !complete && !active && 'bg-background/25 text-muted-foreground',
+              failed && stage.id === currentStage && 'bg-destructive/10 text-destructive ring-1 ring-destructive/20',
             )}
           >
-            <div className="flex items-center gap-2 sm:flex-col sm:items-start">
+            {index < stages.length - 1 ? (
               <span
                 className={cn(
-                  'flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-[11px]',
-                  complete && 'border-primary/40 bg-primary text-primary-foreground',
-                  active && 'border-primary/50 bg-primary/20',
-                  !complete && !active && 'border-border bg-card',
+                  'pointer-events-none absolute left-5 top-9 h-[calc(100%-1rem)] w-px bg-white/[0.055] sm:left-[calc(50%+0.75rem)] sm:top-5 sm:h-px sm:w-[calc(100%-1.5rem)]',
+                  complete && 'bg-primary/25',
+                )}
+                aria-hidden
+              />
+            ) : null}
+            <div className="relative flex items-center gap-2 sm:flex-col sm:items-start">
+              <span
+                className={cn(
+                  'flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] ring-1',
+                  complete && 'bg-primary text-primary-foreground ring-primary/40',
+                  active && 'bg-primary/20 ring-primary/35',
+                  !complete && !active && 'bg-card/70 ring-white/[0.06]',
                 )}
               >
                 {complete ? (
@@ -242,11 +251,10 @@ function PipelineSteps({
                 <span className="text-[10px] text-current/70">{formatDuration(durationMs)}</span>
               ) : null}
             </div>
-            {active ? <span className="absolute inset-0 rounded-2xl ring-1 ring-primary/20" /> : null}
-          </div>
+          </li>
         );
       })}
-    </div>
+    </ol>
   );
 }
 

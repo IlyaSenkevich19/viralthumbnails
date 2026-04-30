@@ -1,13 +1,18 @@
 'use client';
 
 import Image from 'next/image';
-import { Copy } from 'lucide-react';
-import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { TemplatesGridSkeleton } from '@/components/templates/templates-grid-skeleton';
 import { NICHE_ALL } from '@/lib/hooks';
 import type { TemplateNicheOption, ThumbnailTemplateRow } from '@/lib/api/templates';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   TEMPLATE_FACE_FILTER,
   type TemplateFaceFilter,
@@ -44,62 +49,51 @@ export function ProjectVariantsTemplatePicker({
   selectedTemplateId,
   onToggleTemplate,
 }: ProjectVariantsTemplatePickerProps) {
+  const selectedNicheLabel =
+    selectedNiche === NICHE_ALL ? 'Any niche' : niches.find((n) => n.code === selectedNiche)?.label;
+  const selectedFaceLabel =
+    templateFaceFilter === TEMPLATE_FACE_FILTER.withFace
+      ? 'With face'
+      : templateFaceFilter === TEMPLATE_FACE_FILTER.faceless
+        ? 'Faceless'
+        : 'Any face';
+
   return (
-    <div className="space-y-3">
-      <h2 className="text-lg font-semibold tracking-tight text-foreground">Choose a template</h2>
-      {niches.length > 0 ? (
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            size="sm"
-            variant={selectedNiche === NICHE_ALL ? 'default' : 'outline'}
-            className="rounded-full"
-            onClick={() => onNicheChange(NICHE_ALL)}
-          >
-            All
-          </Button>
-          {niches.map((n) => (
-            <Button
-              key={n.code}
-              type="button"
-              size="sm"
-              variant={selectedNiche === n.code ? 'default' : 'outline'}
-              className="rounded-full"
-              onClick={() => onNicheChange(n.code)}
-            >
-              {n.label}
-            </Button>
-          ))}
+    <div className="space-y-2.5">
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-base font-semibold tracking-tight text-foreground">Template (optional)</h2>
+        <p className="rounded-full border border-border/70 px-2 py-0.5 text-[11px] text-muted-foreground">
+          {filteredTemplates.length} shown
+        </p>
+      </div>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <div>
+          <Select value={selectedNiche} onValueChange={(value) => onNicheChange(value)}>
+            <SelectTrigger className="h-9 bg-card/60">
+              <SelectValue placeholder="Niche: any">{`Niche: ${selectedNicheLabel ?? 'Any niche'}`}</SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NICHE_ALL}>Any niche</SelectItem>
+              {niches.map((n) => (
+                <SelectItem key={n.code} value={n.code}>
+                  {n.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-      ) : null}
-      <div className="flex flex-wrap gap-2">
-        <Button
-          type="button"
-          size="sm"
-          variant={templateFaceFilter === TEMPLATE_FACE_FILTER.all ? 'default' : 'outline'}
-          className="rounded-full"
-          onClick={() => onTemplateFaceFilterChange(TEMPLATE_FACE_FILTER.all)}
-        >
-          Any face
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant={templateFaceFilter === TEMPLATE_FACE_FILTER.withFace ? 'default' : 'outline'}
-          className="rounded-full"
-          onClick={() => onTemplateFaceFilterChange(TEMPLATE_FACE_FILTER.withFace)}
-        >
-          With face
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant={templateFaceFilter === TEMPLATE_FACE_FILTER.faceless ? 'default' : 'outline'}
-          className="rounded-full"
-          onClick={() => onTemplateFaceFilterChange(TEMPLATE_FACE_FILTER.faceless)}
-        >
-          Faceless
-        </Button>
+        <div>
+          <Select value={templateFaceFilter} onValueChange={(value) => onTemplateFaceFilterChange(value as TemplateFaceFilter)}>
+            <SelectTrigger className="h-9 bg-card/60">
+              <SelectValue>{`People: ${selectedFaceLabel}`}</SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={TEMPLATE_FACE_FILTER.all}>Any face</SelectItem>
+              <SelectItem value={TEMPLATE_FACE_FILTER.withFace}>With face</SelectItem>
+              <SelectItem value={TEMPLATE_FACE_FILTER.faceless}>Faceless</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {templatesLoading ? (
@@ -107,21 +101,10 @@ export function ProjectVariantsTemplatePicker({
       ) : (
         <div
           className={cn(
-            'grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4',
+            'grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4',
             templatesFetching && 'opacity-80 transition-opacity',
           )}
         >
-          <button
-            type="button"
-            onClick={() =>
-              toast.info('Add a reference template under Templates, then pick it from the grid.')
-            }
-            aria-label="How to add a style reference template"
-            className="flex aspect-video flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border bg-muted/30 text-center text-xs text-muted-foreground transition-colors hover:border-primary/40 hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <Copy className="h-6 w-6 opacity-60" aria-hidden />
-            <span>Replicate style</span>
-          </button>
           {filteredTemplates.map((t) => {
             const active = selectedTemplateId === t.id;
             return (
@@ -163,7 +146,7 @@ export function ProjectVariantsTemplatePicker({
       ) : null}
       {!templatesLoading && templatesTotal > 0 ? (
         <div className="flex items-center justify-between gap-3 pt-1">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             Showing {filteredTemplates.length} of {templatesTotal}
           </p>
           {canLoadMore ? (

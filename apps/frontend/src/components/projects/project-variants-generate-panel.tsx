@@ -1,5 +1,6 @@
 'use client';
 
+import { ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import {
@@ -10,7 +11,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PrimaryActionPanel } from '@/components/ui/primary-action-panel';
 import {
   PROJECT_GENERATE_COUNT_MAX,
   PROJECT_GENERATE_COUNT_MIN,
@@ -53,6 +53,11 @@ export function ProjectVariantsGeneratePanel({
 }: ProjectVariantsGeneratePanelProps) {
   const faceless = templateFaceFilter === TEMPLATE_FACE_FILTER.faceless;
   const hasAvatar = Boolean(selectedAvatarId.trim());
+  const helperText = faceless
+    ? 'Faceless mode ignores character references.'
+    : hasAvatar
+      ? 'Your character reference will guide likeness when possible.'
+      : 'Optional: add a character reference for stronger personal branding.';
 
   const countOptions = Array.from(
     { length: PROJECT_GENERATE_COUNT_MAX - PROJECT_GENERATE_COUNT_MIN + 1 },
@@ -60,100 +65,107 @@ export function ProjectVariantsGeneratePanel({
   );
 
   return (
-    <PrimaryActionPanel className="space-y-4 p-4">
-      <div className="space-y-1.5">
-        <label htmlFor="variant-generate-count" className="text-sm font-medium text-foreground">
-          Thumbnails to generate
-        </label>
+    <section className="space-y-4">
+      <div className="space-y-2">
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <h2 className="text-base font-semibold tracking-tight text-foreground">Output</h2>
+            <p className="text-xs text-muted-foreground">Choose how many distinct directions to generate.</p>
+          </div>
+          <p className="rounded-full border border-primary/25 bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+            {generateCount} credit{generateCount === 1 ? '' : 's'}
+          </p>
+        </div>
         <Select
           value={String(generateCount)}
           onValueChange={(v) => onGenerateCountChange(Number.parseInt(v, 10) || PROJECT_GENERATE_COUNT_MIN)}
         >
-          <SelectTrigger id="variant-generate-count" className="h-10">
+          <SelectTrigger id="variant-generate-count" className="h-10 bg-card/60">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             {countOptions.map((n) => (
               <SelectItem key={n} value={String(n)}>
-                {n} variant{n === 1 ? '' : 's'}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <p className="text-xs text-muted-foreground">
-          Each variant uses a slightly different style direction in the prompt (same topic and template).
-        </p>
-      </div>
-
-      <div className="space-y-1.5">
-        <label htmlFor="variant-character" className="text-sm font-medium text-foreground">
-          Character (optional)
-        </label>
-        <Select
-          value={selectedAvatarId || SELECT_EMPTY_VALUE}
-          onValueChange={(v) => onAvatarChange(v === SELECT_EMPTY_VALUE ? '' : v)}
-        >
-          <SelectTrigger id="variant-character" className="h-10">
-            <SelectValue placeholder="None" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={SELECT_EMPTY_VALUE}>None</SelectItem>
-            {avatars.map((a) => (
-              <SelectItem key={a.id} value={a.id}>
-                {a.name}
+                {n} thumbnail{n === 1 ? '' : 's'}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
       </div>
 
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-sm text-foreground">Prioritize looking like me</span>
-        <button
+      <details className="group rounded-2xl bg-muted/25">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium text-foreground transition-colors marker:hidden hover:bg-muted/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/70">
+          <span>Advanced character settings</span>
+          <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180" />
+        </summary>
+        <div className="space-y-4 px-3 pb-3 pt-2">
+          <div className="space-y-1.5">
+            <label htmlFor="variant-character" className="text-sm font-medium text-foreground">
+              Character reference
+            </label>
+            <Select
+              value={selectedAvatarId || SELECT_EMPTY_VALUE}
+              onValueChange={(v) => onAvatarChange(v === SELECT_EMPTY_VALUE ? '' : v)}
+            >
+              <SelectTrigger id="variant-character" className="h-10 bg-card/60">
+                <SelectValue placeholder="None" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={SELECT_EMPTY_VALUE}>None</SelectItem>
+                {avatars.map((a) => (
+                  <SelectItem key={a.id} value={a.id}>
+                    {a.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <span className="text-sm font-medium text-foreground">Prioritize likeness</span>
+              <p className="text-xs text-muted-foreground">{helperText}</p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={prioritizeFace}
+              disabled={faceless || !hasAvatar}
+              onClick={() => onPrioritizeFaceChange(!prioritizeFace)}
+              className={cn(
+                'relative h-7 w-12 shrink-0 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50',
+                prioritizeFace ? 'bg-primary' : 'bg-muted',
+              )}
+            >
+              <span
+                className={cn(
+                  'absolute top-0.5 block h-6 w-6 rounded-full bg-white shadow transition-transform',
+                  prioritizeFace ? 'translate-x-5' : 'translate-x-0.5',
+                )}
+              />
+            </button>
+          </div>
+        </div>
+      </details>
+
+      <div className="sticky bottom-2 z-10 rounded-[1.35rem] bg-[radial-gradient(ellipse_at_top_right,rgba(255,59,59,0.16),transparent_50%),rgba(18,23,32,0.94)] p-3 shadow-[0_22px_60px_-30px_rgba(0,0,0,0.9)] backdrop-blur">
+        <Button
           type="button"
-          role="switch"
-          aria-checked={prioritizeFace}
-          disabled={faceless || !hasAvatar}
-          onClick={() => onPrioritizeFaceChange(!prioritizeFace)}
-          className={cn(
-            'relative h-7 w-12 shrink-0 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-            prioritizeFace ? 'bg-primary' : 'bg-muted',
-          )}
+          className="relative h-12 w-full gap-2 text-base font-semibold"
+          onClick={onGenerate}
+          disabled={generatePending || !canGenerate}
         >
-          <span
-            className={cn(
-              'absolute top-0.5 block h-6 w-6 rounded-full bg-white shadow transition-transform',
-              prioritizeFace ? 'translate-x-5' : 'translate-x-0.5',
-            )}
-          />
-        </button>
+          {generateLabel}
+          <span className="ml-auto text-xs font-normal opacity-90">
+            {generateCount} credit{generateCount === 1 ? '' : 's'}
+          </span>
+        </Button>
+        {pipelineBusy ? (
+          <p className="mt-2 text-center text-xs text-muted-foreground">
+            Video analysis is running. Generation unlocks when it finishes.
+          </p>
+        ) : null}
       </div>
-
-      <Button
-        type="button"
-        className="relative h-12 w-full gap-2 text-base font-semibold"
-        onClick={onGenerate}
-        disabled={generatePending || !canGenerate}
-      >
-        {generateLabel}
-        <span className="ml-auto text-xs font-normal opacity-90">
-          {generateCount} credit{generateCount === 1 ? '' : 's'}
-        </span>
-      </Button>
-      {faceless ? (
-        <p className="text-xs text-muted-foreground">
-          Faceless: the image prompt avoids people/faces; your character reference is not used.
-        </p>
-      ) : hasAvatar ? (
-        <p className="text-xs text-muted-foreground">
-          Your face reference is sent with each generation so the model can match likeness when possible.
-        </p>
-      ) : null}
-      {pipelineBusy ? (
-        <p className="text-xs text-muted-foreground">
-          Video analysis is in progress. Generation controls unlock when pipeline finishes.
-        </p>
-      ) : null}
-    </PrimaryActionPanel>
+    </section>
   );
 }

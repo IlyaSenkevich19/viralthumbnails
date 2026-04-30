@@ -1,6 +1,5 @@
 'use client';
 
-import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import type { PipelineJobStatusResponse } from '@/lib/api/thumbnails';
 
@@ -24,36 +23,50 @@ export function ProjectVariantsSourceCard({
   }
 
   return (
-    <Card>
-      <CardContent className="space-y-2 p-4">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Source</p>
-        {sourceVideoUrl ? (
-          <p className="truncate text-sm text-foreground" title={sourceVideoUrl}>
-            {sourceVideoUrl}
-          </p>
-        ) : null}
-        {sourceFileName ? (
-          <p className="truncate text-sm text-foreground" title={sourceFileName}>
-            {sourceFileName}
-          </p>
-        ) : null}
+    <section className="space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Source</p>
         {pipelineJob ? (
           <p
             className={cn(
-              'text-xs',
-              pipelineBusy ? 'text-primary' : pipelineFailed ? 'text-destructive' : 'text-muted-foreground',
+              'rounded-full border px-2 py-0.5 text-[11px] font-medium',
+              pipelineBusy
+                ? 'border-primary/35 text-primary'
+                : pipelineFailed
+                  ? 'border-destructive/35 text-destructive'
+                  : 'border-border text-muted-foreground',
             )}
           >
-            {pipelineJob.progress?.label ??
-              (pipelineBusy
-                ? 'Analyzing source'
-                : pipelineFailed
-                  ? pipelineJob.error?.message || 'Pipeline failed'
-                  : 'Pipeline completed')}
+            {pipelineBusy ? 'In progress' : pipelineFailed ? 'Failed' : 'Completed'}
           </p>
         ) : null}
-      </CardContent>
-    </Card>
+      </div>
+      {sourceVideoUrl ? (
+        <p className="truncate text-sm text-foreground/95" title={sourceVideoUrl}>
+          {sourceVideoUrl}
+        </p>
+      ) : null}
+      {sourceFileName ? (
+        <p className="truncate text-sm text-foreground/95" title={sourceFileName}>
+          {sourceFileName}
+        </p>
+      ) : null}
+      {pipelineJob ? (
+        <p
+          className={cn(
+            'text-xs leading-relaxed',
+            pipelineBusy ? 'text-primary' : pipelineFailed ? 'text-destructive' : 'text-muted-foreground',
+          )}
+        >
+          {pipelineJob.progress?.label ??
+            (pipelineBusy
+              ? 'Analyzing source'
+              : pipelineFailed
+                ? pipelineJob.error?.message || 'Pipeline failed'
+                : 'Pipeline completed')}
+        </p>
+      ) : null}
+    </section>
   );
 }
 

@@ -1,9 +1,8 @@
 'use client';
 
 import { Download, ImageIcon } from 'lucide-react';
-import { Button, buttonVariants } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
 import type { ThumbnailVariantRow } from '@/lib/types/project';
 import type { PipelineJobStatusResponse } from '@/lib/api/thumbnails';
 import { VariantStripThumb } from '@/components/projects/project-variant-strip-thumb';
@@ -79,7 +78,7 @@ export function ProjectVariantsResults({
         )
       ) : (
         <>
-          <div className="surface overflow-hidden">
+          <div className="overflow-hidden rounded-[1.5rem] bg-card/70 shadow-[0_24px_70px_-42px_rgba(0,0,0,0.95)] ring-1 ring-white/[0.025]">
             <div className="relative aspect-video max-h-[min(70vh,520px)] w-full bg-muted">
               {previewUrl ? (
                 <div
@@ -103,43 +102,48 @@ export function ProjectVariantsResults({
                 </div>
               ) : null}
             </div>
-            <div className="flex flex-wrap gap-2 border-t border-border p-3">
-              {selectedStyleLabel ? (
-                <span className="rounded-full border border-border bg-background px-2.5 py-1 text-xs text-foreground/90">
-                  {selectedStyleLabel}
-                </span>
-              ) : null}
-              {previewUrl ? (
-                <a
-                  href={previewUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'inline-flex gap-2')}
-                >
-                  <Download className="h-4 w-4" aria-hidden />
-                  Download
-                </a>
-              ) : null}
-              <span className="inline-flex items-center rounded-md border border-border/70 bg-muted/30 px-2.5 py-1 text-xs text-muted-foreground">
-                Advanced edit tools coming soon
-              </span>
-              {selectedVariant ? (
-                <Button
-                  type="button"
-                  variant="destructive"
-                  size="sm"
-                  className="ml-auto"
-                  onClick={() => onRequestDeleteVariant(selectedVariant.id)}
-                >
-                  Delete
-                </Button>
-              ) : null}
+            <div className="flex flex-wrap items-center gap-2 bg-background/22 px-3 py-3">
+              <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+                {selectedStyleLabel ? (
+                  <span className="rounded-full bg-white/[0.055] px-2.5 py-1 text-xs font-medium text-foreground/85 ring-1 ring-white/[0.04]">
+                    {selectedStyleLabel}
+                  </span>
+                ) : null}
+                <span className="text-xs text-muted-foreground">Advanced editing is coming soon</span>
+              </div>
+              <div className="ml-auto flex items-center gap-2">
+                {previewUrl ? (
+                  <a
+                    href={previewUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex h-9 items-center justify-center gap-2 rounded-full bg-white/[0.065] px-3 text-sm font-medium text-foreground transition-colors hover:bg-white/[0.095] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/70"
+                  >
+                    <Download className="h-4 w-4" aria-hidden />
+                    Download
+                  </a>
+                ) : null}
+                {selectedVariant ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-9 rounded-full px-3 text-destructive/80 hover:bg-destructive/10 hover:text-destructive"
+                    onClick={() => onRequestDeleteVariant(selectedVariant.id)}
+                  >
+                    Delete
+                  </Button>
+                ) : null}
+              </div>
             </div>
           </div>
 
-          <div className="space-y-2">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">All variants</p>
-            <div className="flex gap-2 overflow-x-auto pb-1">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">All variants</p>
+              <p className="text-xs text-muted-foreground">{variants.length} generated</p>
+            </div>
+            <div className="flex gap-3 overflow-x-auto pb-1">
               {variants.map((v, i) => (
                 <VariantStripThumb
                   key={v.id}

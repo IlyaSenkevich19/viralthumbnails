@@ -210,13 +210,23 @@ export function Sidebar({
   return (
     <aside
       className={cn(
-        'relative flex h-full shrink-0 flex-col overflow-visible border-r border-border bg-sidebar',
+        'relative isolate flex h-full shrink-0 flex-col overflow-visible bg-sidebar',
         'transition-[width] duration-300 ease-[var(--ease-standard)]',
         /* Above HeaderShell (z-30) so the collapse control on the edge isn’t clipped; below mobile drawer (z-40). */
         inDrawer ? 'w-full min-h-0 border-0' : 'z-[35] hidden lg:flex',
         !inDrawer && (compact ? 'w-[4.5rem]' : 'w-72'),
       )}
     >
+      {!inDrawer ? (
+        <span
+          className={cn(
+            'pointer-events-none absolute inset-y-0 right-0 z-[1] w-px bg-black/30',
+            'after:absolute after:inset-y-0 after:right-0 after:w-px after:bg-white/[0.035]',
+            compact ? 'opacity-55' : 'opacity-75',
+          )}
+          aria-hidden
+        />
+      ) : null}
       {!inDrawer && onToggleCollapsed && (
         <div className="absolute left-full top-[2.85rem] z-[60] -translate-x-1/2">
           <CollapsedSidebarTooltip enabled={compact} label="Expand sidebar">
@@ -227,12 +237,11 @@ export function Sidebar({
               aria-label={compact ? 'Expand sidebar' : 'Collapse sidebar'}
               className={cn(
                 'group flex h-7 w-7 shrink-0 items-center justify-center rounded-full',
-                'border border-border bg-sidebar/95 text-muted-foreground',
-                'shadow-[0_4px_24px_-6px_rgba(0,0,0,0.55),0_2px_8px_-2px_rgba(0,0,0,0.35)]',
-                'backdrop-blur-md',
+                'border border-black/35 bg-[var(--sidebar)] text-muted-foreground',
+                'shadow-[0_6px_18px_-10px_rgba(0,0,0,0.75)]',
                 'motion-base',
-                'hover:border-border-hover hover:bg-card hover:text-foreground',
-                'hover:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.6),0_4px_12px_-4px_rgba(0,0,0,0.4)]',
+                'hover:border-border/70 hover:bg-muted hover:text-foreground',
+                'hover:shadow-[0_8px_22px_-12px_rgba(0,0,0,0.75)]',
                 'active:scale-[0.94]',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--sidebar)]',
               )}
@@ -241,7 +250,7 @@ export function Sidebar({
                 className="pointer-events-none absolute inset-0 rounded-full opacity-0 transition-opacity duration-300 group-hover:opacity-100"
                 style={{
                   background:
-                    'radial-gradient(120% 120% at 30% 20%, rgba(255,59,59,0.14), transparent 55%)',
+                    'radial-gradient(120% 120% at 30% 20%, rgba(255,59,59,0.10), transparent 58%)',
                 }}
                 aria-hidden
               />

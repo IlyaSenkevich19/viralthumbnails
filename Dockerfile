@@ -18,8 +18,7 @@ COPY apps/backend apps/backend
 RUN yarn workspace backend build
 
 ENV NODE_ENV=production
-ENV PORT=3001
 
-EXPOSE 3001
+EXPOSE 8080
 
 CMD ["yarn", "workspace", "backend", "start:prod"]

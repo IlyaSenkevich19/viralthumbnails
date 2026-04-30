@@ -1,0 +1,14 @@
+node_modules
+apps/*/node_modules
+apps/*/dist
+apps/*/.next
+.next
+.turbo
+.git
+.env
+.env.*
+!.env.example
+coverage
+docs
+supabase
+agent-transcripts

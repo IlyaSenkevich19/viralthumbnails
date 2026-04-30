@@ -37,7 +37,13 @@ export type ThumbnailPipelineRunResult = {
   creditsCharged: number;
   analysis: ThumbnailPipelineAnalysis;
   videoAnalysis?: {
-    sampledFrames?: Array<{ frameIndex: number; timeSec: number; selected?: boolean }>;
+    frameExtractionMode?: 'direct_url' | 'yt_dlp_stream' | 'text_context_no_video_url';
+    sampledFrames?: Array<{
+      frameIndex: number;
+      timeSec: number;
+      selected?: boolean;
+      source?: 'direct_url' | 'yt_dlp_stream';
+    }>;
     selectedFramePreviewDataUrl?: string;
   };
   imagePromptsUsed: string[];

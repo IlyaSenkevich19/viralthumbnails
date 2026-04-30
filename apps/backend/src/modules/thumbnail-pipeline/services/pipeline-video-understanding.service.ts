@@ -43,7 +43,13 @@ export type VideoUnderstandingParams = {
 export type VideoUnderstandingResult = {
   analysis: ThumbnailPipelineAnalysis;
   modelUsed: string;
-  sampledFrames?: Array<{ frameIndex: number; timeSec: number; selected?: boolean }>;
+  frameExtractionMode?: 'direct_url' | 'yt_dlp_stream' | 'text_context_no_video_url';
+  sampledFrames?: Array<{
+    frameIndex: number;
+    timeSec: number;
+    selected?: boolean;
+    source?: 'direct_url' | 'yt_dlp_stream';
+  }>;
   selectedFramePreviewDataUrl?: string;
 };
 
@@ -108,6 +114,7 @@ export class PipelineVideoUnderstandingService {
         return {
           analysis,
           modelUsed: model,
+          frameExtractionMode: this.resolveFrameExtractionMode(vlParams),
           sampledFrames: this.buildSampledFrameSummary(vlParams, analysis.selectedFrameIndex),
           selectedFramePreviewDataUrl,
         };
@@ -259,14 +266,29 @@ ${ThumbnailPipelineAnalysisJsonPrompt}`;
   private buildSampledFrameSummary(
     params: VideoUnderstandingParams,
     selectedFrameIndex: number | undefined,
-  ): Array<{ frameIndex: number; timeSec: number; selected?: boolean }> | undefined {
+  ): Array<{
+    frameIndex: number;
+    timeSec: number;
+    selected?: boolean;
+    source?: 'direct_url' | 'yt_dlp_stream';
+  }> | undefined {
     const frames = params.sampledFrameCandidates;
     if (!frames?.length) return undefined;
     return frames.map((frame) => ({
       frameIndex: frame.frameIndex,
       timeSec: frame.timeSec,
       selected: selectedFrameIndex === frame.frameIndex || undefined,
+      source: frame.source,
     }));
+  }
+
+  private resolveFrameExtractionMode(
+    params: VideoUnderstandingParams,
+  ): 'direct_url' | 'yt_dlp_stream' | 'text_context_no_video_url' | undefined {
+    const frameSource = params.sampledFrameCandidates?.find((frame) => frame.source)?.source;
+    if (frameSource) return frameSource;
+    if (params.originalVideoProvided) return 'text_context_no_video_url';
+    return undefined;
   }
 
   private formatTime(totalSec: number): string {

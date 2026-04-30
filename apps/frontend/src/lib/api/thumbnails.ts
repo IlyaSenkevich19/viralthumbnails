@@ -40,7 +40,13 @@ export type PipelineRunResponse = {
   credits_charged: number;
   analysis: Record<string, unknown>;
   video_analysis?: {
-    sampledFrames?: Array<{ frameIndex: number; timeSec: number; selected?: boolean }>;
+    frameExtractionMode?: 'direct_url' | 'yt_dlp_stream' | 'text_context_no_video_url';
+    sampledFrames?: Array<{
+      frameIndex: number;
+      timeSec: number;
+      selected?: boolean;
+      source?: 'direct_url' | 'yt_dlp_stream';
+    }>;
     selectedFramePreviewDataUrl?: string;
   };
   image_prompts_used: string[];
@@ -115,7 +121,13 @@ export type PipelineJobProgress = {
     selected_frame_why?: string;
     visual_frame_description?: string;
     thumbnail_text_ideas?: string[];
-    sampled_frames?: Array<{ frame_index: number; time_sec: number; selected?: boolean }>;
+    frame_extraction_mode?: 'direct_url' | 'yt_dlp_stream' | 'text_context_no_video_url';
+    sampled_frames?: Array<{
+      frame_index: number;
+      time_sec: number;
+      selected?: boolean;
+      source?: 'direct_url' | 'yt_dlp_stream';
+    }>;
     selected_frame_preview_data_url?: string;
   };
 };

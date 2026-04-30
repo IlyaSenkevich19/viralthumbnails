@@ -106,6 +106,7 @@ export class PipelineProjectPersistenceService {
       generated_models: params.runResult.modelsUsed,
       scene_summary_excerpt: sceneSummary.slice(0, 500),
       video_context: params.videoContext ?? undefined,
+      video_analysis: params.runResult.videoAnalysis ?? undefined,
     };
 
     const { data: project, error } = await client
@@ -144,6 +145,7 @@ export class PipelineProjectPersistenceService {
       generated_models: params.runResult.modelsUsed,
       scene_summary_excerpt: sceneSummary.slice(0, 500),
       video_context: params.videoContext ?? undefined,
+      video_analysis: params.runResult.videoAnalysis ?? undefined,
       pipeline_error: null,
     };
     const { data: existing, error: readErr } = await client

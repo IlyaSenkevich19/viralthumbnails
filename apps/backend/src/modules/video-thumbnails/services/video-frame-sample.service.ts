@@ -14,16 +14,21 @@ import {
   VIDEO_PIPELINE_MIN_USABLE_FRAME_COUNT,
 } from '../../../config/video-pipeline.config';
 import { getVideoDurationSecondsFromHttpUrl } from '../utils/video-duration-ffprobe';
+import type { ResolvedDirectVideoSource } from './yt-dlp-video-source.service';
+import { YtDlpVideoSourceService } from './yt-dlp-video-source.service';
 
 const FRAME_EXTRACT_TIMEOUT_MS = 45_000;
 const SIGNATURE_SIZE = 32;
 const MIN_TIME_SEC = 0.05;
+
+export type VideoFrameSampleSource = 'direct_url' | 'yt_dlp_stream';
 
 export type VideoFrameSampleCandidate = {
   /** 1-based index matching the order sent to the VL model. */
   frameIndex: number;
   timeSec: number;
   dataUrl: string;
+  source?: VideoFrameSampleSource;
 };
 
 function dataUrlFromJpegBuffer(buf: Buffer): string {
@@ -61,7 +66,19 @@ function buildCandidateTimes(windowSec: number, count: number): number[] {
   return out;
 }
 
-async function extractJpegFrameAtUrl(url: string, timeSec: number): Promise<Buffer | null> {
+function ffmpegHeaderArgs(headers?: Record<string, string>): string[] {
+  if (!headers || Object.keys(headers).length === 0) return [];
+  const headerText = Object.entries(headers)
+    .map(([key, value]) => `${key.replace(/[\r\n:]/g, '')}: ${value.replace(/[\r\n]/g, ' ')}`)
+    .join('\r\n');
+  return ['-headers', `${headerText}\r\n`];
+}
+
+async function extractJpegFrameAtUrl(
+  url: string,
+  timeSec: number,
+  headers?: Record<string, string>,
+): Promise<Buffer | null> {
   return new Promise((resolve) => {
     const proc = spawn('ffmpeg', [
       '-hide_banner',
@@ -69,6 +86,7 @@ async function extractJpegFrameAtUrl(url: string, timeSec: number): Promise<Buff
       'error',
       '-ss',
       String(timeSec),
+      ...ffmpegHeaderArgs(headers),
       '-i',
       url,
       '-frames:v',
@@ -120,7 +138,11 @@ type FrameSignature = {
   vector: Uint8Array;
 };
 
-async function extractFrameSignatureAtUrl(url: string, timeSec: number): Promise<FrameSignature | null> {
+async function extractFrameSignatureAtUrl(
+  url: string,
+  timeSec: number,
+  headers?: Record<string, string>,
+): Promise<FrameSignature | null> {
   return new Promise((resolve) => {
     const proc = spawn('ffmpeg', [
       '-hide_banner',
@@ -128,6 +150,7 @@ async function extractFrameSignatureAtUrl(url: string, timeSec: number): Promise
       'error',
       '-ss',
       String(timeSec),
+      ...ffmpegHeaderArgs(headers),
       '-i',
       url,
       '-frames:v',
@@ -224,7 +247,12 @@ function signatureDistance(a: Uint8Array, b: Uint8Array): number {
 @Injectable()
 export class VideoFrameSampleService {
   private readonly logger = new Logger(VideoFrameSampleService.name);
-  private readonly cache = new Map<string, { expiresAt: number; frames: string[] }>();
+  private readonly cache = new Map<
+    string,
+    { expiresAt: number; frames: Array<{ dataUrl: string; timeSec: number; source: VideoFrameSampleSource }> }
+  >();
+
+  constructor(private readonly ytDlp: YtDlpVideoSourceService) {}
 
   private pruneCache(now: number): void {
     for (const [k, v] of this.cache.entries()) {
@@ -261,25 +289,88 @@ export class VideoFrameSampleService {
       this.logger.debug(
         `[${params.logContext}] frame sample cache hit frames=${cached.frames.length}`,
       );
-      return cached.frames.map((dataUrl, index) => ({
+      return cached.frames.map((frame, index) => ({
         frameIndex: index + 1,
-        timeSec: this.estimateCachedFrameTime(index, cached.frames.length, params.durationSeconds),
-        dataUrl,
+        timeSec: frame.timeSec,
+        dataUrl: frame.dataUrl,
+        source: frame.source,
       }));
     }
 
-    let duration = params.durationSeconds ?? null;
+    let duration = this.normalizeDuration(params.durationSeconds);
     if (duration == null || !Number.isFinite(duration) || duration <= 0) {
       duration = await getVideoDurationSecondsFromHttpUrl(url);
     }
-    if (duration == null || duration <= 0) {
-      this.logger.debug(
-        `[${params.logContext}] frame sample: could not determine duration; skipping frames`,
+
+    const direct = await this.sampleUsableFramesFromUrl({
+      url,
+      duration,
+      source: 'direct_url',
+      logContext: params.logContext,
+    });
+    if (direct.length >= VIDEO_PIPELINE_MIN_USABLE_FRAME_COUNT) {
+      this.cache.set(cacheKey, {
+        expiresAt: now + VIDEO_PIPELINE_CACHE_TTL_MS,
+        frames: direct.map((frame) => ({ dataUrl: frame.dataUrl, timeSec: frame.timeSec, source: 'direct_url' })),
+      });
+      return direct;
+    }
+
+    const resolved = await this.ytDlp.tryResolveDirectVideoUrl(url, params.logContext);
+    if (!resolved) {
+      this.logger.log(
+        `[${params.logContext}] frame path rejected: usable=${direct.length} < min=${VIDEO_PIPELINE_MIN_USABLE_FRAME_COUNT}; yt-dlp stream unavailable`,
       );
       return [];
     }
 
-    const windowSec = Math.min(duration, VIDEO_PIPELINE_ANALYZE_WINDOW_SECONDS);
+    let streamDuration = duration;
+    if (streamDuration == null || streamDuration <= 0) {
+      streamDuration = await getVideoDurationSecondsFromHttpUrl(resolved.url);
+    }
+
+    const viaYtDlp = await this.sampleUsableFramesFromUrl({
+      sourceUrl: resolved,
+      duration: streamDuration,
+      source: 'yt_dlp_stream',
+      logContext: params.logContext,
+    });
+    if (viaYtDlp.length < VIDEO_PIPELINE_MIN_USABLE_FRAME_COUNT) {
+      this.logger.log(
+        `[${params.logContext}] frame path rejected after yt-dlp: usable=${viaYtDlp.length} < min=${VIDEO_PIPELINE_MIN_USABLE_FRAME_COUNT}`,
+      );
+      return [];
+    }
+
+    this.cache.set(cacheKey, {
+      expiresAt: now + VIDEO_PIPELINE_CACHE_TTL_MS,
+      frames: viaYtDlp.map((frame) => ({
+        dataUrl: frame.dataUrl,
+        timeSec: frame.timeSec,
+        source: 'yt_dlp_stream',
+      })),
+    });
+    return viaYtDlp;
+  }
+
+  private async sampleUsableFramesFromUrl(params: {
+    url?: string;
+    sourceUrl?: ResolvedDirectVideoSource;
+    duration: number | null;
+    source: VideoFrameSampleSource;
+    logContext: string;
+  }): Promise<VideoFrameSampleCandidate[]> {
+    const url = params.sourceUrl?.url ?? params.url;
+    if (!url) return [];
+
+    if (params.duration == null || params.duration <= 0) {
+      this.logger.debug(
+        `[${params.logContext}] frame sample ${params.source}: could not determine duration; skipping frames`,
+      );
+      return [];
+    }
+
+    const windowSec = Math.min(params.duration, VIDEO_PIPELINE_ANALYZE_WINDOW_SECONDS);
     const times = buildCandidateTimes(windowSec, VIDEO_PIPELINE_FRAME_SAMPLE_COUNT);
     const out: VideoFrameSampleCandidate[] = [];
     const acceptedSignatures: FrameSignature[] = [];
@@ -289,13 +380,13 @@ export class VideoFrameSampleService {
 
     for (const t of times) {
       if (out.length >= VIDEO_PIPELINE_FRAME_SAMPLE_COUNT) break;
-      const buf = await extractJpegFrameAtUrl(url, t);
+      const buf = await extractJpegFrameAtUrl(url, t, params.sourceUrl?.headers);
       if (!buf?.length) {
         extractionFailures++;
         continue;
       }
 
-      const signature = await extractFrameSignatureAtUrl(url, t);
+      const signature = await extractFrameSignatureAtUrl(url, t, params.sourceUrl?.headers);
       if (!signature) {
         extractionFailures++;
         continue;
@@ -326,29 +417,26 @@ export class VideoFrameSampleService {
         frameIndex: out.length + 1,
         timeSec: t,
         dataUrl: dataUrlFromJpegBuffer(buf),
+        source: params.source,
       });
     }
 
     if (out.length < VIDEO_PIPELINE_MIN_USABLE_FRAME_COUNT) {
       this.logger.log(
-        `[${params.logContext}] frame path rejected: usable=${out.length} < min=${VIDEO_PIPELINE_MIN_USABLE_FRAME_COUNT} (candidates=${times.length}, droppedLowQuality=${droppedLowQuality}, droppedDuplicates=${droppedDuplicates}, extractionFailures=${extractionFailures})`,
+        `[${params.logContext}] frame path ${params.source} rejected: usable=${out.length} < min=${VIDEO_PIPELINE_MIN_USABLE_FRAME_COUNT} (candidates=${times.length}, droppedLowQuality=${droppedLowQuality}, droppedDuplicates=${droppedDuplicates}, extractionFailures=${extractionFailures})`,
       );
       return [];
     }
 
     this.logger.log(
-      `[${params.logContext}] sampled ${out.length}/${times.length} usable frames (window=${windowSec.toFixed(1)}s of ${duration.toFixed(1)}s, droppedLowQuality=${droppedLowQuality}, droppedDuplicates=${droppedDuplicates}, extractionFailures=${extractionFailures})`,
+      `[${params.logContext}] sampled ${out.length}/${times.length} usable frames via ${params.source} (window=${windowSec.toFixed(1)}s of ${params.duration.toFixed(1)}s, droppedLowQuality=${droppedLowQuality}, droppedDuplicates=${droppedDuplicates}, extractionFailures=${extractionFailures})`,
     );
-    this.cache.set(cacheKey, { expiresAt: now + VIDEO_PIPELINE_CACHE_TTL_MS, frames: out.map((frame) => frame.dataUrl) });
     return out;
   }
 
-  private estimateCachedFrameTime(index: number, count: number, durationSeconds: number | null | undefined): number {
-    const duration =
-      typeof durationSeconds === 'number' && Number.isFinite(durationSeconds) && durationSeconds > 0
-        ? durationSeconds
-        : VIDEO_PIPELINE_ANALYZE_WINDOW_SECONDS;
-    const windowSec = Math.min(duration, VIDEO_PIPELINE_ANALYZE_WINDOW_SECONDS);
-    return computeSampleTimesWithinWindow(windowSec, count)[index] ?? 0;
+  private normalizeDuration(durationSeconds: number | null | undefined): number | null {
+    return typeof durationSeconds === 'number' && Number.isFinite(durationSeconds) && durationSeconds > 0
+      ? durationSeconds
+      : null;
   }
 }

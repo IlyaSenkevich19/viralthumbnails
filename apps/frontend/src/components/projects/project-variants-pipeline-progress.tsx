@@ -30,6 +30,16 @@ export function ProjectVariantsPipelineProgress({
     progressAnalysis?.selected_frame_why ??
     readString(resultAnalysis, 'selectedFrameWhy') ??
     readNestedString(resultAnalysis, 'bestThumbnailMoment', 'why');
+  const frameExtractionMode =
+    progressAnalysis?.frame_extraction_mode ?? resultVideoAnalysis?.frameExtractionMode;
+  const frameModeLabel =
+    frameExtractionMode === 'yt_dlp_stream'
+      ? 'Real YouTube frames'
+      : frameExtractionMode === 'direct_url'
+        ? 'Real video frames'
+        : frameExtractionMode === 'text_context_no_video_url'
+          ? 'Text context only'
+          : 'Frame extraction pending';
   const textIdeas =
     progressAnalysis?.thumbnail_text_ideas ??
     (Array.isArray(resultAnalysis?.thumbnailTextIdeas)
@@ -58,9 +68,23 @@ export function ProjectVariantsPipelineProgress({
       <div className="relative space-y-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary ring-1 ring-primary/15">
-              {pipelineBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-              Video pipeline
+            <div className="flex flex-wrap gap-2">
+              <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary ring-1 ring-primary/15">
+                {pipelineBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                Video pipeline
+              </div>
+              <div
+                className={cn(
+                  'inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ring-1',
+                  frameExtractionMode === 'text_context_no_video_url'
+                    ? 'bg-warning/10 text-warning ring-warning/20'
+                    : frameExtractionMode
+                      ? 'bg-emerald-500/10 text-emerald-300 ring-emerald-400/15'
+                      : 'bg-white/[0.045] text-muted-foreground ring-white/[0.04]',
+                )}
+              >
+                {frameModeLabel}
+              </div>
             </div>
             <div>
               <h3 className="text-2xl font-semibold tracking-tight text-foreground">{heroTitle}</h3>

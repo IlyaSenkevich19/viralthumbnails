@@ -56,7 +56,7 @@ export class ThumbnailPipelineOrchestratorService {
         ? await this.youtubeTranscript.tryFetchCompactTranscript(input.videoUrl.trim(), 'pipeline-vl')
         : null;
 
-      const { analysis, modelUsed, sampledFrames, selectedFramePreviewDataUrl } =
+      const { analysis, modelUsed, frameExtractionMode, sampledFrames, selectedFramePreviewDataUrl } =
         await this.videoUnderstanding.analyze({
         userPrompt: refined.text,
         style: input.style,
@@ -82,10 +82,12 @@ export class ThumbnailPipelineOrchestratorService {
           selected_frame_why: analysis.selectedFrameWhy ?? analysis.bestThumbnailMoment.why,
           visual_frame_description: analysis.visualFrameDescription,
           thumbnail_text_ideas: analysis.thumbnailTextIdeas.slice(0, 3),
+          frame_extraction_mode: frameExtractionMode,
           sampled_frames: sampledFrames?.map((frame) => ({
             frame_index: frame.frameIndex,
             time_sec: frame.timeSec,
             selected: frame.selected,
+            source: frame.source,
           })),
           selected_frame_preview_data_url: selectedFramePreviewDataUrl,
         },
@@ -127,29 +129,53 @@ export class ThumbnailPipelineOrchestratorService {
       if (generateImages) {
         await onProgress?.({
           stage: 'generating_images',
-          label: `Generating images (0/${imagePromptsUsed.length})`,
+          label: selectedFramePreviewDataUrl
+            ? `Editing selected video frame (0/${imagePromptsUsed.length})`
+            : `Generating images (0/${imagePromptsUsed.length})`,
           current: 0,
           total: imagePromptsUsed.length,
           percent: 0,
         });
         const imageTier = input.imageModelTier ?? 'default';
-        modelsUsed.imageGeneration = this.thumbnailGen.imageModel(imageTier);
-        variants = await this.thumbnailGen.generateVariants({
-          prompts: imagePromptsUsed,
-          reference: refBundle,
-          imageModelTier: imageTier,
-          onProgress: onProgress
-            ? async (progress) => {
-                await onProgress({
-                  stage: 'generating_images',
-                  label: `Generating images (${progress.current}/${progress.total})`,
-                  current: progress.current,
-                  total: progress.total,
-                  percent: progress.percent,
-                });
-              }
-            : undefined,
-        });
+        if (selectedFramePreviewDataUrl) {
+          modelsUsed.imageEdit = this.thumbnailEdit.editModel();
+          variants = await this.thumbnailEdit.editVideoFrameVariants({
+            baseFrameDataUrl: selectedFramePreviewDataUrl,
+            prompts: imagePromptsUsed,
+            templateReferenceDataUrls: templateUrls,
+            faceReferenceDataUrls: faceUrls,
+            prioritizeFace: Boolean(input.prioritizeFace) && faceUrls.length > 0,
+            onProgress: onProgress
+              ? async (progress) => {
+                  await onProgress({
+                    stage: 'generating_images',
+                    label: `Editing selected video frame (${progress.current}/${progress.total})`,
+                    current: progress.current,
+                    total: progress.total,
+                    percent: progress.percent,
+                  });
+                }
+              : undefined,
+          });
+        } else {
+          modelsUsed.imageGeneration = this.thumbnailGen.imageModel(imageTier);
+          variants = await this.thumbnailGen.generateVariants({
+            prompts: imagePromptsUsed,
+            reference: refBundle,
+            imageModelTier: imageTier,
+            onProgress: onProgress
+              ? async (progress) => {
+                  await onProgress({
+                    stage: 'generating_images',
+                    label: `Generating images (${progress.current}/${progress.total})`,
+                    current: progress.current,
+                    total: progress.total,
+                    percent: progress.percent,
+                  });
+                }
+              : undefined,
+          });
+        }
         if (!variants.length) {
           throw new BadGatewayException({
             code: 'PIPELINE_NO_IMAGES_GENERATED',
@@ -189,8 +215,9 @@ export class ThumbnailPipelineOrchestratorService {
         creditsCharged: actuallyCharged,
         analysis,
         videoAnalysis:
-          sampledFrames || selectedFramePreviewDataUrl
+          sampledFrames || selectedFramePreviewDataUrl || frameExtractionMode
             ? {
+                frameExtractionMode,
                 sampledFrames,
                 selectedFramePreviewDataUrl,
               }

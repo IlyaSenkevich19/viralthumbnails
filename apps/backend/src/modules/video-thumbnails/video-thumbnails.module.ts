@@ -5,6 +5,7 @@ import { VideoThumbnailsController } from './video-thumbnails.controller';
 import { VideoIngestionService } from './services/video-ingestion.service';
 import { VideoPipelineDurationGateService } from './services/video-pipeline-duration-gate.service';
 import { VideoFrameSampleService } from './services/video-frame-sample.service';
+import { YtDlpVideoSourceService } from './services/yt-dlp-video-source.service';
 import { YoutubeTranscriptService } from './services/youtube-transcript.service';
 import { YoutubeVideoMetaService } from './services/youtube-video-meta.service';
 
@@ -16,6 +17,7 @@ import { YoutubeVideoMetaService } from './services/youtube-video-meta.service';
     YoutubeVideoMetaService,
     YoutubeTranscriptService,
     VideoPipelineDurationGateService,
+    YtDlpVideoSourceService,
     VideoFrameSampleService,
   ],
   exports: [
@@ -23,6 +25,7 @@ import { YoutubeVideoMetaService } from './services/youtube-video-meta.service';
     YoutubeVideoMetaService,
     YoutubeTranscriptService,
     VideoPipelineDurationGateService,
+    YtDlpVideoSourceService,
     VideoFrameSampleService,
   ],
 })

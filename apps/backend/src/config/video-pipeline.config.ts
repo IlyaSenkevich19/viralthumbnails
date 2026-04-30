@@ -15,6 +15,12 @@ export const VIDEO_PIPELINE_FRAME_SAMPLE_COUNT = 4;
 /** Phase 2: maximum width for sampled VL frames. Thumbnail strategy does not need 1280px inputs. */
 export const VIDEO_PIPELINE_FRAME_MAX_WIDTH_PX = 640;
 
+/** Phase 2: yt-dlp is used only to resolve a direct stream URL; frames are still extracted by ffmpeg. */
+export const VIDEO_PIPELINE_YT_DLP_BINARY = 'yt-dlp';
+export const VIDEO_PIPELINE_YT_DLP_TIMEOUT_MS = 30_000;
+export const VIDEO_PIPELINE_YT_DLP_FORMAT =
+  'bv*[height<=720][ext=mp4]/bv*[height<=720]/b[height<=720][ext=mp4]/best[height<=720]/best';
+
 /** Phase 2.1: minimum number of usable frames required to keep image-based VL path. */
 export const VIDEO_PIPELINE_MIN_USABLE_FRAME_COUNT = 2;
 

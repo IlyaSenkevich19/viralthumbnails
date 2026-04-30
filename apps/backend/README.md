@@ -118,6 +118,8 @@ OPENROUTER_API_KEY=
 
 `POST /api/thumbnails/pipeline/run` (Bearer, JSON): модульный OpenRouter-пайплайн (always-on). Поля: `user_prompt` (обязательно), опционально `video_url`, `template_reference_data_urls`, `face_reference_data_urls`, `variant_count`, `generate_images`, `prioritize_face`, `base_image_data_url` + `edit_instruction`, `persist_project`. Ответ включает `run_id`, **`credits_charged`**, `analysis`, `image_prompts_used`, `models_used`, `persisted_project`, при `generate_images: true` — `variants[].image_base64`. Модели шагов — **`src/config/openrouter-models.ts`** (`PIPELINE_STEP_MODELS`).
 
+Для YouTube URL backend использует локальный бинарник **`yt-dlp`** (`VIDEO_PIPELINE_YT_DLP_BINARY = 'yt-dlp'`) только чтобы получить прямой video stream URL. Затем `ffmpeg` достаёт реальные кадры, Gemini выбирает лучший кадр, а Flux edit-flow использует этот кадр как **base image** для финальных thumbnails. Если `yt-dlp` не установлен или stream недоступен, pipeline откатывается в режим `text_context_no_video_url` без дорогой raw-video отправки в VL-модель.
+
 **Кредиты для `pipeline/run*`:** в начале запроса резервируется **`1 + (generate_images ? variant_count : 0) + (есть edit ? 1 : 0)`** (анализ VL + до N генераций + один шаг редактирования). При любой ошибке после резерва выполняется **полный возврат** (`refund`). Формула в коде: `creditsForThumbnailPipelineRun` в `billing.service.ts`.
 
 **Rate limiting (по пользователю, после JWT):**

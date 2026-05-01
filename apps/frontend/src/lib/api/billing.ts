@@ -4,10 +4,17 @@ import { fetchJson } from './fetch-json';
 export type GenerationCreditsDto = {
   balance: number;
   totalGranted: number;
+  trialStarted: boolean;
 };
 
 export async function getGenerationCredits(token: string | null): Promise<GenerationCreditsDto> {
   return fetchJson<GenerationCreditsDto>(ApiRoutes.billing.credits, token);
+}
+
+export async function startCreditTrial(token: string | null): Promise<GenerationCreditsDto> {
+  return fetchJson<GenerationCreditsDto>(ApiRoutes.billing.startTrial, token, {
+    method: 'POST',
+  });
 }
 
 export type CreditLedgerEntryDto = {

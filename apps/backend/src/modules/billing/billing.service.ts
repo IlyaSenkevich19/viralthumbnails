@@ -201,18 +201,53 @@ export class BillingService {
     const { data, error } = await client
       .from('profiles')
       .select(
-        'generation_credits_balance, generation_credits_total_granted, generation_credits_quota',
+        'generation_credits_balance, generation_credits_total_granted, generation_credits_quota, trial_started_at',
       )
       .eq('id', userId)
       .maybeSingle();
     if (error) throw new InternalServerErrorException(error.message);
-    if (!data) return DEFAULT_CREDITS;
+    if (!data) {
+      return {
+        ...DEFAULT_CREDITS,
+        trialStarted: false,
+      };
+    }
     return {
       balance: data.generation_credits_balance as number,
       totalGranted:
         (data.generation_credits_total_granted as number | null) ??
         (data.generation_credits_quota as number | null) ??
         DEFAULT_CREDITS.totalGranted,
+      trialStarted: Boolean((data as { trial_started_at?: string | null }).trial_started_at),
+    };
+  }
+
+  async startCreditTrial(userId: string) {
+    await this.ensureProfileRow(userId);
+    const client = this.supabase.getAdminClient();
+    const now = new Date().toISOString();
+    const { data, error } = await client
+      .from('profiles')
+      .update({
+        trial_started_at: now,
+        updated_at: now,
+      })
+      .eq('id', userId)
+      .select(
+        'generation_credits_balance, generation_credits_total_granted, generation_credits_quota, trial_started_at',
+      )
+      .maybeSingle();
+    if (error) throw new InternalServerErrorException(error.message);
+    if (!data) {
+      throw new InternalServerErrorException('Profile row is missing after trial start.');
+    }
+    return {
+      balance: data.generation_credits_balance as number,
+      totalGranted:
+        (data.generation_credits_total_granted as number | null) ??
+        (data.generation_credits_quota as number | null) ??
+        DEFAULT_CREDITS.totalGranted,
+      trialStarted: Boolean((data as { trial_started_at?: string | null }).trial_started_at),
     };
   }
 

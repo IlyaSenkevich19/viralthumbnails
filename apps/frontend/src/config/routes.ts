@@ -5,6 +5,7 @@
 export const AppRoutes = {
   home: '/',
   create: '/create',
+  welcomeTrial: '/welcome-trial',
   /** Legacy URL; middleware + page redirect to create. */
   dashboard: '/dashboard',
   projects: '/projects',

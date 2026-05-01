@@ -8,6 +8,7 @@ import { queryKeys } from '@/lib/query-keys';
 export type GenerationCredits = {
   balance: number;
   totalGranted: number;
+  trialStarted: boolean;
 };
 
 export function useGenerationCredits() {

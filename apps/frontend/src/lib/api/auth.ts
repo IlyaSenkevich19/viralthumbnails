@@ -51,7 +51,7 @@ export async function signInWithGoogle() {
     options: {
       redirectTo:
         typeof window !== 'undefined'
-          ? `${window.location.origin}${AppRoutes.create}`
+          ? `${window.location.origin}${AppRoutes.welcomeTrial}`
           : undefined,
     },
   });

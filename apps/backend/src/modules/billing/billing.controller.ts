@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, UseGuards } from '@nestjs/common';
 import { ApiControllerPaths } from '../../common/constants/api-controller-paths';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { SupabaseGuard } from '../auth/guards/supabase.guard';
@@ -15,6 +15,11 @@ export class BillingController {
   @Get('credits')
   credits(@CurrentUser() userId: string) {
     return this.billing.getGenerationCredits(userId);
+  }
+
+  @Post('credits/start-trial')
+  startTrial(@CurrentUser() userId: string) {
+    return this.billing.startCreditTrial(userId);
   }
 
   @Get('credits/ledger')

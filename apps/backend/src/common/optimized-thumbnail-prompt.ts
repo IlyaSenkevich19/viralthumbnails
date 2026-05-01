@@ -6,6 +6,12 @@ export interface ThumbnailInput {
   style?: string;
   avoid?: string[];
   variantFocus?: ThumbnailPromptVariantFocus;
+  viewerCuriosity?: string;
+  hookRationale?: string;
+  textPlacement?: string;
+  subjectPlacement?: string;
+  layoutRationale?: string;
+  doNotCoverRegions?: string[];
 }
 
 export type ThumbnailPromptVariantFocus = 'face-focus' | 'text-focus' | 'scene-focus';
@@ -32,7 +38,7 @@ type VariantStrategy = {
 };
 
 export const ULTIMATE_THUMBNAIL_CHECKLIST_RULES =
-  '16:9 1280x720. Max 3 elements: one focal subject, one 1-4 word text hook, and one clean supporting object only if it is natural to the scene. Build visual hierarchy: attention first, interest second, curiosity third. If a face appears, it must be expressive with emotion and eye contact. Do not add artificial arrows, red circles, yellow dots, target rings, check/cross marks, or fake annotation overlays unless the creator explicitly asks for them. Use bold sans-serif text, black/white/yellow with outline. High contrast, bright complementary colors, blurred/darkened background, safe lower-right timestamp zone, no right-edge text, no logos, no watermark, no emojis, no clutter. Make it legible at mobile size, accurate to the video, niche-appropriate, professional, crisp high-res.';
+  '16:9 1280x720. Max 3 elements: one focal subject, one 1-4 word text hook, and one clean supporting object only if it is natural to the scene. Build visual hierarchy: attention first, interest second, curiosity third. If a face appears, it must be expressive with emotion and eye contact. Never place text over a face, eyes, mouth, hands, or the main object; reserve a clean text area in negative space. Do not add artificial arrows, red circles, yellow dots, target rings, check/cross marks, or fake annotation overlays unless the creator explicitly asks for them. Use bold sans-serif text, black/white/yellow with outline. High contrast, bright complementary colors, blurred/darkened background, safe lower-right timestamp zone, no right-edge text, no logos, no watermark, no emojis, no clutter. Make it legible at mobile size, accurate to the video, niche-appropriate, professional, crisp high-res.';
 
 const VARIANT_STRATEGIES: Record<ThumbnailPromptVariantFocus, VariantStrategy> = {
   'face-focus': {
@@ -50,9 +56,9 @@ const VARIANT_STRATEGIES: Record<ThumbnailPromptVariantFocus, VariantStrategy> =
     name: 'TEXT-FOCUS',
     hook: 'Primary click driver is a short benefit/FOMO text hook.',
     layout:
-      'Huge 1-4 word headline occupying one third of the frame; subject/product supports the promise; no extra captions.',
+      'Large 1-4 word headline in a reserved clean area occupying about one third of the frame; do not cover the face, eyes, mouth, hands, or main object.',
     subject:
-      'Show the object, scene, or person that proves the benefit. Keep it secondary to the text hierarchy.',
+      'Show the object, scene, or person that proves the benefit. Crop/reposition the subject so it supports the text without sitting underneath it.',
     background:
       'Simple masked/blurred background with depth, not flat solid color unless intentionally premium/minimal.',
     color: 'Black/white/yellow headline with heavy outline over saturated contrasting background.',
@@ -117,6 +123,12 @@ export function generateOptimizedThumbnailPrompt(input: ThumbnailInput): string 
   const videoUrl = cleanInline(input.videoUrl) || 'no URL';
   const style = cleanInline(input.style);
   const avoid = input.avoid?.map(cleanInline).filter(Boolean);
+  const viewerCuriosity = cleanInline(input.viewerCuriosity);
+  const hookRationale = cleanInline(input.hookRationale);
+  const textPlacement = cleanInline(input.textPlacement);
+  const subjectPlacement = cleanInline(input.subjectPlacement);
+  const layoutRationale = cleanInline(input.layoutRationale);
+  const doNotCoverRegions = input.doNotCoverRegions?.map(cleanInline).filter(Boolean);
   const strategy = VARIANT_STRATEGIES[input.variantFocus ?? 'face-focus'];
 
   return `
@@ -129,11 +141,17 @@ CREATIVE BRIEF
 - Click promise: ${keyMessage}
 - On-image text: "${shortText}" (exactly this idea, max 1-4 words, do not add extra text)
 - Variant: ${strategy.name}. ${strategy.hook}
+${viewerCuriosity ? `- Viewer curiosity: ${viewerCuriosity}` : ''}
+${hookRationale ? `- Why this hook fits: ${hookRationale}` : ''}
 
 LAYOUT
 - ${strategy.layout}
 - Fill the frame with the important elements; overlap or bleed edges when it makes the subject larger.
 - Keep the lower-right timestamp area and right edge free from text or key details.
+- Text placement: ${textPlacement || 'place text only in a clean negative-space area, never across the face or main object.'}
+- Subject placement: ${subjectPlacement || 'crop/recompose so the subject is large and separated from the text zone.'}
+${layoutRationale ? `- Layout rationale: ${layoutRationale}` : ''}
+${doNotCoverRegions?.length ? `- Do not cover: ${doNotCoverRegions.join(', ')}.` : '- Do not cover: face, eyes, mouth, hands, main object, or lower-right timestamp area.'}
 
 SUBJECT
 - ${strategy.subject}
@@ -148,7 +166,9 @@ COLOR / TYPE
 STRICT RULES
 - ${ULTIMATE_THUMBNAIL_CHECKLIST_RULES}
 - Keep the thumbnail accurate to the video. Create curiosity, not deceptive clickbait.
+- Do not invent fights, "versus" conflict, romantic drama, money claims, or shocking events unless the source clearly supports them.
 - Do not repeat a long video title as text. Use the short hook only.
+- If the source frame contains a person, keep the face readable and uncovered. Move the text, not the face.
 - No artificial arrows, red circles, yellow dots, target rings, fake highlights, or annotation overlays unless explicitly requested.
 - No logos, no watermarks, no emojis, no tiny text, no crowded UI screenshots, no amateur solid-color poster look.
 ${style ? `\nSTYLE DIRECTION\n- ${style}` : ''}

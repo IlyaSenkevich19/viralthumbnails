@@ -120,6 +120,11 @@ export type PipelineJobProgress = {
     selected_frame_time_sec?: number;
     selected_frame_why?: string;
     visual_frame_description?: string;
+    viewer_curiosity?: string;
+    hook_rationale?: string;
+    text_placement?: string;
+    subject_placement?: string;
+    layout_rationale?: string;
     thumbnail_text_ideas?: string[];
     frame_extraction_mode?: 'direct_url' | 'yt_dlp_stream' | 'text_context_no_video_url';
     sampled_frames?: Array<{

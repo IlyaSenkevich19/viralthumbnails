@@ -9,10 +9,10 @@ import { userContentTextThenReferenceImages } from '../../openrouter/multipart-u
 import type { OpenRouterMessage } from '../../openrouter/openrouter.types';
 
 const EDIT_HEADER =
-  'You are editing an existing 16:9 YouTube thumbnail. After this paragraph: first image is the current thumbnail; following images are template and/or face references in that order. Apply the edit instructions while preserving readability and contrast.';
+  'You are editing an existing 16:9 YouTube thumbnail. After this paragraph: first image is the current thumbnail; following images are template and/or face references in that order. Apply the edit instructions while preserving readability and contrast. Never place text over the face, eyes, mouth, hands, or main object.';
 
 const VIDEO_FRAME_EDIT_HEADER =
-  'Create a finished 16:9 YouTube thumbnail by editing the first attached image, which is a real selected frame from the source video. Preserve the real scene, person, pose, and visual truth from this first image unless a face reference explicitly asks for likeness replacement. Following images, if present, are template/style references and then face references. Do not invent artificial arrows, red circles, yellow dots, target rings, fake highlights, or annotation overlays unless explicitly requested by the creator.';
+  'Create a finished 16:9 YouTube thumbnail by editing the first attached image, which is a real selected frame from the source video. Preserve the real people, setting, and story beat, but you may crop, reframe, darken/blur background, improve lighting, separate the subject, and create clean negative space for text. Following images, if present, are template/style references and then face references. Do not invent artificial arrows, red circles, yellow dots, target rings, fake highlights, or annotation overlays unless explicitly requested by the creator. Never place text over the face, eyes, mouth, hands, or main object.';
 
 export type EditedPipelineImage = {
   index: number;
@@ -80,6 +80,7 @@ export class PipelineThumbnailEditingService {
 
   async editVideoFrameVariants(params: {
     baseFrameDataUrl: string;
+    variantBaseFrameDataUrls?: string[];
     prompts: string[];
     templateReferenceDataUrls?: string[];
     faceReferenceDataUrls?: string[];
@@ -93,18 +94,17 @@ export class PipelineThumbnailEditingService {
     const model = this.editModel();
     const templates = params.templateReferenceDataUrls ?? [];
     const faces = params.faceReferenceDataUrls ?? [];
-    const ordered = [params.baseFrameDataUrl, ...templates, ...faces];
     const timeoutMs = getOpenRouterConfig(this.config).projectGenTimeoutMs;
     const out: EditedPipelineImage[] = [];
     const total = params.prompts.length;
 
     const referencePolicy = [
       templates.length
-        ? 'Use template reference(s) only for layout energy, typography, spacing, and safe zones. Do not replace the video scene with the template content. Do not copy template annotation marks such as arrows, circles, target rings, or yellow dots.'
+        ? 'Use template reference(s) only as a layout system: text zone, subject zone, hierarchy, typography energy, spacing, and safe zones. Do not replace the video scene with the template content. Do not copy template annotation marks such as arrows, circles, target rings, or yellow dots.'
         : '',
       faces.length
         ? params.prioritizeFace
-          ? 'Use the face reference to make the main person recognizable while keeping the original video pose, lighting direction, and thumbnail composition.'
+          ? 'Face reference has priority for likeness: make the main person recognizable while keeping the source video setting and story beat believable.'
           : 'Use the face reference softly for likeness if it fits, but keep the source video person and scene believable.'
         : 'No face reference was provided: preserve the person/people from the source video frame.',
     ]
@@ -113,6 +113,8 @@ export class PipelineThumbnailEditingService {
 
     for (let i = 0; i < params.prompts.length; i++) {
       const prompt = params.prompts[i];
+      const baseFrameDataUrl = params.variantBaseFrameDataUrls?.[i] ?? params.baseFrameDataUrl;
+      const ordered = [baseFrameDataUrl, ...templates, ...faces];
       const body = `${VIDEO_FRAME_EDIT_HEADER}\n\n${referencePolicy}\n\nNegative overlay rules: no artificial red circles, no arrows, no yellow dots, no target rings, no fake annotation graphics, no fake UI markers.\n\nEdit instructions:\n${prompt.trim().slice(0, 2400)}`;
       const content: OpenRouterMessage['content'] = userContentTextThenReferenceImages(body, ordered);
       try {

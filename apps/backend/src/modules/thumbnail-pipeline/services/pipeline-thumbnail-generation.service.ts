@@ -13,7 +13,7 @@ import type { OpenRouterMessage } from '../../openrouter/openrouter.types';
 import type { ReferenceBundle } from './pipeline-prompt-builder.service';
 
 const MULTIMODAL_HEADER =
-  'Generate a single 16:9 YouTube thumbnail image. After this paragraph, reference images appear in order: selected video frame if present, then template reference(s), then face reference if present.';
+  'Generate a single 16:9 YouTube thumbnail image. Reference images appear in priority order: selected video frame if present (source truth), then template reference(s) (layout only), then face reference if present (likeness). Never place text over the face, eyes, mouth, hands, or main object.';
 
 export type GeneratedPipelineImage = {
   index: number;

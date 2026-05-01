@@ -50,6 +50,12 @@ export type VideoUnderstandingResult = {
     selected?: boolean;
     source?: 'direct_url' | 'yt_dlp_stream';
   }>;
+  sampledFramePreviews?: Array<{
+    frameIndex: number;
+    timeSec: number;
+    dataUrl: string;
+    source?: 'direct_url' | 'yt_dlp_stream';
+  }>;
   selectedFramePreviewDataUrl?: string;
 };
 
@@ -116,6 +122,7 @@ export class PipelineVideoUnderstandingService {
           modelUsed: model,
           frameExtractionMode: this.resolveFrameExtractionMode(vlParams),
           sampledFrames: this.buildSampledFrameSummary(vlParams, analysis.selectedFrameIndex),
+          sampledFramePreviews: this.buildSampledFramePreviews(vlParams),
           selectedFramePreviewDataUrl,
         };
       } catch (e) {
@@ -140,6 +147,13 @@ export class PipelineVideoUnderstandingService {
         'Strong before/after or conflict cue',
       ],
       emotion: 'Curiosity and urgency',
+      viewerCuriosity: 'What is the most important reveal or result behind this topic?',
+      primaryHookText: 'WATCH THIS',
+      hookRationale: 'The prompt does not include video evidence, so the hook should stay broad and curiosity-led.',
+      textPlacement: 'Place text in the clearest empty third of the frame, away from any face or main object.',
+      subjectPlacement: 'Place the main subject on the opposite third with a tight crop and readable silhouette.',
+      layoutRationale: 'Use a simple two-zone layout so the viewer reads the subject and hook instantly on mobile.',
+      doNotCoverRegions: ['face', 'eyes', 'mouth', 'main object', 'lower-right timestamp area'],
       bestThumbnailMoment: {
         startSec: 0,
         label: 'Text-driven key concept',
@@ -285,6 +299,24 @@ ${frameList}`
       frameIndex: frame.frameIndex,
       timeSec: frame.timeSec,
       selected: selectedFrameIndex === frame.frameIndex || undefined,
+      source: frame.source,
+    }));
+  }
+
+  private buildSampledFramePreviews(
+    params: VideoUnderstandingParams,
+  ): Array<{
+    frameIndex: number;
+    timeSec: number;
+    dataUrl: string;
+    source?: 'direct_url' | 'yt_dlp_stream';
+  }> | undefined {
+    const frames = params.sampledFrameCandidates;
+    if (!frames?.length) return undefined;
+    return frames.map((frame) => ({
+      frameIndex: frame.frameIndex,
+      timeSec: frame.timeSec,
+      dataUrl: frame.dataUrl,
       source: frame.source,
     }));
   }

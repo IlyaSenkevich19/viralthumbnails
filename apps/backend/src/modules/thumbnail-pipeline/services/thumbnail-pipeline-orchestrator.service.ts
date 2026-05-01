@@ -56,7 +56,7 @@ export class ThumbnailPipelineOrchestratorService {
         ? await this.youtubeTranscript.tryFetchCompactTranscript(input.videoUrl.trim(), 'pipeline-vl')
         : null;
 
-      const { analysis, modelUsed, frameExtractionMode, sampledFrames, selectedFramePreviewDataUrl } =
+      const { analysis, modelUsed, frameExtractionMode, sampledFrames, sampledFramePreviews, selectedFramePreviewDataUrl } =
         await this.videoUnderstanding.analyze({
         userPrompt: refined.text,
         style: input.style,
@@ -81,6 +81,11 @@ export class ThumbnailPipelineOrchestratorService {
           selected_frame_time_sec: selectedFrame?.timeSec,
           selected_frame_why: analysis.selectedFrameWhy ?? analysis.bestThumbnailMoment.why,
           visual_frame_description: analysis.visualFrameDescription,
+          viewer_curiosity: analysis.viewerCuriosity,
+          hook_rationale: analysis.hookRationale,
+          text_placement: analysis.textPlacement,
+          subject_placement: analysis.subjectPlacement,
+          layout_rationale: analysis.layoutRationale,
           thumbnail_text_ideas: analysis.thumbnailTextIdeas.slice(0, 3),
           frame_extraction_mode: frameExtractionMode,
           sampled_frames: sampledFrames?.map((frame) => ({
@@ -98,6 +103,7 @@ export class ThumbnailPipelineOrchestratorService {
         analysis,
         userPrompt: refined.text,
         style: input.style,
+        videoUrl: input.videoUrl,
         count,
       });
 
@@ -117,7 +123,7 @@ export class ThumbnailPipelineOrchestratorService {
 
       const refLine = this.promptBuilder.referenceInstructionLine(refBundle);
       const imagePromptsUsed = refLine
-        ? basePrompts.map((p) => `${p} ${refLine}`.slice(0, 2800))
+        ? basePrompts.map((p) => this.promptBuilder.attachReferenceInstruction(p, refLine))
         : basePrompts;
 
       const modelsUsed: ThumbnailPipelineRunResult['modelsUsed'] = {
@@ -138,9 +144,21 @@ export class ThumbnailPipelineOrchestratorService {
         });
         const imageTier = input.imageModelTier ?? 'default';
         if (selectedFramePreviewDataUrl) {
+          const framePreviewByIndex = new Map(
+            (sampledFramePreviews ?? []).map((frame) => [frame.frameIndex, frame.dataUrl] as const),
+          );
+          const variantBaseFrameDataUrls = imagePromptsUsed.map((_, index) => {
+            const moments = analysis.thumbnailMoments ?? [];
+            const moment = moments.length ? moments[index % moments.length] : undefined;
+            return (
+              (moment?.frameIndex ? framePreviewByIndex.get(moment.frameIndex) : undefined) ??
+              selectedFramePreviewDataUrl
+            );
+          });
           modelsUsed.imageEdit = this.thumbnailEdit.editModel();
           variants = await this.thumbnailEdit.editVideoFrameVariants({
             baseFrameDataUrl: selectedFramePreviewDataUrl,
+            variantBaseFrameDataUrls,
             prompts: imagePromptsUsed,
             templateReferenceDataUrls: templateUrls,
             faceReferenceDataUrls: faceUrls,

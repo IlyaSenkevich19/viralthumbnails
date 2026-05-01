@@ -30,6 +30,7 @@ export const ApiRoutes = {
   thumbnails: {
     pipelineRun: '/thumbnails/pipeline/run',
     pipelineRunVideo: '/thumbnails/pipeline/run-video',
+    prepareVideoSource: '/thumbnails/pipeline/prepare-video-source',
     pipelineJobCreate: '/thumbnails/pipeline/jobs',
     pipelineJobOne: (jobId: string) => `/thumbnails/pipeline/jobs/${jobId}`,
     parseUrl: '/thumbnails/parse-url',

@@ -90,6 +90,13 @@ export type PipelineJobSubmitResponse = {
   created_at: string;
 };
 
+export type PreparedVideoSourceResponse = {
+  video_url: string;
+  video_temp_storage_path?: string;
+  file_name: string | null;
+  video_context?: PipelineVideoContext;
+};
+
 export type PipelineJobProgress = {
   stage:
     | 'queued'
@@ -235,6 +242,15 @@ export async function runThumbnailPipelineVideo(
   if (prioritize_face === true) form.append('prioritize_face', 'true');
   if (image_model_tier) form.append('image_model_tier', image_model_tier);
   return fetchMultipart<PipelineJobSubmitResponse>(ApiRoutes.thumbnails.pipelineRunVideo, token, form);
+}
+
+export async function prepareThumbnailPipelineVideoSource(
+  token: string | null,
+  file: File,
+): Promise<PreparedVideoSourceResponse> {
+  const form = new FormData();
+  form.append('file', file);
+  return fetchMultipart<PreparedVideoSourceResponse>(ApiRoutes.thumbnails.prepareVideoSource, token, form);
 }
 
 export async function parseVideoUrl(token: string | null, rawUrl: string): Promise<ParseVideoUrlResponse> {

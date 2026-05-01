@@ -7,10 +7,8 @@ import { projectVariantsPath } from '@/config/routes';
 import { isLikelyYoutubeUrl } from '@/lib/format';
 import { projectsApi, thumbnailsApi } from '@/lib/api';
 import {
-  useGenerationCredits,
   usePipelineJobSurface,
 } from '@/lib/hooks';
-import { assertSufficientCredits } from '@/lib/paywall-notify';
 import type { PipelineVideoResponse } from '@/lib/types/pipeline-video';
 import { VIDEO_ANALYSIS_MAX_SECONDS } from '@/lib/video/clip-limits';
 import { maybeTrimVideoForThumbnails, TrimVideoError } from '@/lib/video/trim-video-for-thumbnails';
@@ -18,17 +16,11 @@ import { toast } from 'sonner';
 import {
   DEFAULT_VIDEO_THUMBNAIL_COUNT,
   DASHBOARD_CREATE_HUB_MODE,
-  DASHBOARD_RUN_RECOVERY_KEY,
-  DASHBOARD_VIDEO_RECOVERY_KEY,
   type HubMode,
   type YoutubeMetaPreview,
-  creditsRequiredForMode,
-  buildYoutubeUserPrompt,
-  normalizeVideoVariantCount,
   titleFromFirstLine,
   titleFromVideoFileName,
 } from '../dashboard-create-hub.utils';
-import { writePipelineRecoveryJob } from '@/lib/pipeline/pipeline-recovery-storage';
 
 export function useDashboardCreateHub() {
   const router = useRouter();
@@ -48,7 +40,6 @@ export function useDashboardCreateHub() {
   const [urlError, setUrlError] = useState('');
   const [describeError, setDescribeError] = useState('');
   const [youtubeMetaPreview, setYoutubeMetaPreview] = useState<YoutubeMetaPreview | null>(null);
-  const { data: credits } = useGenerationCredits();
 
   const busyProject =
     mode === DASHBOARD_CREATE_HUB_MODE.prompt || mode === DASHBOARD_CREATE_HUB_MODE.youtube
@@ -56,11 +47,7 @@ export function useDashboardCreateHub() {
       : false;
   const busyVideo = mode === DASHBOARD_CREATE_HUB_MODE.video && (creatingProject || videoPreparing);
   const primaryBusy = busyProject || busyVideo || creatingProject || pipelineSurface.active;
-  const requiredCredits = creditsRequiredForMode({ mode, videoCount });
-  const cannotAffordGenerate =
-    (mode === DASHBOARD_CREATE_HUB_MODE.video || mode === DASHBOARD_CREATE_HUB_MODE.youtube) &&
-    credits?.balance != null &&
-    credits.balance < requiredCredits;
+  const cannotAffordGenerate = false;
   const recoveringPreviousGeneration = pipelineSurface.label === 'Resuming';
 
   const clearModeErrors = useCallback(() => {
@@ -105,16 +92,7 @@ export function useDashboardCreateHub() {
         return;
       }
 
-      const n = normalizeVideoVariantCount(videoCount);
-      if (
-        !assertSufficientCredits({
-          balance: credits?.balance,
-          cost: creditsRequiredForMode({ mode: DASHBOARD_CREATE_HUB_MODE.video, videoCount }),
-        })
-      )
-        return;
-
-      let fileToSend: File | undefined;
+      let fileToSend: File = videoFile;
       if (videoFile) {
         setVideoPreparing(true);
         try {
@@ -140,28 +118,20 @@ export function useDashboardCreateHub() {
       setCreatingProject(true);
       let createdProjectId: string | null = null;
       try {
+        const prepared = await thumbnailsApi.prepareThumbnailPipelineVideoSource(accessToken, fileToSend);
         const project = await projectsApi.createProject(accessToken, {
           title: titleFromVideoFileName(videoFile.name),
           source_type: 'video',
           source_data: {
             file_name: videoFile?.name,
+            video_url: prepared.video_url,
+            video_temp_storage_path: prepared.video_temp_storage_path,
+            video_context: prepared.video_context,
           },
         });
         createdProjectId = project.id;
         router.push(projectVariantsPath(project.id));
-        const created = await thumbnailsApi.runThumbnailPipelineVideo(accessToken, {
-          file: fileToSend,
-          count: n,
-          project_id: project.id,
-        });
-        writePipelineRecoveryJob(DASHBOARD_VIDEO_RECOVERY_KEY, created.job_id);
-        await projectsApi.updateProject(accessToken, project.id, {
-          source_data: {
-            ...(project.source_data ?? {}),
-            pipeline_job_id: created.job_id,
-          },
-        });
-        toast.success('Video is being analyzed. Follow progress in the project page.');
+        toast.success('Project created. Choose settings, then generate thumbnails.');
       } catch (err) {
         if (createdProjectId) {
           try {
@@ -170,7 +140,7 @@ export function useDashboardCreateHub() {
             // keep original error surfaced below
           }
         }
-        toast.error(err instanceof Error ? err.message : 'Could not start video analysis');
+        toast.error(err instanceof Error ? err.message : 'Could not prepare video project');
       } finally {
         setCreatingProject(false);
       }
@@ -201,14 +171,6 @@ export function useDashboardCreateHub() {
         // Non-blocking fallback: generation can continue even if metadata enrichment failed.
       }
 
-      if (
-        !assertSufficientCredits({
-          balance: credits?.balance,
-          cost: creditsRequiredForMode({ mode: DASHBOARD_CREATE_HUB_MODE.youtube, videoCount }),
-        })
-      )
-        return;
-
       setCreatingProject(true);
       let createdProjectId: string | null = null;
       try {
@@ -235,27 +197,7 @@ export function useDashboardCreateHub() {
         });
         createdProjectId = project.id;
         router.push(projectVariantsPath(project.id));
-        const created = await thumbnailsApi.createThumbnailPipelineJob(accessToken, {
-          user_prompt: buildYoutubeUserPrompt({
-            finalUrl,
-            title: videoMeta?.title ? String(videoMeta.title) : undefined,
-            author: videoMeta?.author ? String(videoMeta.author) : undefined,
-          }),
-          style: 'YouTube URL context',
-          video_url: finalUrl,
-          variant_count: DEFAULT_VIDEO_THUMBNAIL_COUNT,
-          generate_images: true,
-          persist_project: true,
-          project_id: project.id,
-        });
-        writePipelineRecoveryJob(DASHBOARD_RUN_RECOVERY_KEY, created.job_id);
-        await projectsApi.updateProject(accessToken, project.id, {
-          source_data: {
-            ...(project.source_data ?? {}),
-            pipeline_job_id: created.job_id,
-          },
-        });
-        toast.success('YouTube video analysis started. Progress is shown in project page.');
+        toast.success('Project created. Choose settings, then generate thumbnails.');
       } catch (err) {
         if (createdProjectId) {
           try {
@@ -264,7 +206,7 @@ export function useDashboardCreateHub() {
             // keep original error surfaced below
           }
         }
-        toast.error(err instanceof Error ? err.message : 'Could not start YouTube analysis');
+        toast.error(err instanceof Error ? err.message : 'Could not create YouTube project');
       } finally {
         setCreatingProject(false);
       }
@@ -295,8 +237,6 @@ export function useDashboardCreateHub() {
     accessToken,
     mode,
     videoFile,
-    videoCount,
-    credits?.balance,
     creative,
     youtubeUrl,
     clearModeErrors,

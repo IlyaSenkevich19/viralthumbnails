@@ -40,7 +40,7 @@ export const CreateHubFooter = memo(function CreateHubFooter({
               ? mode === DASHBOARD_CREATE_HUB_MODE.video
                 ? 'Working…'
                 : 'Creating…'
-              : 'Generate thumbnails'}
+              : 'Continue to project'}
         </span>
       </Button>
     </div>

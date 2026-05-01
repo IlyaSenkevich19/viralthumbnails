@@ -28,6 +28,7 @@ type ProjectVariantsGeneratePanelProps = {
   onPrioritizeFaceChange: (value: boolean) => void;
   templateFaceFilter: TemplateFaceFilter;
   generateCount: number;
+  creditCost: number;
   onGenerateCountChange: (count: number) => void;
   onGenerate: () => void;
   generatePending: boolean;
@@ -44,6 +45,7 @@ export function ProjectVariantsGeneratePanel({
   onPrioritizeFaceChange,
   templateFaceFilter,
   generateCount,
+  creditCost,
   onGenerateCountChange,
   onGenerate,
   generatePending,
@@ -73,7 +75,7 @@ export function ProjectVariantsGeneratePanel({
             <p className="text-xs text-muted-foreground">Choose how many distinct directions to generate.</p>
           </div>
           <p className="rounded-full border border-primary/25 bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
-            {generateCount} credit{generateCount === 1 ? '' : 's'}
+            {creditCost} credit{creditCost === 1 ? '' : 's'}
           </p>
         </div>
         <Select
@@ -157,7 +159,7 @@ export function ProjectVariantsGeneratePanel({
         >
           {generateLabel}
           <span className="ml-auto text-xs font-normal opacity-90">
-            {generateCount} credit{generateCount === 1 ? '' : 's'}
+            {creditCost} credit{creditCost === 1 ? '' : 's'}
           </span>
         </Button>
         {pipelineBusy ? (

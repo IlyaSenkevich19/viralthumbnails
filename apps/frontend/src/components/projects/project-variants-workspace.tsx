@@ -158,13 +158,14 @@ export function ProjectVariantsWorkspace({
       ),
     [generateCount],
   );
+  const generationCreditCost = clampedGenerateCount + 1;
 
   const handleGenerate = useCallback(() => {
     if (!accessToken) {
       toast.error('Not signed in');
       return;
     }
-    if (!assertSufficientCredits({ balance: credits?.balance, cost: clampedGenerateCount })) return;
+    if (!assertSufficientCredits({ balance: credits?.balance, cost: generationCreditCost })) return;
     const faceInThumbnail =
       templateFaceFilter === TEMPLATE_FACE_FILTER.withFace
         ? 'with_face'
@@ -183,6 +184,7 @@ export function ProjectVariantsWorkspace({
     credits?.balance,
     generate,
     clampedGenerateCount,
+    generationCreditCost,
     prioritizeFace,
     selectedAvatarId,
     selectedTemplateId,
@@ -205,7 +207,7 @@ export function ProjectVariantsWorkspace({
   const pipelineFailed = pipelineJob?.status === 'failed';
 
   const canGenerate = Boolean(
-    accessToken && (credits == null || credits.balance >= clampedGenerateCount) && !pipelineBusy,
+    accessToken && (credits == null || credits.balance >= generationCreditCost) && !pipelineBusy,
   );
 
   return (
@@ -298,6 +300,7 @@ export function ProjectVariantsWorkspace({
                 onPrioritizeFaceChange={setPrioritizeFace}
                 templateFaceFilter={templateFaceFilter}
                 generateCount={clampedGenerateCount}
+                creditCost={generationCreditCost}
                 onGenerateCountChange={(n) =>
                   setGenerateCount(
                     Math.min(PROJECT_GENERATE_COUNT_MAX, Math.max(PROJECT_GENERATE_COUNT_MIN, Math.floor(n))),

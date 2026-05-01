@@ -11,6 +11,7 @@ import { SupabaseGuard } from '../auth/guards/supabase.guard';
 import { VideoIngestionService } from '../video-thumbnails/services/video-ingestion.service';
 import { VideoPipelineDurationGateService } from '../video-thumbnails/services/video-pipeline-duration-gate.service';
 import type { UploadedVideoFile } from '../video-thumbnails/types/upload.types';
+import { BUCKET_PROJECT_THUMBNAILS, StorageService } from '../storage/storage.service';
 import { ThumbnailPipelineRunDto } from './dto/thumbnail-pipeline-run.dto';
 import { ThumbnailPipelineRunVideoDto } from './dto/thumbnail-pipeline-run-video.dto';
 import { ThumbnailPipelineJobsService } from './services/thumbnail-pipeline-jobs.service';
@@ -29,6 +30,7 @@ export class ThumbnailPipelineController {
     private readonly jobs: ThumbnailPipelineJobsService,
     private readonly ingestion: VideoIngestionService,
     private readonly videoDurationGate: VideoPipelineDurationGateService,
+    private readonly storage: StorageService,
   ) {}
 
   @Post('pipeline/run')
@@ -150,6 +152,50 @@ export class ThumbnailPipelineController {
       status: job.status,
       created_at: job.created_at,
     };
+  }
+
+  @Post('pipeline/prepare-video-source')
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+      },
+      required: ['file'],
+    },
+  })
+  @UseGuards(UserIdThrottlerGuard)
+  @Throttle({ default: { ...THROTTLE_PIPELINE_RUN } })
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: VIDEO_UPLOAD_LIMIT_BYTES },
+    }),
+  )
+  async prepareVideoSource(@CurrentUser() userId: string, @UploadedFile() file?: UploadedVideoFile) {
+    const ingestRunId = randomUUID();
+    const resolved = await this.ingestion.resolve({
+      userId,
+      runId: ingestRunId,
+      file,
+    });
+    try {
+      const videoContext = await this.videoDurationGate.resolveContextAndEnforceForPipeline({
+        upload: file?.buffer?.length ? file : undefined,
+        logContext: 'pipeline/prepare-video-source',
+      });
+      return {
+        video_url: resolved.url,
+        video_temp_storage_path: resolved.tempStoragePath,
+        file_name: file?.originalname ?? null,
+        video_context: videoContext,
+      };
+    } catch (e) {
+      if (resolved.tempStoragePath) {
+        await this.storage.removeObjectsIfPresent(BUCKET_PROJECT_THUMBNAILS, [resolved.tempStoragePath]);
+      }
+      throw e;
+    }
   }
 
   private async enqueuePipelineRunJob(userId: string, body: ThumbnailPipelineRunDto) {

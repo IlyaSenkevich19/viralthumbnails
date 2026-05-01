@@ -9,8 +9,6 @@ import { queryKeys } from '@/lib/query-keys';
 import type { ProjectRow, ProjectSourceType, ProjectWithVariants } from '@/lib/types/project';
 import { toast } from 'sonner';
 import { DEFAULT_NEW_PROJECT_VARIANT_COUNT } from '@/config/credits';
-import { ApiError, isApiError } from '@/lib/api/api-error';
-import { INITIAL_GENERATION_ALL_FAILED } from '@/lib/api/project-errors';
 import { handleBillingMutationError } from '@/lib/paywall-notify';
 
 export const createProjectAndGenerateMutationKey = ['projects', 'create-and-generate'] as const;
@@ -67,7 +65,6 @@ export function useCreateProjectAndGenerateMutation() {
       if (!userId) throw new Error('Not signed in');
       const { generate, ...body } = input;
       const project = await projectsApi.createProject(accessToken, body);
-      let removedAfterAllFailed = false;
       try {
         const gen = await projectsApi.generateThumbnails(accessToken, project.id, {
           count: generate?.count ?? DEFAULT_NEW_PROJECT_VARIANT_COUNT,
@@ -75,33 +72,12 @@ export function useCreateProjectAndGenerateMutation() {
           avatar_id: generate?.avatar_id,
           prioritize_face: generate?.prioritize_face,
         });
-        const ok = gen.results.filter((r) => r.status === 'done').length;
-        if (ok === 0) {
-          try {
-            await projectsApi.deleteProject(accessToken, project.id);
-          } catch {
-            /* server may have removed draft already */
-          }
-          removedAfterAllFailed = true;
-          const firstFail = gen.results.find((r) => r.status === 'failed');
-          const row = firstFail as { errorMessage?: string; error_message?: string } | undefined;
-          const detail =
-            row?.errorMessage?.trim() ||
-            row?.error_message?.trim() ||
-            'All thumbnail generations failed. Credits were refunded.';
-          throw new ApiError(detail, 400, INITIAL_GENERATION_ALL_FAILED);
-        }
         return { project, gen };
       } catch (err) {
-        if (isApiError(err) && err.code === INITIAL_GENERATION_ALL_FAILED) {
-          throw err;
-        }
-        if (!removedAfterAllFailed) {
-          try {
-            await projectsApi.deleteProject(accessToken, project.id);
-          } catch {
-            /* ignore */
-          }
+        try {
+          await projectsApi.deleteProject(accessToken, project.id);
+        } catch {
+          /* ignore */
         }
         throw err;
       }
@@ -138,11 +114,6 @@ export function useCreateProjectAndGenerateMutation() {
         }
       }
       if (handleBillingMutationError(err)) {
-        void queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
-        return;
-      }
-      if (isApiError(err) && err.code === INITIAL_GENERATION_ALL_FAILED) {
-        toast.error('Generation failed', { description: err.message });
         void queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
         return;
       }
@@ -238,24 +209,25 @@ export function useGenerateThumbnailsMutation(projectId: string) {
       return projectsApi.generateThumbnails(accessToken, projectId, opts);
     },
     onSuccess: (res) => {
-      const ok = res.results.filter((r) => r.status === 'done').length;
-      const total = res.results.length;
-      if (ok === 0) {
-        toast.error('Generation failed for all variants. Check API keys and model access.');
-      } else if (ok < total) {
-        toast.warning(`${ok} of ${total} thumbnails ready; some failed.`);
-      } else {
-        toast.success('Thumbnails generated');
+      if (userId) {
+        const detailKey = queryKeys.projects.detail(userId, projectId);
+        queryClient.setQueryData<ProjectWithVariants | undefined>(detailKey, (current) => {
+          if (!current) return current;
+          return {
+            ...current,
+            status: 'generating',
+            source_data: {
+              ...(current.source_data ?? {}),
+              pipeline_job_id: res.job_id,
+            },
+          };
+        });
       }
+      toast.success('Generation started');
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
     },
     onError: (err) => {
       if (handleBillingMutationError(err)) return;
-      if (isApiError(err) && err.code === INITIAL_GENERATION_ALL_FAILED) {
-        toast.error('Generation failed', { description: err.message });
-        void queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
-        return;
-      }
       toast.error(err instanceof Error ? err.message : 'Generation failed');
     },
     onSettled: () => {

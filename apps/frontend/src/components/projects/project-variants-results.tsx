@@ -39,17 +39,6 @@ export function ProjectVariantsResults({
 }: ProjectVariantsResultsProps) {
   return (
     <section className="min-w-0 flex-1 space-y-4">
-      <div>
-        <h2 className="text-xl font-semibold tracking-tight text-foreground">
-          Generated thumbnails ({variants.length})
-        </h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {variants.length > 0
-            ? 'Select a thumbnail below to preview. Open in a new tab or download when ready.'
-            : 'Run generation from the left. New variants will show up here.'}
-        </p>
-      </div>
-
       {variants.length === 0 ? (
         pipelineJob ? (
           <ProjectVariantsPipelineProgress
@@ -138,11 +127,7 @@ export function ProjectVariantsResults({
             </div>
           </div>
 
-          <div className="space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">All variants</p>
-              <p className="text-xs text-muted-foreground">{variants.length} generated</p>
-            </div>
+          <div>
             <div className="flex gap-3 overflow-x-auto pb-1">
               {variants.map((v, i) => (
                 <VariantStripThumb

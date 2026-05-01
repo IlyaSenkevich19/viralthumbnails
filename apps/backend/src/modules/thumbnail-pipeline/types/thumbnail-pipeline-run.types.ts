@@ -12,7 +12,9 @@ export type ThumbnailPipelineRunInput = {
   /** Phase 1+: duration probe for bounded frame sampling (Phase 2 VL input). */
   videoContext?: PipelineVideoContext;
   templateReferenceDataUrls?: string[];
+  templateId?: string;
   faceReferenceDataUrls?: string[];
+  avatarId?: string;
   variantCount?: number;
   /** When false, only structured analysis is returned (no image API calls). */
   generateImages?: boolean;

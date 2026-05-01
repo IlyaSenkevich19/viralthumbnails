@@ -1,5 +1,5 @@
 import {
-  BadRequestException,
+  ConflictException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -9,17 +9,20 @@ import {
   BUCKET_PROJECT_THUMBNAILS,
   StorageService,
 } from '../storage/storage.service';
-import { ProjectGenerationService } from './project-generation.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { inferProjectTitle } from './infer-project-title';
 import { UpdateProjectDto } from './dto/update-project.dto';
+import { ThumbnailPipelineJobsService } from '../thumbnail-pipeline/services/thumbnail-pipeline-jobs.service';
+import { ThumbnailPipelineRunDto } from '../thumbnail-pipeline/dto/thumbnail-pipeline-run.dto';
+import { VideoPipelineDurationGateService } from '../video-thumbnails/services/video-pipeline-duration-gate.service';
 
 @Injectable()
 export class ProjectsService {
   constructor(
     private readonly supabase: SupabaseService,
     private readonly storage: StorageService,
-    private readonly projectGeneration: ProjectGenerationService,
+    private readonly pipelineJobs: ThumbnailPipelineJobsService,
+    private readonly videoDurationGate: VideoPipelineDurationGateService,
   ) {}
 
   async create(userId: string, dto: CreateProjectDto) {
@@ -131,6 +134,9 @@ export class ProjectsService {
     const coverPath = (project as { cover_thumbnail_storage_path?: string | null })
       .cover_thumbnail_storage_path;
     if (typeof coverPath === 'string' && coverPath.length > 0) paths.push(coverPath);
+    const sourceData = (project as { source_data?: Record<string, unknown> | null }).source_data ?? {};
+    const videoTempPath = sourceData.video_temp_storage_path;
+    if (typeof videoTempPath === 'string' && videoTempPath.length > 0) paths.push(videoTempPath);
     for (const row of variants ?? []) {
       const p = (row as { generated_image_storage_path?: string | null })
         .generated_image_storage_path;
@@ -225,42 +231,159 @@ export class ProjectsService {
     },
   ) {
     const project = await this.getByIdForUser(projectId, userId);
-    const wasDraft = (project as { status?: string }).status === 'draft';
-    let removedAfterAllFailed = false;
-
-    try {
-      const result = await this.projectGeneration.generateThumbnailVariants(
-        project as Record<string, unknown>,
-        projectId,
-        userId,
-        templateId,
-        count,
-        avatarId,
-        prioritizeFace,
-        opts?.faceInThumbnail,
-        opts?.imageModelTier,
-      );
-      const done = result.results.filter((r) => r.status === 'done').length;
-      if (wasDraft && done === 0) {
-        await this.deleteProject(projectId, userId);
-        removedAfterAllFailed = true;
-        throw new BadRequestException({
-          code: 'INITIAL_GENERATION_ALL_FAILED',
-          message:
-            'No thumbnails could be generated. Credits were refunded — try a different prompt or template.',
-        });
-      }
-      return result;
-    } catch (err) {
-      if (wasDraft && !removedAfterAllFailed) {
-        try {
-          await this.deleteProject(projectId, userId);
-        } catch {
-          /* best-effort cleanup for orphan draft after hard failure */
-        }
-      }
-      throw err;
+    const activeJob = await this.pipelineJobs.findActiveForUser(userId);
+    if (activeJob) {
+      throw new ConflictException({
+        code: 'PIPELINE_JOB_ALREADY_ACTIVE',
+        message: 'A pipeline generation is already in progress. Please wait until it finishes.',
+      });
     }
+
+    const faceInThumbnail = opts?.faceInThumbnail ?? 'default';
+    const avatarForPipeline = faceInThumbnail === 'faceless' ? undefined : avatarId?.trim() || undefined;
+    const effectivePrioritizeFace = Boolean(avatarForPipeline) || Boolean(prioritizeFace);
+    const body = await this.buildPipelineBodyForProject({
+      project: project as Record<string, unknown>,
+      projectId,
+      templateId,
+      avatarId: avatarForPipeline,
+      prioritizeFace: effectivePrioritizeFace,
+      count,
+      imageModelTier: opts?.imageModelTier,
+      faceInThumbnail,
+    });
+    const videoContext = body.video_url?.trim()
+      ? await this.videoDurationGate.resolveContextAndEnforceForPipeline({
+          videoUrl: body.video_url.trim(),
+          logContext: 'projects/generate',
+        })
+      : undefined;
+
+    const job = await this.pipelineJobs.enqueue({
+      userId,
+      payload: {
+        source: 'run',
+        body,
+        videoContext,
+        projectId,
+      },
+    });
+    await this.pipelineJobs.updateProjectPipelineState({
+      userId,
+      projectId,
+      status: 'generating',
+      pipelineJobId: job.id,
+      progress: { stage: 'queued', label: 'Queued' },
+      errorMessage: null,
+      sourceDataPatch: {
+        last_template_id: templateId ?? null,
+        last_avatar_id: avatarForPipeline ?? null,
+        last_prioritize_face: effectivePrioritizeFace,
+        last_variant_count: body.variant_count,
+        last_face_in_thumbnail: faceInThumbnail,
+      },
+    });
+
+    return {
+      job_id: job.id,
+      status: job.status,
+      created_at: job.created_at,
+    };
+  }
+
+  private async buildPipelineBodyForProject(params: {
+    project: Record<string, unknown>;
+    projectId: string;
+    templateId?: string;
+    avatarId?: string;
+    prioritizeFace: boolean;
+    count: number;
+    imageModelTier?: 'default' | 'premium';
+    faceInThumbnail: 'default' | 'with_face' | 'faceless';
+  }): Promise<ThumbnailPipelineRunDto> {
+    const sourceData = (params.project.source_data as Record<string, unknown> | null) ?? {};
+    const sourceType = typeof params.project.source_type === 'string' ? params.project.source_type : 'text';
+    const title = String(params.project.title ?? 'Untitled project').trim() || 'Untitled project';
+    const videoUrl = await this.resolveProjectVideoUrl(sourceData);
+    const prompt = this.buildProjectPipelinePrompt({ title, sourceType, sourceData });
+    const styleParts = [
+      sourceType === 'youtube_url'
+        ? 'YouTube URL context'
+        : sourceType === 'video'
+          ? 'Uploaded video context'
+          : 'Prompt-only thumbnail concept',
+      params.faceInThumbnail === 'faceless'
+        ? 'Faceless thumbnail: do not use human portraits or recognizable template faces.'
+        : params.avatarId
+          ? 'Selected face reference is the likeness source for the main person. Do not copy the person from the template.'
+          : params.faceInThumbnail === 'with_face'
+            ? 'Include a clear on-camera human face when the source supports it.'
+            : '',
+    ].filter(Boolean);
+
+    return {
+      user_prompt: prompt,
+      style: styleParts.join(' '),
+      video_url: videoUrl,
+      template_id: params.templateId,
+      avatar_id: params.avatarId,
+      variant_count: Math.min(12, Math.max(1, Math.floor(params.count) || 1)),
+      generate_images: true,
+      image_model_tier: params.imageModelTier ?? 'default',
+      prioritize_face: params.prioritizeFace,
+      persist_project: true,
+      project_id: params.projectId,
+    };
+  }
+
+  private async resolveProjectVideoUrl(sourceData: Record<string, unknown>): Promise<string | undefined> {
+    const tempPath = sourceData.video_temp_storage_path;
+    if (typeof tempPath === 'string' && tempPath.trim().length > 0) {
+      return this.storage.createSignedUrl(BUCKET_PROJECT_THUMBNAILS, tempPath.trim());
+    }
+    const candidates = [sourceData.video_url, sourceData.url];
+    for (const raw of candidates) {
+      if (typeof raw === 'string' && raw.trim().length > 0) return raw.trim();
+    }
+    return undefined;
+  }
+
+  private buildProjectPipelinePrompt(params: {
+    title: string;
+    sourceType: string;
+    sourceData: Record<string, unknown>;
+  }): string {
+    const parts = [
+      `Generate high-CTR YouTube thumbnails for project: ${params.title}.`,
+      `Source type: ${params.sourceType}.`,
+    ];
+    const videoMeta = params.sourceData.video_meta as Record<string, unknown> | undefined;
+    const sourceTitle = this.readFirstString(params.sourceData.title, videoMeta?.title);
+    const author = this.readFirstString(params.sourceData.author, videoMeta?.author);
+    const text = this.readFirstString(
+      params.sourceData.text,
+      params.sourceData.prompt,
+      params.sourceData.script,
+      params.sourceData.user_prompt,
+    );
+    const fileName = this.readFirstString(params.sourceData.file_name);
+    if (sourceTitle) parts.push(`Video title: ${sourceTitle}.`);
+    if (author) parts.push(`Channel/author: ${author}.`);
+    if (fileName) parts.push(`Uploaded file: ${fileName}.`);
+    if (text) parts.push(`Creator prompt/context: ${text.slice(0, 1200)}.`);
+    parts.push(
+      'Build a truthful YouTube thumbnail concept. Use the source video or prompt as the story, template only as layout, and selected face only as likeness reference when provided.',
+    );
+    return parts.join(' ').slice(0, 8000);
+  }
+
+  private readFirstString(...values: unknown[]): string | undefined {
+    for (const value of values) {
+      if (typeof value !== 'string') continue;
+      const trimmed = value.trim();
+      if (trimmed.length > 0) return trimmed;
+    }
+    return undefined;
   }
 
   private signProjectRow<T extends Record<string, unknown>>(row: T): Promise<T> {

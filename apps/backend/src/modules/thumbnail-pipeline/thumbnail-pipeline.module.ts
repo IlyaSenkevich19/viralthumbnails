@@ -33,6 +33,7 @@ import { ThumbnailPipelineOrchestratorService } from './services/thumbnail-pipel
   ],
   exports: [
     ThumbnailPipelineOrchestratorService,
+    ThumbnailPipelineJobsService,
     PipelineProjectPersistenceService,
     PipelineVideoUnderstandingService,
     PipelinePromptBuilderService,

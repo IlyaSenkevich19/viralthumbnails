@@ -47,6 +47,7 @@ export interface GenerateThumbnailResultDto {
 }
 
 export interface GenerateThumbnailsResponse {
-  variant_ids: string[];
-  results: GenerateThumbnailResultDto[];
+  job_id: string;
+  status: 'queued' | 'running' | 'succeeded' | 'failed';
+  created_at: string;
 }

@@ -8,6 +8,8 @@ import { SupabaseModule } from '../supabase/supabase.module';
 import { ProjectThumbnailGenerationModule } from '../project-thumbnail-generation/project-thumbnail-generation.module';
 import { BillingModule } from '../billing/billing.module';
 import { StorageModule } from '../storage/storage.module';
+import { ThumbnailPipelineModule } from '../thumbnail-pipeline/thumbnail-pipeline.module';
+import { VideoThumbnailsModule } from '../video-thumbnails/video-thumbnails.module';
 
 @Module({
   imports: [
@@ -16,6 +18,8 @@ import { StorageModule } from '../storage/storage.module';
     StorageModule,
     ProjectThumbnailGenerationModule,
     BillingModule,
+    ThumbnailPipelineModule,
+    VideoThumbnailsModule,
   ],
   controllers: [ThumbnailVariantsController, ProjectsController],
   providers: [ProjectsService, ProjectGenerationService],

@@ -69,7 +69,7 @@ export class PipelineProjectPersistenceService {
             coverThumbnailStoragePath: uploaded[0]?.storagePath ?? null,
           });
 
-      await this.insertVariants(projectId, uploaded);
+      await this.insertVariants(projectId, uploaded, params.runInput.templateId);
 
       return { projectId, variants: uploaded };
     } catch (error) {
@@ -100,7 +100,9 @@ export class PipelineProjectPersistenceService {
       style: params.runInput.style ?? undefined,
       video_url: params.runInput.videoUrl ?? undefined,
       template_reference_data_urls: params.runInput.templateReferenceDataUrls ?? undefined,
+      template_id: params.runInput.templateId ?? undefined,
       face_reference_data_urls: params.runInput.faceReferenceDataUrls ?? undefined,
+      avatar_id: params.runInput.avatarId ?? undefined,
       variant_count: params.runInput.variantCount ?? undefined,
       prioritize_face: params.runInput.prioritizeFace ?? undefined,
       generated_models: params.runResult.modelsUsed,
@@ -142,6 +144,8 @@ export class PipelineProjectPersistenceService {
     const sceneSummary = params.runResult.analysis.sceneSummary.trim();
     const sourceDataPatch = {
       pipeline_run_id: params.runResult.runId,
+      template_id: params.runInput.templateId ?? undefined,
+      avatar_id: params.runInput.avatarId ?? undefined,
       generated_models: params.runResult.modelsUsed,
       scene_summary_excerpt: sceneSummary.slice(0, 500),
       video_context: params.videoContext ?? undefined,
@@ -178,13 +182,17 @@ export class PipelineProjectPersistenceService {
     return params.projectId;
   }
 
-  private async insertVariants(projectId: string, variants: PersistedPipelineVariant[]): Promise<void> {
+  private async insertVariants(
+    projectId: string,
+    variants: PersistedPipelineVariant[],
+    templateId?: string,
+  ): Promise<void> {
     const client = this.supabase.getAdminClient();
     for (const v of variants) {
       const { error } = await client.from('thumbnail_variants').insert({
         project_id: projectId,
         status: 'done',
-        template_id: null,
+        template_id: templateId ?? null,
         generated_image_storage_path: v.storagePath,
         generated_image_url: null,
         error_message: null,

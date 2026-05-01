@@ -14,6 +14,7 @@ import { useGenerationCredits } from '@/lib/hooks/use-generation-credits';
 import { queryKeys } from '@/lib/query-keys';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { trackEvent } from '@/lib/analytics';
 
 const VALUE_POINTS = [
   'Analyze a YouTube URL and find thumbnail-worthy moments',
@@ -37,6 +38,10 @@ export function TrialWelcomeClient() {
   const startTrial = useMutation({
     mutationFn: () => billingApi.startCreditTrial(accessToken),
     onSuccess: (nextCredits) => {
+      trackEvent('trial_started', {
+        credits_balance: nextCredits.balance,
+        credits_total_granted: nextCredits.totalGranted,
+      });
       if (user?.id) {
         queryClient.setQueryData(queryKeys.billing.credits(user.id), nextCredits);
       }

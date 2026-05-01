@@ -10,6 +10,7 @@ import type { ProjectRow, ProjectSourceType, ProjectWithVariants } from '@/lib/t
 import { toast } from 'sonner';
 import { DEFAULT_NEW_PROJECT_VARIANT_COUNT } from '@/config/credits';
 import { handleBillingMutationError } from '@/lib/paywall-notify';
+import { trackEvent } from '@/lib/analytics';
 
 export const createProjectAndGenerateMutationKey = ['projects', 'create-and-generate'] as const;
 export const createEmptyProjectMutationKey = ['projects', 'create-empty'] as const;
@@ -65,6 +66,11 @@ export function useCreateProjectAndGenerateMutation() {
       if (!userId) throw new Error('Not signed in');
       const { generate, ...body } = input;
       const project = await projectsApi.createProject(accessToken, body);
+      trackEvent('project_created', {
+        project_id: project.id,
+        source_type: body.source_type,
+        has_generate_options: Boolean(generate),
+      });
       try {
         const gen = await projectsApi.generateThumbnails(accessToken, project.id, {
           count: generate?.count ?? DEFAULT_NEW_PROJECT_VARIANT_COUNT,
@@ -208,7 +214,16 @@ export function useGenerateThumbnailsMutation(projectId: string) {
       if (!accessToken) throw new Error('Not signed in');
       return projectsApi.generateThumbnails(accessToken, projectId, opts);
     },
-    onSuccess: (res) => {
+    onSuccess: (res, opts) => {
+      trackEvent('generation_started', {
+        project_id: projectId,
+        job_id: res.job_id,
+        count: opts.count ?? 1,
+        has_template: Boolean(opts.template_id),
+        has_avatar: Boolean(opts.avatar_id),
+        prioritize_face: Boolean(opts.prioritize_face),
+        face_in_thumbnail: opts.face_in_thumbnail ?? 'default',
+      });
       if (userId) {
         const detailKey = queryKeys.projects.detail(userId, projectId);
         queryClient.setQueryData<ProjectWithVariants | undefined>(detailKey, (current) => {

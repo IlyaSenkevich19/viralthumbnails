@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import Link from 'next/link';
 import { Check, ChevronDown } from 'lucide-react';
 import { AppRoutes } from '@/config/routes';
@@ -8,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { SetPageFrame } from '@/components/layout/set-page-frame';
 import { useCreditLedger, useGenerationCredits } from '@/lib/hooks';
 import { cn } from '@/lib/utils';
+import { trackEvent } from '@/lib/analytics';
 
 const REASON_LABEL: Record<string, string> = {
   trial_grant: 'Trial grant',
@@ -51,6 +53,13 @@ function describeLedgerEntry(item: {
 export default function CreditsPricingPage() {
   const { data: credits } = useGenerationCredits();
   const { data: ledger, isPending: ledgerPending } = useCreditLedger();
+
+  useEffect(() => {
+    trackEvent('credits_pack_viewed', {
+      credits_balance: credits?.balance,
+      credits_total_granted: credits?.totalGranted,
+    });
+  }, [credits?.balance, credits?.totalGranted]);
 
   return (
     <div className="space-y-10 pb-8">

@@ -21,6 +21,7 @@ import {
   titleFromFirstLine,
   titleFromVideoFileName,
 } from '../dashboard-create-hub.utils';
+import { trackEvent } from '@/lib/analytics';
 
 export function useDashboardCreateHub() {
   const router = useRouter();
@@ -130,6 +131,11 @@ export function useDashboardCreateHub() {
           },
         });
         createdProjectId = project.id;
+        trackEvent('project_created', {
+          project_id: project.id,
+          source_type: 'video',
+          has_video_file: true,
+        });
         router.push(projectVariantsPath(project.id));
         toast.success('Project created. Choose settings, then generate thumbnails.');
       } catch (err) {
@@ -196,6 +202,12 @@ export function useDashboardCreateHub() {
           },
         });
         createdProjectId = project.id;
+        trackEvent('project_created', {
+          project_id: project.id,
+          source_type: 'youtube_url',
+          has_video_url: true,
+          has_video_meta: Boolean(videoMeta),
+        });
         router.push(projectVariantsPath(project.id));
         toast.success('Project created. Choose settings, then generate thumbnails.');
       } catch (err) {
@@ -225,6 +237,11 @@ export function useDashboardCreateHub() {
         title: titleFromFirstLine(hint) || undefined,
         source_type: 'text',
         source_data: { text: hint },
+      });
+      trackEvent('project_created', {
+        project_id: project.id,
+        source_type: 'text',
+        prompt_length: hint.length,
       });
       toast.success('Project created. Continue in editor.');
       router.push(projectVariantsPath(project.id));

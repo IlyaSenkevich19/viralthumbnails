@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect } from 'react';
+import { Suspense, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
@@ -13,6 +13,7 @@ import { AppRoutes } from '@/config/routes';
 import { toast } from 'sonner';
 import { SetPageFrame } from '@/components/layout/set-page-frame';
 import { ProjectVariantsWorkspace } from '@/components/projects/project-variants-workspace';
+import { trackEvent } from '@/lib/analytics';
 import {
   clearPipelineRecoveryJob,
   DASHBOARD_PIPELINE_RUN_RECOVERY_KEY,
@@ -56,14 +57,27 @@ function VariantsGalleryInner({ projectId }: { projectId: string }) {
     ? DASHBOARD_PIPELINE_VIDEO_RECOVERY_KEY
     : DASHBOARD_PIPELINE_RUN_RECOVERY_KEY;
   const pipelineJobQuery = usePipelineJobStatus(pipelineJobId);
+  const trackedCompletedJobRef = useRef<string | null>(null);
 
   useEffect(() => {
     const status = pipelineJobQuery.data?.status;
+    if (
+      pipelineJobId &&
+      (status === 'succeeded' || status === 'failed') &&
+      trackedCompletedJobRef.current !== pipelineJobId
+    ) {
+      trackedCompletedJobRef.current = pipelineJobId;
+      trackEvent(status === 'succeeded' ? 'generation_succeeded' : 'generation_failed', {
+        project_id: projectId,
+        job_id: pipelineJobId,
+        source_type: data?.source_type,
+      });
+    }
     if (status === 'succeeded' || status === 'failed') {
       clearPipelineRecoveryJob(pipelineRecoveryKey);
       void refetch();
     }
-  }, [pipelineJobQuery.data?.status, pipelineRecoveryKey, refetch]);
+  }, [data?.source_type, pipelineJobId, pipelineJobQuery.data?.status, pipelineRecoveryKey, projectId, refetch]);
 
   useEffect(() => {
     const status = pipelineJobQuery.data?.status;

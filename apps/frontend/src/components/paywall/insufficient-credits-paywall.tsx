@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AppRoutes } from '@/config/routes';
 import { Button } from '@/components/ui/button';
+import { trackEvent } from '@/lib/analytics';
 
 export const OPEN_PAYWALL_EVENT = 'vt-open-insufficient-credits-paywall';
 
@@ -30,6 +31,11 @@ export function InsufficientCreditsPaywall() {
       if (!custom.detail) return;
       setPayload(custom.detail);
       setOpen(true);
+      trackEvent('paywall_viewed', {
+        title: custom.detail.title,
+        need: custom.detail.need,
+        have: custom.detail.have,
+      });
     };
     window.addEventListener(OPEN_PAYWALL_EVENT, onEvent as EventListener);
     return () => window.removeEventListener(OPEN_PAYWALL_EVENT, onEvent as EventListener);
@@ -86,6 +92,11 @@ export function InsufficientCreditsPaywall() {
           <Button
             type="button"
             onClick={() => {
+              trackEvent('paywall_cta_clicked', {
+                cta: 'unlock_credits',
+                need: payload.need,
+                have: payload.have,
+              });
               setOpen(false);
               router.push(AppRoutes.credits);
             }}

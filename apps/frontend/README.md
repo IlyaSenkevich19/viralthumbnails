@@ -114,7 +114,7 @@ yarn lint
 ## Deployment (e.g. Vercel)
 
 - Set **`NEXT_PUBLIC_SUPABASE_URL`**, **`NEXT_PUBLIC_SUPABASE_ANON_KEY`**, **`NEXT_PUBLIC_BACKEND_URL`** (production API) in the host’s environment.
-- **Analytics** (see `src/components/marketing/marketing-scripts.tsx`): prefer **`NEXT_PUBLIC_GTM_ID`** and configure GA4 + Google Ads in GTM; or set **`NEXT_PUBLIC_GA_MEASUREMENT_ID`** / **`NEXT_PUBLIC_GOOGLE_ADS_ID`** without GTM (not both paths — GTM wins). Redeploy after changing `NEXT_PUBLIC_*`.
+- **Analytics** (see `src/components/marketing/marketing-scripts.tsx`): set **`NEXT_PUBLIC_GTM_ID`** only. Configure GA4, Google Ads, and cross-domain linker inside the GTM container. Redeploy after changing `NEXT_PUBLIC_*`.
 - Ensure the backend **`FRONTEND_URL`** (CORS) includes your Vercel domain.
 
 ## Monorepo

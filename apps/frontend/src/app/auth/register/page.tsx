@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 import { LeadCustomSelect } from '@/components/ui/lead-custom-select';
 import { submitLeadIntake } from '@/lib/api/lead-intake';
 import { isLikelyYoutubeUrl, normalizeHttpUrl } from '@/lib/youtube-channel-url';
+import { trackEvent } from '@/lib/analytics';
 
 const PROBLEM_OPTIONS = [
   { value: 'time', label: 'Takes too long', icon: Clock },
@@ -61,6 +62,7 @@ export default function RegisterPage() {
 
   useEffect(() => {
     setAttribution(collectLeadAttribution());
+    trackEvent('signup_started', { source: 'register_page' });
   }, []);
 
   const totalSteps = 5;
@@ -117,6 +119,13 @@ export default function RegisterPage() {
       },
       {
         onSuccess: () => {
+          trackEvent('signup_completed', {
+            lead_session_id: leadSessionId,
+            has_channel_url: Boolean(normalizeHttpUrl(channelUrl).trim()),
+            biggest_thumbnail_problem: biggestProblem || undefined,
+            subscriber_count: subscriberCount || undefined,
+            videos_per_week: videosPerWeek || undefined,
+          });
           void submitLeadIntake({
             lead_session_id: leadSessionId,
             funnel_stage: 'signup_completed',

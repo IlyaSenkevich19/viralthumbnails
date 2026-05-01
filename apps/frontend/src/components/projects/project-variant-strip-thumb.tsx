@@ -36,20 +36,24 @@ export function VariantStripThumb({
           : 'bg-white/[0.025] ring-1 ring-white/[0.045] hover:bg-white/[0.045]',
       )}
     >
-      <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-muted">
+      <div className="relative isolate aspect-video w-full overflow-hidden rounded-xl bg-muted">
         {url ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={url} alt="" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]" />
+          <img
+            src={url}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 will-change-transform group-hover:scale-[1.03]"
+          />
         ) : (
-          <div className="flex h-full items-center justify-center p-1 text-center text-[10px] text-muted-foreground">
+          <div className="relative flex h-full items-center justify-center p-1 text-center text-[10px] text-muted-foreground">
             {variant.status}
           </div>
         )}
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-transparent opacity-80" />
+        <div className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-t from-black/35 via-transparent to-transparent opacity-80" />
         {showStatus ? (
           <span
             className={cn(
-              'absolute right-1.5 top-1.5 rounded-full px-1.5 py-0.5 text-[10px] font-medium capitalize backdrop-blur',
+              'absolute right-1.5 top-1.5 z-[2] rounded-full px-1.5 py-0.5 text-[10px] font-medium capitalize backdrop-blur',
               variant.status === 'failed'
                 ? 'bg-destructive/85 text-destructive-foreground'
                 : 'bg-background/75 text-muted-foreground',

@@ -29,20 +29,20 @@ export function VariantStripThumb({
       onClick={onSelect}
       style={{ animationDelay: `${Math.min(enterIndex, 24) * 42}ms` }}
       className={cn(
-        'vt-variant-enter group w-36 shrink-0 rounded-2xl p-1 text-left transition-[background,box-shadow,transform]',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/70',
+        'vt-variant-enter group relative w-36 shrink-0 overflow-hidden rounded-2xl border-2 bg-card/35 text-left transition-[background,border-color,transform]',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/70 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
         selected
-          ? 'bg-primary/12 shadow-[0_16px_42px_-28px_rgba(255,59,59,0.85)] ring-1 ring-primary/45'
-          : 'bg-white/[0.025] ring-1 ring-white/[0.045] hover:bg-white/[0.045]',
+          ? 'border-primary/80 bg-primary/10'
+          : 'border-white/[0.1] hover:border-white/22 hover:bg-white/[0.04]',
       )}
     >
-      <div className="relative isolate aspect-video w-full overflow-hidden rounded-xl bg-muted">
+      <div className="relative isolate aspect-video w-full overflow-hidden bg-muted">
         {url ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={url}
             alt=""
-            className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 will-change-transform group-hover:scale-[1.03]"
+            className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 will-change-transform group-hover:scale-[1.02]"
           />
         ) : (
           <div className="relative flex h-full items-center justify-center p-1 text-center text-[10px] text-muted-foreground">
@@ -64,7 +64,7 @@ export function VariantStripThumb({
         ) : null}
       </div>
       {styleLabel ? (
-        <span className="mt-1.5 block truncate px-1 text-[11px] font-medium text-foreground/85">
+        <span className="block truncate bg-black/25 px-2.5 py-2 text-[11px] font-medium text-foreground/85">
           {styleLabel}
         </span>
       ) : null}

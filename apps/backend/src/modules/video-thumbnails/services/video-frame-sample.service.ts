@@ -5,9 +5,11 @@ import {
   VIDEO_PIPELINE_ANALYZE_WINDOW_SECONDS,
   VIDEO_PIPELINE_CACHE_MAX_ENTRIES,
   VIDEO_PIPELINE_CACHE_TTL_MS,
+  VIDEO_PIPELINE_FRAME_CANDIDATE_COUNT,
   VIDEO_PIPELINE_FRAME_DEDUP_DISTANCE_THRESHOLD,
   VIDEO_PIPELINE_FRAME_MAX_WIDTH_PX,
   VIDEO_PIPELINE_FRAME_SAMPLE_COUNT,
+  VIDEO_PIPELINE_FRAME_START_OFFSET_SECONDS,
   VIDEO_PIPELINE_MIN_FRAME_BRIGHTNESS,
   VIDEO_PIPELINE_MIN_FRAME_EDGE_ENERGY,
   VIDEO_PIPELINE_MIN_FRAME_STDDEV,
@@ -19,7 +21,7 @@ import { YtDlpVideoSourceService } from './yt-dlp-video-source.service';
 
 const FRAME_EXTRACT_TIMEOUT_MS = 45_000;
 const SIGNATURE_SIZE = 32;
-const MIN_TIME_SEC = 0.05;
+const MIN_TIME_SEC = Math.max(0.05, VIDEO_PIPELINE_FRAME_START_OFFSET_SECONDS);
 
 export type VideoFrameSampleSource = 'direct_url' | 'yt_dlp_stream';
 
@@ -29,6 +31,7 @@ export type VideoFrameSampleCandidate = {
   timeSec: number;
   dataUrl: string;
   source?: VideoFrameSampleSource;
+  qualityScore?: number;
 };
 
 function dataUrlFromJpegBuffer(buf: Buffer): string {
@@ -135,6 +138,7 @@ type FrameSignature = {
   meanBrightness: number;
   stddev: number;
   edgeEnergy: number;
+  colorfulness: number;
   vector: Uint8Array;
 };
 
@@ -156,7 +160,7 @@ async function extractFrameSignatureAtUrl(
       '-frames:v',
       '1',
       '-vf',
-      `scale=${SIGNATURE_SIZE}:${SIGNATURE_SIZE}:flags=fast_bilinear,format=gray`,
+      `scale=${SIGNATURE_SIZE}:${SIGNATURE_SIZE}:flags=fast_bilinear,format=rgb24`,
       '-f',
       'rawvideo',
       'pipe:1',
@@ -186,32 +190,45 @@ async function extractFrameSignatureAtUrl(
         return;
       }
       const buf = Buffer.concat(chunks);
-      if (buf.length < SIGNATURE_SIZE * SIGNATURE_SIZE) {
+      if (buf.length < SIGNATURE_SIZE * SIGNATURE_SIZE * 3) {
         resolve(null);
         return;
       }
 
       let sum = 0;
-      for (let i = 0; i < buf.length; i++) sum += buf[i];
-      const mean = sum / buf.length;
+      let saturationSum = 0;
+      const luma = new Uint8Array(SIGNATURE_SIZE * SIGNATURE_SIZE);
+      for (let i = 0, p = 0; i + 2 < buf.length && p < luma.length; i += 3, p++) {
+        const r = buf[i] ?? 0;
+        const g = buf[i + 1] ?? 0;
+        const b = buf[i + 2] ?? 0;
+        const y = Math.round(0.2126 * r + 0.7152 * g + 0.0722 * b);
+        luma[p] = y;
+        sum += y;
+        const max = Math.max(r, g, b);
+        const min = Math.min(r, g, b);
+        saturationSum += max === 0 ? 0 : (max - min) / max;
+      }
+      const mean = sum / luma.length;
+      const colorfulness = saturationSum / luma.length;
 
       let sq = 0;
-      for (let i = 0; i < buf.length; i++) {
-        const d = buf[i] - mean;
+      for (let i = 0; i < luma.length; i++) {
+        const d = luma[i] - mean;
         sq += d * d;
       }
-      const stddev = Math.sqrt(sq / buf.length);
+      const stddev = Math.sqrt(sq / luma.length);
       let edgeSum = 0;
       let edgeCount = 0;
       for (let y = 0; y < SIGNATURE_SIZE; y++) {
         for (let x = 0; x < SIGNATURE_SIZE; x++) {
           const idx = y * SIGNATURE_SIZE + x;
           if (x + 1 < SIGNATURE_SIZE) {
-            edgeSum += Math.abs(buf[idx] - buf[idx + 1]);
+            edgeSum += Math.abs((luma[idx] ?? 0) - (luma[idx + 1] ?? 0));
             edgeCount++;
           }
           if (y + 1 < SIGNATURE_SIZE) {
-            edgeSum += Math.abs(buf[idx] - buf[idx + SIGNATURE_SIZE]);
+            edgeSum += Math.abs((luma[idx] ?? 0) - (luma[idx + SIGNATURE_SIZE] ?? 0));
             edgeCount++;
           }
         }
@@ -219,11 +236,12 @@ async function extractFrameSignatureAtUrl(
       const edgeEnergy = edgeCount > 0 ? edgeSum / edgeCount : 0;
 
       resolve({
-        hash: createHash('sha1').update(buf).digest('hex'),
+        hash: createHash('sha1').update(luma).digest('hex'),
         meanBrightness: mean,
         stddev,
         edgeEnergy,
-        vector: new Uint8Array(buf),
+        colorfulness,
+        vector: luma,
       });
     });
   });
@@ -237,6 +255,48 @@ function signatureDistance(a: Uint8Array, b: Uint8Array): number {
     sum += Math.abs(a[i] - b[i]);
   }
   return sum / n;
+}
+
+function clamp01(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.min(1, Math.max(0, value));
+}
+
+function triangularScore(value: number, ideal: number, range: number): number {
+  return clamp01(1 - Math.abs(value - ideal) / Math.max(1, range));
+}
+
+function scoreFrameCandidate(signature: FrameSignature, timeSec: number, windowSec: number): number {
+  const brightness = triangularScore(signature.meanBrightness, 118, 92);
+  const contrast = clamp01((signature.stddev - VIDEO_PIPELINE_MIN_FRAME_STDDEV) / 42);
+  const sharpness = clamp01((signature.edgeEnergy - VIDEO_PIPELINE_MIN_FRAME_EDGE_ENERGY) / 24);
+  const color = clamp01(signature.colorfulness / 0.34);
+  const timing = timeSec < VIDEO_PIPELINE_FRAME_START_OFFSET_SECONDS + 2 ? 0.78 : 1;
+  const latePenalty = windowSec > 0 ? 1 - clamp01(timeSec / windowSec) * 0.12 : 1;
+
+  return (
+    brightness * 0.24 +
+    contrast * 0.28 +
+    sharpness * 0.28 +
+    color * 0.14 +
+    timing * 0.04 +
+    latePenalty * 0.02
+  );
+}
+
+function selectBestFrameCandidates(
+  candidates: Array<VideoFrameSampleCandidate & { qualityScore: number }>,
+  limit: number,
+): VideoFrameSampleCandidate[] {
+  const selected = [...candidates]
+    .sort((a, b) => b.qualityScore - a.qualityScore)
+    .slice(0, Math.max(1, limit))
+    .sort((a, b) => a.timeSec - b.timeSec);
+
+  return selected.map((frame, index) => ({
+    ...frame,
+    frameIndex: index + 1,
+  }));
 }
 
 /**
@@ -281,7 +341,7 @@ export class VideoFrameSampleService {
   }): Promise<VideoFrameSampleCandidate[]> {
     const url = params.videoUrl?.trim();
     if (!url) return [];
-    const cacheKey = `${url}|dur=${params.durationSeconds ?? 'na'}|w=${VIDEO_PIPELINE_ANALYZE_WINDOW_SECONDS}|k=${VIDEO_PIPELINE_FRAME_SAMPLE_COUNT}|q=${VIDEO_PIPELINE_MIN_FRAME_BRIGHTNESS},${VIDEO_PIPELINE_MIN_FRAME_STDDEV},${VIDEO_PIPELINE_MIN_FRAME_EDGE_ENERGY}|d=${VIDEO_PIPELINE_FRAME_DEDUP_DISTANCE_THRESHOLD}`;
+    const cacheKey = `${url}|dur=${params.durationSeconds ?? 'na'}|w=${VIDEO_PIPELINE_ANALYZE_WINDOW_SECONDS}|k=${VIDEO_PIPELINE_FRAME_SAMPLE_COUNT}|cand=${VIDEO_PIPELINE_FRAME_CANDIDATE_COUNT}|start=${VIDEO_PIPELINE_FRAME_START_OFFSET_SECONDS}|q=${VIDEO_PIPELINE_MIN_FRAME_BRIGHTNESS},${VIDEO_PIPELINE_MIN_FRAME_STDDEV},${VIDEO_PIPELINE_MIN_FRAME_EDGE_ENERGY}|d=${VIDEO_PIPELINE_FRAME_DEDUP_DISTANCE_THRESHOLD}`;
     const now = Date.now();
     this.pruneCache(now);
     const cached = this.cache.get(cacheKey);
@@ -371,15 +431,14 @@ export class VideoFrameSampleService {
     }
 
     const windowSec = Math.min(params.duration, VIDEO_PIPELINE_ANALYZE_WINDOW_SECONDS);
-    const times = buildCandidateTimes(windowSec, VIDEO_PIPELINE_FRAME_SAMPLE_COUNT);
-    const out: VideoFrameSampleCandidate[] = [];
+    const times = buildCandidateTimes(windowSec, VIDEO_PIPELINE_FRAME_CANDIDATE_COUNT);
+    const candidates: Array<VideoFrameSampleCandidate & { qualityScore: number }> = [];
     const acceptedSignatures: FrameSignature[] = [];
     let droppedLowQuality = 0;
     let droppedDuplicates = 0;
     let extractionFailures = 0;
 
     for (const t of times) {
-      if (out.length >= VIDEO_PIPELINE_FRAME_SAMPLE_COUNT) break;
       const buf = await extractJpegFrameAtUrl(url, t, params.sourceUrl?.headers);
       if (!buf?.length) {
         extractionFailures++;
@@ -413,23 +472,26 @@ export class VideoFrameSampleService {
       }
 
       acceptedSignatures.push(signature);
-      out.push({
-        frameIndex: out.length + 1,
+      candidates.push({
+        frameIndex: 0,
         timeSec: t,
         dataUrl: dataUrlFromJpegBuffer(buf),
         source: params.source,
+        qualityScore: scoreFrameCandidate(signature, t, windowSec),
       });
     }
 
+    const out = selectBestFrameCandidates(candidates, VIDEO_PIPELINE_FRAME_SAMPLE_COUNT);
+
     if (out.length < VIDEO_PIPELINE_MIN_USABLE_FRAME_COUNT) {
       this.logger.log(
-        `[${params.logContext}] frame path ${params.source} rejected: usable=${out.length} < min=${VIDEO_PIPELINE_MIN_USABLE_FRAME_COUNT} (candidates=${times.length}, droppedLowQuality=${droppedLowQuality}, droppedDuplicates=${droppedDuplicates}, extractionFailures=${extractionFailures})`,
+        `[${params.logContext}] frame path ${params.source} rejected: usable=${out.length} < min=${VIDEO_PIPELINE_MIN_USABLE_FRAME_COUNT} (candidateTimes=${times.length}, scored=${candidates.length}, droppedLowQuality=${droppedLowQuality}, droppedDuplicates=${droppedDuplicates}, extractionFailures=${extractionFailures})`,
       );
       return [];
     }
 
     this.logger.log(
-      `[${params.logContext}] sampled ${out.length}/${times.length} usable frames via ${params.source} (window=${windowSec.toFixed(1)}s of ${params.duration.toFixed(1)}s, droppedLowQuality=${droppedLowQuality}, droppedDuplicates=${droppedDuplicates}, extractionFailures=${extractionFailures})`,
+      `[${params.logContext}] selected ${out.length}/${candidates.length} scored frames via ${params.source} (candidateTimes=${times.length}, window=${windowSec.toFixed(1)}s of ${params.duration.toFixed(1)}s, droppedLowQuality=${droppedLowQuality}, droppedDuplicates=${droppedDuplicates}, extractionFailures=${extractionFailures}, scores=${out.map((frame) => frame.qualityScore?.toFixed(2)).join(',')})`,
     );
     return out;
   }

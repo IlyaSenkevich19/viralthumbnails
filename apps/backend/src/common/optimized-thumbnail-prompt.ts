@@ -8,7 +8,7 @@ export interface ThumbnailInput {
   variantFocus?: ThumbnailPromptVariantFocus;
 }
 
-export type ThumbnailPromptVariantFocus = 'face-focus' | 'text-focus' | 'symbol-focus';
+export type ThumbnailPromptVariantFocus = 'face-focus' | 'text-focus' | 'scene-focus';
 
 export type PromptComplianceResult = {
   score: number;
@@ -32,16 +32,16 @@ type VariantStrategy = {
 };
 
 export const ULTIMATE_THUMBNAIL_CHECKLIST_RULES =
-  '16:9 1280x720. Max 3 elements: one focal subject, one 1-4 word text hook, optional one symbol. Build visual hierarchy: attention first, interest second, curiosity third. If a face appears, it must be expressive with emotion and eye contact. Symbols are limited to arrow/circle/check/cross/!? only. Use bold sans-serif text, black/white/yellow with outline. High contrast, bright complementary colors, blurred/darkened background, safe lower-right timestamp zone, no right-edge text, no logos, no watermark, no emojis, no clutter. Make it legible at mobile size, accurate to the video, niche-appropriate, professional, crisp high-res.';
+  '16:9 1280x720. Max 3 elements: one focal subject, one 1-4 word text hook, and one clean supporting object only if it is natural to the scene. Build visual hierarchy: attention first, interest second, curiosity third. If a face appears, it must be expressive with emotion and eye contact. Do not add artificial arrows, red circles, yellow dots, target rings, check/cross marks, or fake annotation overlays unless the creator explicitly asks for them. Use bold sans-serif text, black/white/yellow with outline. High contrast, bright complementary colors, blurred/darkened background, safe lower-right timestamp zone, no right-edge text, no logos, no watermark, no emojis, no clutter. Make it legible at mobile size, accurate to the video, niche-appropriate, professional, crisp high-res.';
 
 const VARIANT_STRATEGIES: Record<ThumbnailPromptVariantFocus, VariantStrategy> = {
   'face-focus': {
     name: 'FACE-FOCUS',
     hook: 'Primary click driver is emotion and eye contact.',
     layout:
-      'Large expressive face on the left or upper-left third; text on the opposite side; one small arrow/circle only if it creates curiosity.',
+      'Large expressive face on the left or upper-left third; text on the opposite side; no artificial annotation overlays.',
     subject:
-      'Use surprise, fear, excitement, or intense realization. Eyes face camera. Tight crop, readable expression, natural skin texture.',
+      'Use the emotion implied by the video context, creator prompt, or selected frame. Prefer a clear, high-energy expression with eyes toward camera when it fits; do not force fear, shock, or negativity unless the source actually calls for it. Tight crop, readable expression, natural skin texture.',
     background:
       'Use the video/topic as blurred context behind the face. Keep background darkened enough for foreground pop.',
     color: 'Warm face lighting against cool/dark complementary background accents.',
@@ -57,16 +57,16 @@ const VARIANT_STRATEGIES: Record<ThumbnailPromptVariantFocus, VariantStrategy> =
       'Simple masked/blurred background with depth, not flat solid color unless intentionally premium/minimal.',
     color: 'Black/white/yellow headline with heavy outline over saturated contrasting background.',
   },
-  'symbol-focus': {
-    name: 'SYMBOL-FOCUS',
-    hook: 'Primary click driver is a visual mystery marker.',
+  'scene-focus': {
+    name: 'SCENE-FOCUS',
+    hook: 'Primary click driver is the real source scene, action, or surprising object.',
     layout:
-      'One arrow, circle, check/cross, or !? points to a curiosity object. Text stays very short and secondary.',
+      'Use a dramatic crop of the real scene or object as the visual hook; text stays short and secondary.',
     subject:
-      'Make the circled/pointed object feel like the reveal viewers must click to understand.',
+      'Make the real object, action, transformation, or conflict feel like the reveal viewers must click to understand.',
     background:
-      'Keep surrounding context visible enough to understand the niche, but blur/darken anything distracting.',
-    color: 'Use red/yellow symbol contrast against a darker complementary scene.',
+      'Keep surrounding context visible enough to understand the niche, but blur/darken anything distracting without adding fake markers.',
+    color: 'Use cinematic contrast and selective lighting instead of arrows, circles, or target overlays.',
   },
 };
 
@@ -81,7 +81,7 @@ const COMPLIANCE_CHECKS: readonly PromptCheck[] = [
   { label: 'curiosity / FOMO', pattern: /curiosity|FOMO|mystery/i },
   { label: 'shrink test', pattern: /mobile size|shrink/i },
   { label: 'emotional face', pattern: /expressive face|emotion|eye contact/i },
-  { label: 'allowed symbols only', pattern: /arrow|circle|check\/cross|!\?/i },
+  { label: 'no artificial annotation overlays', pattern: /Do not add artificial|fake annotation/i },
   { label: 'high contrast', pattern: /High contrast/i },
   { label: 'safe zones', pattern: /safe lower-right|right edge|right-edge/i },
   { label: 'bright complementary colors', pattern: /bright complementary|saturated|complementary/i },
@@ -149,6 +149,7 @@ STRICT RULES
 - ${ULTIMATE_THUMBNAIL_CHECKLIST_RULES}
 - Keep the thumbnail accurate to the video. Create curiosity, not deceptive clickbait.
 - Do not repeat a long video title as text. Use the short hook only.
+- No artificial arrows, red circles, yellow dots, target rings, fake highlights, or annotation overlays unless explicitly requested.
 - No logos, no watermarks, no emojis, no tiny text, no crowded UI screenshots, no amateur solid-color poster look.
 ${style ? `\nSTYLE DIRECTION\n- ${style}` : ''}
 ${avoid?.length ? `\nAVOID\n- ${avoid.join('\n- ')}` : ''}
@@ -158,7 +159,7 @@ Output ONLY the image. No captions, no explanations, no mockup frame.
 }
 
 export function generateABVariants(input: ThumbnailInput): string[] {
-  return (['face-focus', 'text-focus', 'symbol-focus'] as const).map((variantFocus) =>
+  return (['face-focus', 'text-focus', 'scene-focus'] as const).map((variantFocus) =>
     generateOptimizedThumbnailPrompt({ ...input, variantFocus }),
   );
 }

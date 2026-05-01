@@ -346,7 +346,7 @@ export class ProjectVariantImageService {
             ? 'face-focus'
             : styleVariantIndex % 3 === 1
               ? 'text-focus'
-              : 'symbol-focus',
+              : 'scene-focus',
     });
 
     return [optimizedPrompt, templateText.trim(), faceText.trim()].filter(Boolean).join(' ');

@@ -185,7 +185,14 @@ ${ThumbnailPipelineAnalysisJsonPrompt}`;
         : '';
 
     const videoNote = useFrames
-      ? `The video is represented by ${sampled.length} sampled still frames from the analyzed window. Act as a YouTube thumbnail creative director: understand the video's promise, rank the most clickable frames/moments, set selectedFrameIndex to the best attached frame number, and explain why it is clickable.${frameList}`
+      ? `The video is represented by ${sampled.length} quality-scored still frames from the opening analyzed window. Act as a YouTube thumbnail creative director: understand the video's promise, rank the most clickable frames/moments, set selectedFrameIndex to the best attached frame number, and explain why it is clickable.
+
+Selection priority:
+1. Prefer a clear human face with visible emotion, eye contact, or expressive reaction when present.
+2. If no strong face is present, prefer the clearest action/conflict/result scene that explains the video's promise.
+3. Avoid blurry transition frames, empty intro screens, dark UI-only frames, tiny subjects, and low-emotion screenshots.
+4. Pick a frame that can work as the base image for an edited YouTube thumbnail, not merely a frame that describes the video.
+${frameList}`
       : hasOriginalVideo
         ? 'A video URL was provided but raw video upload to the VL model is disabled for cost control. Use the creator prompt, metadata, and transcript if present. If timing is unknown, use startSec 0 and describe the best inferred thumbnail moment.'
         : 'No video is attached; infer carefully from the text prompt and any reference images. Use startSec 0 when unknown.';

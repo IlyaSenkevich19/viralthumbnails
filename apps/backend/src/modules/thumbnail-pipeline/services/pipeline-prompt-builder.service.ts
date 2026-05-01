@@ -58,8 +58,15 @@ export class PipelinePromptBuilderService {
           keyMessage,
           niche: style?.trim() || 'YouTube thumbnail',
           style: [styleInstruction, styleLine].filter(Boolean).join(' '),
-          avoid: analysis.negativeCues,
-          variantFocus: i % 3 === 0 ? 'face-focus' : i % 3 === 1 ? 'text-focus' : 'symbol-focus',
+          avoid: [
+            ...analysis.negativeCues,
+            'artificial red circles',
+            'arrows',
+            'yellow dots',
+            'target rings',
+            'fake annotation overlays',
+          ],
+          variantFocus: i % 3 === 0 ? 'face-focus' : i % 3 === 1 ? 'text-focus' : 'scene-focus',
         }) + (neg ? `\n\nNEGATIVE CUES: ${neg}` : ''),
       );
     }
@@ -74,8 +81,8 @@ export class PipelinePromptBuilderService {
       : '';
     const templateText = hasTemplateImage
       ? hasVideoFrame
-        ? ' Template reference(s) follow the selected frame: borrow layout energy, safe margins, typography, and structure without overriding the selected moment.'
-        : ' The first attached image(s) are layout/style template reference(s): match composition, safe margins, typography energy, and structure; adapt colors to the topic.'
+        ? ' Template reference(s) follow the selected frame: borrow layout energy, safe margins, typography, and structure without overriding the selected moment; do not copy circles, arrows, yellow dots, or annotation overlays from templates.'
+        : ' The first attached image(s) are layout/style template reference(s): match composition, safe margins, typography energy, and structure; adapt colors to the topic; do not copy circles, arrows, yellow dots, or annotation overlays.'
       : '';
     const faceText =
       hasFaceImage && hasTemplateImage

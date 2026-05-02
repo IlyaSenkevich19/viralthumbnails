@@ -16,16 +16,20 @@ import {
 import {
   parseTemplatePageSizeParam,
 } from '@/lib/api/templates';
+import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { VtPillToggleRow } from '@/components/motion/vt-pill-toggle-row';
 import { TemplatesGridSkeleton } from '@/components/templates/templates-grid-skeleton';
 import { TemplatesPagination } from '@/components/templates/templates-pagination';
-import { EmptyState } from '@/components/ui/empty-state';
+import { EmptyState, EmptyStateCard } from '@/components/ui/empty-state';
+import { InfoHint } from '@/components/ui/info-hint';
 import { InlineLoadError } from '@/components/ui/inline-load-error';
 import { vtSpring, vtStagger } from '@/lib/motion-presets';
 import { cn } from '@/lib/utils';
+import { AppRoutes } from '@/config/routes';
+import { buttonVariants } from '@/components/ui/button';
 
 const NICHE_QUERY = 'niche';
 const PAGE_QUERY = 'page';
@@ -154,12 +158,8 @@ export function TemplatesClient() {
 
   const loading = authLoading || (hasSession && isPending && !data);
   const paginationBusy = Boolean(isFetching && isPlaceholderData);
-  const listError =
-    !authLoading && !hasSession
-      ? 'Not signed in'
-      : isError
-        ? (error as Error).message
-        : null;
+  const sessionGate = !authLoading && !hasSession;
+  const fetchErrorMessage = authLoading || !hasSession ? null : isError ? (error as Error).message : null;
 
   const nichePillItems = useMemo(
     () => [{ id: NICHE_ALL, label: 'Any niche' }, ...niches.map((n) => ({ id: n.code, label: n.label }))],
@@ -191,52 +191,55 @@ export function TemplatesClient() {
         </div>
       ) : null}
 
-      {listError ? (
+      {sessionGate ? (
         <InlineLoadError
-          message={listError}
-          onRetry={hasSession ? () => void refetch() : undefined}
+          tone="neutral"
+          message="Sign in to browse templates and reuse them across generations."
+          extraActions={
+            <Link href={AppRoutes.home} className={buttonVariants({ variant: 'default', size: 'sm' })}>
+              Sign in
+            </Link>
+          }
         />
+      ) : fetchErrorMessage ? (
+        <InlineLoadError message={fetchErrorMessage} onRetry={() => void refetch()} />
       ) : null}
       {loading ? (
-        hasSession ? (
-          <TemplatesGridSkeleton variant="page" count={Math.min(pageSize, 12)} />
-        ) : (
-          <p className="text-sm text-muted-foreground">Loading…</p>
-        )
+        <TemplatesGridSkeleton variant="page" count={Math.min(pageSize, 12)} />
       ) : hasSession && items.length === 0 && total === 0 ? (
-        <Card>
-          <CardContent className="p-0">
-            <EmptyState
-              icon={<LayoutTemplate className="h-7 w-7" strokeWidth={1.75} aria-hidden />}
-              title={
-                selectedNiche !== NICHE_ALL ? `No templates in ${nicheLabel(selectedNiche)}` : 'No templates yet'
-              }
-              description={
-                selectedNiche !== NICHE_ALL ? (
-                  <>
-                    Try another niche or{' '}
-                    <button
-                      type="button"
-                      className="font-medium text-primary underline-offset-2 hover:underline"
-                      onClick={() => setNiche(NICHE_ALL)}
-                    >
-                      show every niche
-                    </button>
-                    .
-                  </>
-                ) : (
-                  <>
-                    Your template library is empty. Add your first template to reuse layouts and style direction
-                    across future generations.
-                    <span className="mt-2 block text-xs leading-relaxed text-muted-foreground/90">
-                      For technical setup and API import options, see project documentation.
-                    </span>
-                  </>
-                )
-              }
-            />
-          </CardContent>
-        </Card>
+        <EmptyStateCard
+          icon={<LayoutTemplate className="h-7 w-7" strokeWidth={1.75} aria-hidden />}
+          title={
+            selectedNiche !== NICHE_ALL ? `No templates in ${nicheLabel(selectedNiche)}` : 'No templates yet'
+          }
+          description={
+            selectedNiche !== NICHE_ALL ? (
+              <>
+                Try another niche or{' '}
+                <button
+                  type="button"
+                  className="font-medium text-primary underline-offset-2 hover:underline"
+                  onClick={() => setNiche(NICHE_ALL)}
+                >
+                  show every niche
+                </button>
+                .
+              </>
+            ) : (
+              <>
+                Your template library is empty—add presets to steer layout and typography on future renders.{' '}
+                <span className="inline-flex translate-y-[2px] align-middle">
+                  <InfoHint
+                    buttonLabel="Template library setup paths"
+                    helpBody={
+                      <p>For bulk imports, scripted migrations, or API-driven seeds, skim the docs shipped with this repo.</p>
+                    }
+                  />
+                </span>
+              </>
+            )
+          }
+        />
       ) : hasSession ? (
         <div className="space-y-4">
           {items.length > 0 ? (
@@ -297,7 +300,12 @@ export function TemplatesClient() {
               ))}
             </motion.div>
           ) : total > 0 ? (
-            <p className="text-sm text-muted-foreground">No templates on this page.</p>
+            <EmptyState
+              density="compact"
+              icon={<LayoutTemplate className="h-6 w-6" strokeWidth={1.75} aria-hidden />}
+              title="Nothing on this page"
+              description="Try another page or change how many items you show per page."
+            />
           ) : null}
           {total > 0 ? (
             <TemplatesPagination

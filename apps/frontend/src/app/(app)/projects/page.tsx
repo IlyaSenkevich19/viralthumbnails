@@ -26,8 +26,12 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { ConfirmationModal } from '@/components/ui/confirmation-modal';
-import { EmptyState } from '@/components/ui/empty-state';
+import {
+  ConfirmationModal,
+  DESTRUCTIVE_CONFIRM_WORD,
+} from '@/components/ui/confirmation-modal';
+import { EmptyState, EmptyStateCard } from '@/components/ui/empty-state';
+import { InfoHint } from '@/components/ui/info-hint';
 import { InlineLoadError } from '@/components/ui/inline-load-error';
 import { ProjectRowMenu } from '@/components/projects/project-row-menu';
 import { SetPageFrame } from '@/components/layout/set-page-frame';
@@ -94,12 +98,8 @@ function ProjectsPageContent() {
   const hasSession = Boolean(user?.id && accessToken);
   const showSkeleton = authLoading || (hasSession && isPending);
   const listBusy = hasSession && (showSkeleton || paginationBusy);
-  const listError =
-    !authLoading && !hasSession
-      ? 'Session not available. Try refreshing the page.'
-      : isError
-        ? (error as Error).message
-        : null;
+  const sessionGate = !authLoading && !hasSession;
+  const fetchErrorMessage = authLoading || !hasSession ? null : isError ? (error as Error).message : null;
 
   const openProject = useCallback(
     (p: { id: string }) => {
@@ -141,14 +141,17 @@ function ProjectsPageContent() {
       <SetPageFrame title="Projects" />
       {pipelineSurface.active && pipelineSurface.label ? (
         <div
-          className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-sm text-foreground"
+          className="flex flex-wrap items-center gap-x-1.5 gap-y-1 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-sm text-foreground"
           role="status"
           aria-live="polite"
         >
-          <Loader2 className="h-4 w-4 shrink-0 animate-spin text-primary" aria-hidden />
-          <span>
-            {pipelineSurface.label}. The new project will appear here when the run finishes.
-          </span>
+          <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-primary" aria-hidden />
+          <span className="min-w-0">{pipelineSurface.label}.</span>
+          <InfoHint
+            className="shrink-0"
+            buttonLabel="When queued projects surface in this list"
+            helpBody={<p>New rows appear automatically once ingestion and studio prep finish—stay on Projects to watch it land.</p>}
+          />
         </div>
       ) : null}
       <ConfirmationModal
@@ -156,13 +159,38 @@ function ProjectsPageContent() {
         onOpenChange={(open) => {
           if (!open) setProjectToDelete(null);
         }}
-        title="Delete project?"
+        title="Permanently delete this project?"
         description={
-          projectToDelete
-            ? `“${projectToDelete.title}” and all its generated images will be removed. This cannot be undone.`
-            : undefined
+          projectToDelete ? (
+            <div className="space-y-3">
+              <p>
+                Project{' '}
+                <span className="font-semibold text-foreground">“{projectToDelete.title}”</span>{' '}
+                and every thumbnail variant created under it will be removed from your workspace. Source uploads and
+                generation history tied to this project may no longer appear in the UI.
+              </p>
+              <p className="text-foreground/90">
+                This action cannot be undone. Confirm only when you intentionally want to discard the whole project—not
+                a single image.
+              </p>
+            </div>
+          ) : undefined
         }
-        confirmLabel="Delete"
+        confirmGuard={{
+          phrase: DESTRUCTIVE_CONFIRM_WORD,
+          fieldLabel: `Type ${DESTRUCTIVE_CONFIRM_WORD} to confirm`,
+          hintAriaLabel: 'Why you must type DELETE before removing a project',
+          hint: (
+            <>
+              We ask for{' '}
+              <kbd className="rounded border border-border/70 bg-muted/40 px-1.5 py-0.5 font-mono text-[10px]">
+                {DESTRUCTIVE_CONFIRM_WORD}
+              </kbd>{' '}
+              so one mistaken tap on &quot;Delete project…&quot; in the overflow menu doesn’t wipe a whole workspace.
+            </>
+          ),
+        }}
+        confirmLabel="Delete project"
         cancelLabel="Cancel"
         variant="destructive"
         onConfirm={() => {
@@ -237,11 +265,18 @@ function ProjectsPageContent() {
         </Button>
       </div>
 
-      {listError ? (
+      {sessionGate ? (
         <InlineLoadError
-          message={listError}
-          onRetry={hasSession ? () => void refetch() : undefined}
+          tone="neutral"
+          message="Sign in to browse and manage projects."
+          extraActions={
+            <Link href={AppRoutes.home} className={buttonVariants({ variant: 'default', size: 'sm' })}>
+              Sign in
+            </Link>
+          }
         />
+      ) : fetchErrorMessage ? (
+        <InlineLoadError message={fetchErrorMessage} onRetry={() => void refetch()} />
       ) : null}
       <section aria-label="Project list results" aria-busy={Boolean(listBusy && hasSession)}>
         {showSkeleton ? (
@@ -260,60 +295,62 @@ function ProjectsPageContent() {
             </div>
           </div>
         ) : total === 0 && !qFromUrl ? (
-          <Card>
-            <CardContent className="p-0">
-              <EmptyState
-                icon={<FolderOpen className="h-7 w-7" strokeWidth={1.75} aria-hidden />}
-                title="No projects yet"
-                description={
-                  <>
-                    Name a workspace, attach template and optional face references, then generate thumbnails in the
-                    studio. For a shortcut from prompt, URL, or upload, jump to{' '}
-                    <Link href={AppRoutes.create} className="font-medium text-primary underline-offset-2 hover:underline">
-                      Generate thumbnails
-                    </Link>
-                    .
-                  </>
-                }
-              >
-                <Button
-                  type="button"
-                  className={buttonVariants()}
-                  disabled={!hasSession || createEmptyProject.isPending}
-                  onClick={() => createEmptyProject.mutate()}
-                >
-                  {createEmptyProject.isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                  ) : (
-                    <Plus className="h-4 w-4" aria-hidden />
-                  )}
-                  Create project
-                </Button>
-              </EmptyState>
-            </CardContent>
-          </Card>
+          <EmptyStateCard
+            icon={<FolderOpen className="h-7 w-7" strokeWidth={1.75} aria-hidden />}
+            title="No projects yet"
+            description={
+              <>
+                Spin up a studio workspace for templates and faces—or{' '}
+                <Link href={AppRoutes.create} className="font-medium text-primary underline-offset-2 hover:underline">
+                  jump straight to Generate
+                </Link>{' '}
+                when you already have prompt, clip, or link inputs ready.{` `}
+                <span className="inline-flex translate-y-[2px] align-middle">
+                  <InfoHint
+                    buttonLabel="How projects reuse studio context"
+                    helpBody={
+                      <p>
+                        Projects cache source media, likeness picks, and template rails so iterative thumbnail passes stay
+                        fast without re-uploading collateral every time.
+                      </p>
+                    }
+                  />
+                </span>
+              </>
+            }
+          >
+            <Button
+              type="button"
+              className={buttonVariants()}
+              disabled={!hasSession || createEmptyProject.isPending}
+              onClick={() => createEmptyProject.mutate()}
+            >
+              {createEmptyProject.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              ) : (
+                <Plus className="h-4 w-4" aria-hidden />
+              )}
+              Create project
+            </Button>
+          </EmptyStateCard>
         ) : total === 0 && qFromUrl ? (
-          <Card>
-            <CardContent className="p-0">
-              <EmptyState
-                icon={<SearchIcon className="h-7 w-7" strokeWidth={1.75} aria-hidden />}
-                title="No matching projects"
-                description={
-                  <>
-                    Nothing matched &quot;{qFromUrl}&quot;. Try another keyword or{' '}
-                    <button
-                      type="button"
-                      className="font-medium text-primary underline-offset-2 hover:underline"
-                      onClick={() => clearSearch()}
-                    >
-                      clear search
-                    </button>
-                    .
-                  </>
-                }
-              />
-            </CardContent>
-          </Card>
+          <EmptyStateCard
+            icon={<SearchIcon className="h-7 w-7" strokeWidth={1.75} aria-hidden />}
+            title="No matching projects"
+            description={
+              <>
+                Nothing matched &quot;{qFromUrl}&quot;. Try another keyword or{' '}
+                <button
+                  type="button"
+                  className="font-medium text-primary underline-offset-2 hover:underline"
+                  onClick={() => clearSearch()}
+                >
+                  clear search
+                </button>
+                .
+              </>
+            }
+          />
         ) : (
           <div
             className={cn(
@@ -500,7 +537,12 @@ function ProjectsPageContent() {
             </motion.div>
 
             {projects.length === 0 && total > 0 ? (
-              <p className="text-center text-sm text-muted-foreground">No projects on this page.</p>
+              <EmptyState
+                density="compact"
+                icon={<FolderOpen className="h-6 w-6" strokeWidth={1.75} aria-hidden />}
+                title="Nothing on this page"
+                description="Try another page or adjust your search."
+              />
             ) : null}
 
             {total > 0 ? (

@@ -10,6 +10,7 @@ import { useGenerationCredits } from '@/lib/hooks/use-generation-credits';
 import { cn } from '@/lib/utils';
 import { CollapsedSidebarTooltip } from '@/components/layout/collapsed-sidebar-tooltip';
 import { AppRoutes } from '@/config/routes';
+import { InfoHint } from '@/components/ui/info-hint';
 
 const shellFocus =
   'outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--sidebar)]';
@@ -166,7 +167,22 @@ export function SidebarCreditsBlock({
 
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">Credits</p>
+            <div className="flex min-w-0 items-center gap-x-1.5">
+              <p className="text-[10px] font-semibold uppercase leading-none tracking-[0.22em] text-muted-foreground">
+                Credits
+              </p>
+              <InfoHint
+                className="shrink-0"
+                side="top"
+                buttonLabel="How credits appear in the sidebar"
+                helpBody={
+                  <p>
+                    Mirrors your live generation balance from billing. Progress fill highlights how much of the latest
+                    grant batch is still available before you revisit the ledger.
+                  </p>
+                }
+              />
+            </div>
             <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/60 opacity-70 transition-opacity group-hover:opacity-100" aria-hidden />
           </div>
           <div className="mt-1.5 flex items-baseline gap-1.5">

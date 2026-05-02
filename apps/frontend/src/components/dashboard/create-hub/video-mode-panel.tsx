@@ -1,5 +1,8 @@
+'use client';
+
 import { memo, useCallback, useEffect, useRef, useState, type DragEvent } from 'react';
 import { Film, RefreshCw, Trash2, UploadCloud } from 'lucide-react';
+import { InfoHint } from '@/components/ui/info-hint';
 import { cn } from '@/lib/utils';
 
 type Props = {
@@ -59,12 +62,24 @@ export const VideoModePanel = memo(function VideoModePanel({ videoFile, onVideoF
   return (
     <div className="flex h-full flex-col">
       <div className="flex flex-col gap-2">
-        <label htmlFor="dash-video-file" className="text-sm font-medium text-foreground">
-          Source video
-        </label>
-        <p className="max-w-[65ch] text-xs leading-relaxed text-muted-foreground">
-          Upload a short clip so the analyzer can pull real frames before generation.
-        </p>
+        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
+          <label htmlFor="dash-video-file" className="min-w-0 text-sm font-medium leading-tight text-foreground">
+            Source video
+          </label>
+          <InfoHint
+            buttonLabel="Source video tips"
+            helpBody={
+              <>
+                <p>
+                  Prefer a trimmed clip so the analyzer samples encoded frames cleanly before concepts render. Over the
+                  preview, swap or remove clips using the overlay controls—they appear while hovering or focusing within
+                  the player region.
+                </p>
+                <p className="mt-2">Supported uploads: MP4, WebM, MOV (browser-dependent codecs).</p>
+              </>
+            }
+          />
+        </div>
       </div>
       <div className="mt-3 flex flex-col gap-3">
         <input
@@ -114,14 +129,13 @@ export const VideoModePanel = memo(function VideoModePanel({ videoFile, onVideoF
                 </span>
               </div>
             </div>
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-3">
+              <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-foreground" title={videoFile.name}>
                   {videoFile.name}
                 </p>
                 <p className="text-xs text-muted-foreground">{formatFileSize(videoFile.size)}</p>
               </div>
-              <p className="text-[11px] text-muted-foreground">Actions appear on hover</p>
             </div>
           </div>
         ) : (
@@ -157,7 +171,6 @@ export const VideoModePanel = memo(function VideoModePanel({ videoFile, onVideoF
           >
             <UploadCloud className="h-6 w-6 text-muted-foreground" aria-hidden />
             <p className="mt-2 text-sm font-semibold text-foreground">Drop video here or click to upload</p>
-            <p className="mt-1 text-xs text-muted-foreground">Supported formats: MP4, WebM, MOV</p>
           </div>
         )}
       </div>

@@ -3,6 +3,7 @@ import { BackendHealth } from '@/components/backend-health';
 import { SetPageFrame } from '@/components/layout/set-page-frame';
 import { SetupHealthPanel } from '@/components/settings/setup-health-panel';
 import { PrimaryActionPanel } from '@/components/ui/primary-action-panel';
+import { SectionHeading } from '@/components/ui/section-heading';
 
 export default function SettingsPage() {
   return (
@@ -11,30 +12,44 @@ export default function SettingsPage() {
 
       <PrimaryActionPanel>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Workspace preferences</CardTitle>
-          <p className="max-w-[65ch] text-sm leading-relaxed text-muted-foreground">
-            Personal knobs for thumbnail generation workflows—more controls arrive as preferences ship.
-          </p>
+          <SectionHeading
+            title={<CardTitle className="text-base">Workspace preferences</CardTitle>}
+            helpLabel="About workspace preferences"
+            helpBody={
+              <>
+                <p className="text-foreground">
+                  Personal knobs for thumbnail generation workflows — more controls will appear here over time as
+                  preferences ship.
+                </p>
+                <p className="mt-2">
+                  Preferential controls aren&apos;t wired yet; use diagnostics below meanwhile to validate backend setup.
+                </p>
+              </>
+            }
+          />
         </CardHeader>
         <CardContent className="space-y-2 text-sm text-muted-foreground">
-          <p>Preference controls will appear here in upcoming updates.</p>
-          <p>Currently available: diagnostics below to verify backend and model setup.</p>
+          <p>Coming soon.</p>
         </CardContent>
       </PrimaryActionPanel>
 
       <PrimaryActionPanel>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Diagnostics</CardTitle>
-          <p className="max-w-[65ch] text-sm leading-relaxed text-muted-foreground">
-            Confirms authenticated calls can reach the ViralThumblify backend you configured.
-          </p>
+          <SectionHeading
+            title={<CardTitle className="text-base">Diagnostics</CardTitle>}
+            helpLabel="What diagnostics checks"
+            helpBody={
+              <>
+                <p>
+                  Confirms authenticated calls reach the ViralThumblify backend you pointed this app at. If API health
+                  shows an error, ensure the backend is running and env vars resolve to the intended API URL.
+                </p>
+              </>
+            }
+          />
         </CardHeader>
-        <CardContent className="flex flex-wrap items-center gap-3">
+        <CardContent className="flex flex-wrap items-start gap-3">
           <BackendHealth />
-          <p className="text-sm text-muted-foreground">
-            If this shows an error, check that the backend is running and your environment variables
-            point to the correct API URL.
-          </p>
         </CardContent>
       </PrimaryActionPanel>
 

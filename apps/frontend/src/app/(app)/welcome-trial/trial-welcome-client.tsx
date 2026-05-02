@@ -7,6 +7,8 @@ import { ArrowRight, Check, Sparkles } from 'lucide-react';
 import { SetPageFrame } from '@/components/layout/set-page-frame';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { InlineLoadError } from '@/components/ui/inline-load-error';
+import { InfoHint } from '@/components/ui/info-hint';
 import { AppRoutes } from '@/config/routes';
 import { useAuth } from '@/contexts/auth-context';
 import { billingApi } from '@/lib/api';
@@ -26,7 +28,7 @@ export function TrialWelcomeClient() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { user, accessToken, isLoading: authLoading } = useAuth();
-  const { data: credits, isPending, isError } = useGenerationCredits();
+  const { data: credits, isPending, isError, refetch } = useGenerationCredits();
 
   useEffect(() => {
     if (isPending || isError || !credits) return;
@@ -61,19 +63,36 @@ export function TrialWelcomeClient() {
     <div className="mx-auto grid min-h-[calc(100dvh-12rem)] w-full max-w-6xl items-center gap-8 lg:grid-cols-[1.05fr_0.95fr]">
       <SetPageFrame title="Start free trial" />
 
+      {isError ? (
+        <div className="lg:col-span-2">
+          <InlineLoadError
+            message="Could not load your trial status. Check your connection and try again."
+            onRetry={() => void refetch()}
+          />
+        </div>
+      ) : null}
+
       <section className="space-y-7">
         <div className="inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
           <Sparkles className="h-3.5 w-3.5" />
           Free trial included
         </div>
         <div className="space-y-4">
-          <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
-            Start with {creditsCount} thumbnail generations.
-          </h1>
-          <p className="max-w-[65ch] text-base leading-relaxed text-muted-foreground">
-            ViralThumblify stays paid-after-trial—you get starter credits now so every run touches real uploads
-            before you buy a larger pack.
-          </p>
+          <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
+            <h1 className="max-w-3xl min-w-0 text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
+              Start with {creditsCount} thumbnail generations.
+            </h1>
+            <InfoHint
+              className="shrink-0"
+              buttonLabel="How the trial compares to paid credits"
+              helpBody={
+                <p>
+                  Paid plans kick in only after credits run dry—the starter grants exist so onboarding always exercises
+                  real uploads before you evaluate a bigger pack.
+                </p>
+              }
+            />
+          </div>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)_minmax(0,0.92fr)]">
@@ -105,10 +124,21 @@ export function TrialWelcomeClient() {
             <p className="text-sm font-medium uppercase tracking-[0.18em] text-primary">
               What you unlock
             </p>
-            <h2 className="mt-3 text-2xl font-semibold text-foreground">Run thumbnails while credits remain</h2>
-            <p className="mt-2 max-w-[65ch] text-sm leading-relaxed text-muted-foreground">
-              Exhaust the starter balance on real uploads. Credit packs unlock only once you explicitly buy them.
-            </p>
+            <div className="mt-3 flex flex-wrap items-center gap-x-1.5 gap-y-1">
+              <h2 className="min-w-0 text-2xl font-semibold text-foreground">
+                Run thumbnails while credits remain
+              </h2>
+              <InfoHint
+                className="shrink-0"
+                buttonLabel="When paid packs activate"
+                helpBody={
+                  <p>
+                    Burn through the gratis balance against real uploads. Larger credit packs remain locked until you
+                    intentionally purchase them — nothing auto-renews silently.
+                  </p>
+                }
+              />
+            </div>
           </div>
 
           <div className="space-y-3">
@@ -127,16 +157,24 @@ export function TrialWelcomeClient() {
             size="lg"
             className={cn('w-full gap-2', startTrial.isPending && 'opacity-80')}
             onClick={() => startTrial.mutate()}
-            disabled={loading || startTrial.isPending || !accessToken}
+            disabled={loading || startTrial.isPending || !accessToken || isError}
           >
             {startTrial.isPending ? 'Starting trial…' : 'Start free trial'}
             <ArrowRight className="h-4 w-4" />
           </Button>
 
-          <p className="text-center text-xs leading-5 text-muted-foreground">
-            No subscription starts today. Credits are consumed only when you generate or edit
-            thumbnails.
-          </p>
+          <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center">
+            <span className="max-w-xl text-xs leading-5 text-muted-foreground">
+              Credits spend only while generating or refining thumbnails — no recurring charge today.
+            </span>
+            <InfoHint
+              className="shrink-0"
+              buttonLabel="Subscription status during trial"
+              helpBody={
+                <p>No subscription activates automatically. Charges apply only after you consciously buy packs.</p>
+              }
+            />
+          </div>
         </div>
       </Card>
     </div>

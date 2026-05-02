@@ -8,6 +8,7 @@ import { useSignInMutation, useSignInWithGoogleMutation } from '@/lib/hooks';
 import { toast } from 'sonner';
 import { GoogleSignInButton } from '@/components/auth/google-sign-in-button';
 import { Button } from '@/components/ui/button';
+import { InfoHint } from '@/components/ui/info-hint';
 import { Input } from '@/components/ui/input';
 import { AppRoutes } from '@/config/routes';
 import { AuthSplitLayout, authFormInputClassName } from '@/components/auth/auth-split-layout';
@@ -68,12 +69,18 @@ export function LoginScreen() {
       }
     >
       <div>
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-          Welcome <span className="text-primary">back</span>
-        </h1>
-        <p className="mt-2 max-w-[65ch] text-sm leading-relaxed text-muted-foreground">
-          Continue where you left off—runs, thumbnails, and project history stay tied to this account.
-        </p>
+        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
+          <h1 className="min-w-0 text-3xl font-semibold tracking-tight text-foreground">
+            Welcome <span className="text-primary">back</span>
+          </h1>
+          <InfoHint
+            className="shrink-0"
+            buttonLabel="What stays tied to your account"
+            helpBody={
+              <p>Picks up where you left off—runs, thumbnails, and studio history sync to this workspace profile.</p>
+            }
+          />
+        </div>
       </div>
 
       <motion.form

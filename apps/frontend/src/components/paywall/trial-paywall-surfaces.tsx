@@ -9,6 +9,7 @@ import { Button, buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { openInsufficientCreditsPaywall } from '@/components/paywall/insufficient-credits-paywall';
+import { InfoHint } from '@/components/ui/info-hint';
 
 const SESSION_LOW_CREDITS = 'vt_low_credits_toast_shown';
 
@@ -53,10 +54,14 @@ export function TrialPaywallSurfaces() {
         )}
         role="status"
       >
-        <p className="font-medium text-foreground">You&apos;re out of credits</p>
-        <p className="mt-1 text-muted-foreground">
-          Generations use credits. Buy a one-time pack to continue — no subscription.
-        </p>
+        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
+          <p className="min-w-0 font-medium text-foreground">You&apos;re out of credits</p>
+          <InfoHint
+            className="shrink-0"
+            buttonLabel="How to top up credits"
+            helpBody={<p>Buys consume your balance once per thumbnail run—packs refill available credits without a subscription.</p>}
+          />
+        </div>
         <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
           <Button
             type="button"

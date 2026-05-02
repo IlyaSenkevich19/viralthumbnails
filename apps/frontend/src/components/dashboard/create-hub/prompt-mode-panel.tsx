@@ -1,4 +1,7 @@
+'use client';
+
 import { memo } from 'react';
+import { InfoHint } from '@/components/ui/info-hint';
 
 type Props = {
   creative: string;
@@ -10,12 +13,20 @@ export const PromptModePanel = memo(function PromptModePanel({ creative, onCreat
   return (
     <div className="flex h-full flex-col gap-3">
       <div className="flex flex-col gap-2">
-        <label htmlFor="dash-prompt" className="text-sm font-medium text-foreground">
-          Prompt details
-        </label>
-        <p className="max-w-[65ch] text-xs leading-relaxed text-muted-foreground">
-          Subject, on-image text hook, palette, mood, and composition notes.
-        </p>
+        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
+          <label htmlFor="dash-prompt" className="min-w-0 text-sm font-medium leading-tight text-foreground">
+            Prompt details
+          </label>
+          <InfoHint
+            buttonLabel="What to put in the prompt"
+            helpBody={
+              <p>
+                Mention subject matter, headline text-on-thumbnail cues, palette, mood, framing, composition, faces to
+                include or omit—anything downstream layout models can interpret faithfully.
+              </p>
+            }
+          />
+        </div>
       </div>
       <textarea
         id="dash-prompt"

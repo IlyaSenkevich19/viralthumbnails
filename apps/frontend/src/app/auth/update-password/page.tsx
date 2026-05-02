@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { AuthSplitLayout, authFormInputClassName } from '@/components/auth/auth-split-layout';
 import { useUpdatePasswordMutation } from '@/lib/hooks';
 import { Button } from '@/components/ui/button';
+import { InfoHint } from '@/components/ui/info-hint';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { AppRoutes } from '@/config/routes';
@@ -54,13 +55,21 @@ export default function UpdatePasswordPage() {
       }
     >
       <div>
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-          Choose a new <span className="text-primary">password</span>
-        </h1>
-        <p className="mt-2 max-w-[65ch] text-sm leading-relaxed text-muted-foreground">
-          Open this page from your ViralThumblify reset email. Expired links can be replaced from Sign in → Forgot
-          password.
-        </p>
+        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
+          <h1 className="min-w-0 text-3xl font-semibold tracking-tight text-foreground">
+            Choose a new <span className="text-primary">password</span>
+          </h1>
+          <InfoHint
+            className="shrink-0"
+            buttonLabel="How this reset link works"
+            helpBody={
+              <p>
+                Open through the ViralThumblify reset email. If this link expires, request a replacement from Sign in →
+                Forgot password.
+              </p>
+            }
+          />
+        </div>
       </div>
 
       <motion.form

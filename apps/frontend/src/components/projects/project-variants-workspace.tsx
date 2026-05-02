@@ -15,7 +15,11 @@ import {
 import { assertSufficientCredits } from '@/lib/paywall-notify';
 import { pickThumbnailStyles } from '@/lib/thumbnail-style-matrix';
 import { toast } from 'sonner';
-import { ConfirmationModal } from '@/components/ui/confirmation-modal';
+import {
+  ConfirmationModal,
+  DESTRUCTIVE_CONFIRM_WORD,
+} from '@/components/ui/confirmation-modal';
+import { InfoHint } from '@/components/ui/info-hint';
 import { Card, CardContent } from '@/components/ui/card';
 import { ProjectVariantsGeneratePanel } from '@/components/projects/project-variants-generate-panel';
 import { ProjectVariantsResults } from '@/components/projects/project-variants-results';
@@ -206,6 +210,9 @@ export function ProjectVariantsWorkspace({
   /** Clicks through to paywall when balance is low; do not disable the button for credits only. */
   const canGenerate = Boolean(accessToken && !pipelineBusy);
 
+  const deletionStyleLabel =
+    variantToDelete != null ? (styleByVariantId.get(variantToDelete) ?? null) : null;
+
   return (
     <>
       <ConfirmationModal
@@ -213,9 +220,47 @@ export function ProjectVariantsWorkspace({
         onOpenChange={(open) => {
           if (!open) setVariantToDelete(null);
         }}
-        title="Remove this image?"
-        description="This generated thumbnail will be permanently deleted. This cannot be undone."
-        confirmLabel="Delete"
+        title="Permanently delete this thumbnail?"
+        description={
+          variantToDelete ? (
+            <div className="space-y-3">
+              <p>
+                {deletionStyleLabel ? (
+                  <>
+                    Removing variant{' '}
+                    <span className="font-semibold text-foreground">{deletionStyleLabel}</span>{' '}
+                    from{' '}
+                    <span className="font-semibold text-foreground">“{project.title}”</span>{' '}
+                    deletes that generated image—including any refinements attached to this variant—from your workspace.
+                  </>
+                ) : (
+                  <>
+                    This removes the generated image for{' '}
+                    <span className="font-semibold text-foreground">“{project.title}”</span>; other thumbnails in this
+                    project stay.
+                  </>
+                )}{' '}
+                Credits already spent are not refunded.
+              </p>
+              <p className="text-foreground/90">You cannot undo a thumbnail deletion.</p>
+            </div>
+          ) : undefined
+        }
+        confirmGuard={{
+          phrase: DESTRUCTIVE_CONFIRM_WORD,
+          fieldLabel: `Type ${DESTRUCTIVE_CONFIRM_WORD} to confirm`,
+          hintAriaLabel: 'Why you must type DELETE before removing a thumbnail',
+          hint: (
+            <>
+              We ask for{' '}
+              <kbd className="rounded border border-border/70 bg-muted/40 px-1.5 py-0.5 font-mono text-[10px]">
+                {DESTRUCTIVE_CONFIRM_WORD}
+              </kbd>{' '}
+              so a slip on the delete control isn’t mistaken for intentionally discarding this image.
+            </>
+          ),
+        }}
+        confirmLabel="Delete thumbnail"
         cancelLabel="Cancel"
         variant="destructive"
         onConfirm={() => {
@@ -230,10 +275,20 @@ export function ProjectVariantsWorkspace({
         <aside className="w-full shrink-0 space-y-3.5 xl:sticky xl:top-6 xl:max-h-[calc(100dvh-4rem)] xl:w-[min(100%,31rem)] xl:overflow-y-auto xl:pr-2">
           <Card className="overflow-visible border-transparent bg-card/65 shadow-[0_18px_55px_-36px_rgba(0,0,0,0.95)] ring-1 ring-white/[0.025] hover:border-transparent">
             <CardContent className="space-y-5 p-4">
-              <p className="max-w-[65ch] text-xs leading-relaxed text-muted-foreground">
-                Source summary and template live here; the large preview and version rail stay on the right so you
-                judge output first.
-              </p>
+              <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 border-b border-white/[0.04] pb-3">
+                <p className="text-[11px] font-semibold uppercase leading-none tracking-[0.18em] text-muted-foreground">
+                  Studio
+                </p>
+                <InfoHint
+                  buttonLabel="How this sidebar is arranged"
+                  helpBody={
+                    <p>
+                      Source ingestion, templates, avatar controls stack on the left. The expansive preview canvas and
+                      variant history occupy the wider column so judgments stay anchored on visuals first.
+                    </p>
+                  }
+                />
+              </div>
               {hasSource ? (
                 <>
                   <ProjectVariantsSourceCard

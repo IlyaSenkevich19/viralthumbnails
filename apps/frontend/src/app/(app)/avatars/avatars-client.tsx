@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import {
   useAvatarsList,
   useCreateAvatarMutation,
@@ -9,16 +10,18 @@ import {
 } from '@/lib/hooks';
 import { useAuth } from '@/contexts/auth-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ConfirmationModal } from '@/components/ui/confirmation-modal';
 import { toast } from 'sonner';
 import { Trash2, Upload, UserCircle } from 'lucide-react';
 import { prepareAvatarImageFile } from '@/lib/prepare-avatar-image';
+import { AppRoutes } from '@/config/routes';
 import { SetPageFrame } from '@/components/layout/set-page-frame';
-import { EmptyState } from '@/components/ui/empty-state';
+import { EmptyStateCard } from '@/components/ui/empty-state';
 import { InlineLoadError } from '@/components/ui/inline-load-error';
 import { Skeleton } from '@/components/ui/skeleton';
+import { InfoHint } from '@/components/ui/info-hint';
 
 const AVATAR_ACCEPTED_FORMATS = 'PNG, JPG, WEBP';
 const AVATAR_SIZE_HINT_MB = 10;
@@ -52,12 +55,8 @@ export function AvatarsClient() {
   const deleteMutation = useDeleteAvatarMutation();
 
   const loading = authLoading || (hasSession && isPending);
-  const listError =
-    !authLoading && !hasSession
-      ? 'Not signed in'
-      : isError
-        ? (error as Error).message
-        : null;
+  const sessionGate = !authLoading && !hasSession;
+  const fetchErrorMessage = authLoading || !hasSession ? null : isError ? (error as Error).message : null;
 
   async function onPickFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -99,10 +98,19 @@ export function AvatarsClient() {
 
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Add a face</CardTitle>
-          <p className="text-xs text-muted-foreground">
-            Use a clear portrait photo. Accepted: {AVATAR_ACCEPTED_FORMATS}. Up to {AVATAR_SIZE_HINT_MB} MB.
-          </p>
+          <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
+            <CardTitle className="min-w-0 text-base">Add a face</CardTitle>
+            <InfoHint
+              className="shrink-0"
+              buttonLabel="Photo requirements for likeness references"
+              helpBody={
+                <p>
+                  Use a tidy portrait with obvious facial cues. Accepted formats are {AVATAR_ACCEPTED_FORMATS}, each file
+                  up to {AVATAR_SIZE_HINT_MB} MB before compression kicks in server-side.
+                </p>
+              }
+            />
+          </div>
         </CardHeader>
         <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-end">
           <div className="flex min-w-0 flex-1 flex-col gap-2">
@@ -136,11 +144,18 @@ export function AvatarsClient() {
         </CardContent>
       </Card>
 
-      {listError ? (
+      {sessionGate ? (
         <InlineLoadError
-          message={listError}
-          onRetry={hasSession ? () => void refetch() : undefined}
+          tone="neutral"
+          message="Sign in to save and reuse face references when generating thumbnails."
+          extraActions={
+            <Link href={AppRoutes.home} className={buttonVariants({ variant: 'default', size: 'sm' })}>
+              Sign in
+            </Link>
+          }
         />
+      ) : fetchErrorMessage ? (
+        <InlineLoadError message={fetchErrorMessage} onRetry={() => void refetch()} />
       ) : null}
 
       {loading ? (
@@ -156,20 +171,15 @@ export function AvatarsClient() {
           ))}
         </div>
       ) : hasSession && items.length === 0 ? (
-        <Card>
-          <CardContent className="p-0">
-            <EmptyState
-              title="No saved faces yet"
-              description={
-                <>
-                  Add a clear photo above — we&apos;ll use it as a reference when you generate thumbnails with your
-                  face.
-                </>
-              }
-              icon={<UserCircle className="h-7 w-7" strokeWidth={1.75} aria-hidden />}
-            />
-          </CardContent>
-        </Card>
+        <EmptyStateCard
+          title="No saved faces yet"
+          description={
+            <>
+              Add a clear photo above — we&apos;ll use it as a reference when you generate thumbnails with your face.
+            </>
+          }
+          icon={<UserCircle className="h-7 w-7" strokeWidth={1.75} aria-hidden />}
+        />
       ) : hasSession && items.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((a) => (
@@ -193,7 +203,7 @@ export function AvatarsClient() {
                   type="button"
                   size="icon"
                   variant="outline"
-                  className="shrink-0 text-destructive hover:bg-destructive/10"
+                  className="shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                   aria-label={`Delete ${a.name}`}
                   onClick={() => setDeleteId(a.id)}
                 >

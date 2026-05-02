@@ -40,13 +40,14 @@ export function VariantStripThumb({
     <button
       type="button"
       onClick={onSelect}
+      aria-current={selected ? 'true' : undefined}
       style={{ animationDelay: `${Math.min(enterIndex, 12) * 32}ms` }}
       className={cn(
-        'vt-variant-enter group relative shrink-0 overflow-hidden rounded-2xl border-2 bg-card/35 text-left transition-[background,border-color,transform]',
+        'vt-variant-enter group relative shrink-0 overflow-hidden rounded-2xl border-2 bg-card/35 text-left transition-[background,border-color,box-shadow,transform]',
         compact ? 'w-full max-w-[9.25rem] sm:max-w-[10rem]' : 'w-36',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/70 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/80 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
         selected
-          ? 'border-primary/80 bg-primary/10'
+          ? 'border-primary/90 bg-primary/[0.12] ring-2 ring-primary/50 ring-offset-2 ring-offset-background'
           : 'border-white/[0.1] hover:border-white/22 hover:bg-white/[0.04]',
         className,
       )}
@@ -65,14 +66,14 @@ export function VariantStripThumb({
           </div>
         )}
         <div className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-t from-black/35 via-transparent to-transparent opacity-80" />
-        {!showStatus && selected ? (
+        {selected ? (
           <span
             className={cn(
-              'pointer-events-none absolute left-1.5 top-1.5 z-[2] rounded-full bg-primary/90 font-semibold uppercase tracking-wide text-primary-foreground shadow-sm ring-1 ring-white/15',
+              'pointer-events-none absolute left-1.5 top-1.5 z-[2] rounded-full bg-primary/92 font-semibold uppercase tracking-wide text-primary-foreground shadow-sm ring-1 ring-white/20',
               compact ? 'px-1.5 py-px text-[8px]' : 'left-2 top-2 px-2 py-0.5 text-[10px]',
             )}
           >
-            Current
+            Selected
           </span>
         ) : null}
         {isLatestDone && !selected && !showStatus ? (
@@ -90,7 +91,7 @@ export function VariantStripThumb({
             className={cn(
               'absolute right-1.5 top-1.5 z-[2] rounded-full px-1.5 py-0.5 text-[10px] font-medium capitalize backdrop-blur',
               variant.status === 'failed'
-                ? 'bg-destructive/85 text-destructive-foreground'
+                ? 'bg-warning/90 text-black shadow-sm ring-1 ring-warning/35'
                 : 'bg-background/75 text-muted-foreground',
             )}
           >
@@ -127,7 +128,10 @@ export function VariantStripThumb({
           </span>
         )}
       </div>
-      <span className="sr-only">Select variant for {projectTitle}</span>
+      <span className="sr-only">
+        {styleLabel ?? 'Variant'} version {versionIndex}, {projectTitle}.{selected ? ' Currently selected.' : ''} Press Enter
+        or Space to show in preview.
+      </span>
     </button>
   );
 }

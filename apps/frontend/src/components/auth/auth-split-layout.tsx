@@ -1,6 +1,9 @@
+'use client';
+
 import type { ReactNode } from 'react';
 import { BrandWordmark } from '@/components/layout/brand-wordmark';
 import { AuthThumbnailMarquee } from '@/components/auth/auth-thumbnail-marquee';
+import { InfoHint } from '@/components/ui/info-hint';
 
 type AuthSplitLayoutProps = {
   /** Right side of the header (e.g. Sign up / Sign in links). */
@@ -30,14 +33,23 @@ export function AuthSplitLayout({ headerRight, children }: AuthSplitLayoutProps)
         <div className="absolute inset-0 bg-[linear-gradient(to_bottom,_transparent_60%,_rgba(0,0,0,0.15))]" />
         <div className="relative z-[2] w-full space-y-12 px-10">
           <div className="mx-auto max-w-xl space-y-6">
-            <h2 className="max-w-xl text-3xl font-semibold leading-tight">
-              Analyze footage.
-              <br />
-              Generate thumbnails; revise until they stick.
-            </h2>
-            <p className="max-w-[65ch] text-sm leading-relaxed text-muted-foreground">
-              One flow for prompts, uploads, or a YouTube link. Outputs stay anchored to frames from your footage.
-            </p>
+            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
+              <h2 className="max-w-xl min-w-0 text-3xl font-semibold leading-tight">
+                Analyze footage.
+                <br />
+                Generate thumbnails; revise until they stick.
+              </h2>
+              <InfoHint
+                className="shrink-0"
+                buttonLabel="How ViralThumblify fits your workflow"
+                helpBody={
+                  <p>
+                    One flow covers typed prompts, file uploads, or a pasted YouTube link. Outputs stay anchored to real
+                    frames from your footage instead of drifting into generic composites.
+                  </p>
+                }
+              />
+            </div>
           </div>
           <AuthThumbnailMarquee />
         </div>

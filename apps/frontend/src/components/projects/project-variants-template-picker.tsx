@@ -2,7 +2,10 @@
 
 import { motion, useReducedMotion } from 'framer-motion';
 import Image from 'next/image';
+import { Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/empty-state';
+import { InfoHint } from '@/components/ui/info-hint';
 import { cn } from '@/lib/utils';
 import { TemplatesGridSkeleton } from '@/components/templates/templates-grid-skeleton';
 import { NICHE_ALL } from '@/lib/hooks';
@@ -63,11 +66,19 @@ export function ProjectVariantsTemplatePicker({
 
   return (
     <div className="space-y-2.5">
-      <div>
-        <h2 className="text-base font-semibold tracking-tight text-foreground">Template (optional)</h2>
-        <p className="mt-1 max-w-[65ch] text-xs leading-relaxed text-muted-foreground">
-          Guides composition; clear it anytime to rely on prompts and source frames only.
-        </p>
+      <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
+        <h2 className="min-w-0 text-base font-semibold leading-tight tracking-tight text-foreground">
+          Template (optional)
+        </h2>
+        <InfoHint
+          buttonLabel="How templates are used"
+          helpBody={
+            <p>
+              Templates bias composition toward known layouts yet stay optional — clear selection anytime to rely on
+              descriptive prompts plus captured frames from your source pipeline.
+            </p>
+          }
+        />
       </div>
       <div className="grid gap-2 sm:grid-cols-2">
         <div>
@@ -147,7 +158,13 @@ export function ProjectVariantsTemplatePicker({
         </div>
       )}
       {!templatesLoading && filteredTemplates.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No templates match this face filter.</p>
+        <EmptyState
+          density="compact"
+          className="items-start px-1 py-5 text-left"
+          icon={<Filter className="h-6 w-6" strokeWidth={1.75} aria-hidden />}
+          title="No templates match this face filter"
+          description="Relax the filter to “Any” or switch template niche to surface more previews."
+        />
       ) : null}
       {!templatesLoading && templatesTotal > 0 ? (
         <div className="flex items-center justify-between gap-3 pt-1">

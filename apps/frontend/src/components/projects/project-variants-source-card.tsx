@@ -1,5 +1,6 @@
 'use client';
 
+import { InfoHint } from '@/components/ui/info-hint';
 import { cn } from '@/lib/utils';
 import type { PipelineJobStatusResponse } from '@/lib/api/thumbnails';
 
@@ -25,11 +26,16 @@ export function ProjectVariantsSourceCard({
   return (
     <section className="space-y-2">
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Source</p>
-          <p className="mt-1 max-w-[65ch] text-[11px] leading-relaxed text-muted-foreground/90">
-            File or URL this project was spun up from—read-only summary.
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-1.5 gap-y-1">
+          <p className="shrink-0 text-[11px] font-medium uppercase leading-none tracking-[0.14em] text-muted-foreground">
+            Source
           </p>
+          <InfoHint
+            buttonLabel="About the Source summary"
+            helpBody={
+              <p>Shows whichever file upload or ingest URL seeded this studio project—immutable reference only.</p>
+            }
+          />
         </div>
         {pipelineJob ? (
           <p
@@ -38,7 +44,7 @@ export function ProjectVariantsSourceCard({
               pipelineBusy
                 ? 'border-primary/35 text-primary'
                 : pipelineFailed
-                  ? 'border-destructive/35 text-destructive'
+                  ? 'border-warning/40 text-warning ring-1 ring-warning/15'
                   : 'border-border text-muted-foreground',
             )}
           >
@@ -60,7 +66,7 @@ export function ProjectVariantsSourceCard({
         <p
           className={cn(
             'text-xs leading-relaxed',
-            pipelineBusy ? 'text-primary' : 'text-destructive',
+            pipelineBusy ? 'text-primary' : 'text-warning',
           )}
         >
           {pipelineJob.progress?.label ??

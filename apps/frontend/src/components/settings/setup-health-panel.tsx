@@ -3,9 +3,12 @@
 import { AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { InlineLoadError } from '@/components/ui/inline-load-error';
 import { PrimaryActionPanel } from '@/components/ui/primary-action-panel';
 import { useBackendSetupHealth } from '@/lib/hooks';
 import { cn } from '@/lib/utils';
+import { InfoHint } from '@/components/ui/info-hint';
 
 function StatusBadge({ ok }: { ok: boolean }) {
   if (ok) return <Badge className="border-emerald-500/25 bg-emerald-500/10 text-emerald-300">OK</Badge>;
@@ -17,30 +20,38 @@ function StatusBadge({ ok }: { ok: boolean }) {
 }
 
 export function SetupHealthPanel() {
-  const { data, isPending, isError } = useBackendSetupHealth();
+  const { data, isPending, isError, refetch } = useBackendSetupHealth();
 
   if (isPending) {
     return (
-      <Card>
+      <Card aria-busy="true" aria-label="Loading pipeline diagnostics">
         <CardHeader>
           <CardTitle className="text-base">Pipeline diagnostics</CardTitle>
         </CardHeader>
-        <CardContent className="text-sm text-muted-foreground">Checking backend setup…</CardContent>
+        <CardContent className="space-y-3">
+          <Skeleton className="h-[4.75rem] w-full rounded-xl" />
+          <Skeleton className="h-[4.75rem] w-full rounded-xl" />
+          <Skeleton className="h-24 w-full rounded-xl sm:col-span-2" />
+          <span className="sr-only">Checking backend setup…</span>
+        </CardContent>
       </Card>
     );
   }
 
   if (isError || !data) {
     return (
-      <Card className="border-red-900/50">
+      <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <AlertTriangle className="h-4 w-4 text-red-300" />
+            <AlertTriangle className="h-4 w-4 text-amber-300" aria-hidden />
             Pipeline diagnostics
           </CardTitle>
         </CardHeader>
-        <CardContent className="text-sm text-muted-foreground">
-          Could not load setup diagnostics from backend.
+        <CardContent>
+          <InlineLoadError
+            message="Could not load setup diagnostics from the backend."
+            onRetry={() => void refetch()}
+          />
         </CardContent>
       </Card>
     );
@@ -57,10 +68,22 @@ export function SetupHealthPanel() {
   return (
     <PrimaryActionPanel>
       <CardHeader className="space-y-3 pb-4">
-        <CardTitle className="flex items-center justify-between gap-3 text-base">
-          <span className="flex items-center gap-2.5">
-            <CheckCircle2 className="h-4 w-4 text-primary" />
-            Pipeline diagnostics
+        <CardTitle className="flex flex-wrap items-start justify-between gap-3 text-base">
+          <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
+            <span className="flex items-center gap-2.5">
+              <CheckCircle2 className="h-4 w-4 text-primary" aria-hidden />
+              Pipeline diagnostics
+            </span>
+            <InfoHint
+              className="shrink-0"
+              buttonLabel="What pipeline diagnostics include"
+              helpBody={
+                <p>
+                  Reflects live environment variables and the OpenRouter model map your backend advertises at this
+                  instant—ideal for validating secrets before kicking off heavier jobs.
+                </p>
+              }
+            />
           </span>
           <div
             className={cn(
@@ -70,13 +93,10 @@ export function SetupHealthPanel() {
                 : 'border border-amber-500/25 bg-amber-500/10 text-amber-300',
             )}
           >
-            <CheckCircle2 className="h-3.5 w-3.5" />
+            <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
             {allReady ? 'Ready' : 'Needs attention'}
           </div>
         </CardTitle>
-        <p className="text-sm text-muted-foreground">
-          Runtime checks and currently active OpenRouter pipeline model map.
-        </p>
       </CardHeader>
 
       <CardContent className="space-y-6">

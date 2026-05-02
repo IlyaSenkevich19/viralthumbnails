@@ -5,6 +5,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 import Link from 'next/link';
 import { Mail } from 'lucide-react';
 import { AuthSplitLayout } from '@/components/auth/auth-split-layout';
+import { InfoHint } from '@/components/ui/info-hint';
 import { buttonVariants } from '@/components/ui/button';
 import { AppRoutes } from '@/config/routes';
 import { cn } from '@/lib/utils';
@@ -36,12 +37,20 @@ export default function ResetLinkSentPage() {
       }
     >
       <div>
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-          Check your <span className="text-primary">inbox</span>
-        </h1>
-        <p className="mt-2 max-w-[65ch] text-sm leading-relaxed text-muted-foreground">
-          Matching accounts receive a ViralThumblify reset link—delivery sometimes lags roughly a minute.
-        </p>
+        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
+          <h1 className="min-w-0 text-3xl font-semibold tracking-tight text-foreground">
+            Check your <span className="text-primary">inbox</span>
+          </h1>
+          <InfoHint
+            className="shrink-0"
+            buttonLabel="Reset email delivery timing"
+            helpBody={
+              <p>
+                Matching workspaces get a ViralThumblify reset link—inboxes can lag about a minute, so skim spam if needed.
+              </p>
+            }
+          />
+        </div>
       </div>
 
       <motion.div

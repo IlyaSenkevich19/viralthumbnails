@@ -10,6 +10,7 @@ import { CreditPacksGrid } from '@/components/billing/credit-packs-grid';
 import { trackEvent } from '@/lib/analytics';
 import { vtSpring } from '@/lib/motion-presets';
 import { useFocusTrap } from '@/lib/use-focus-trap';
+import { InfoHint } from '@/components/ui/info-hint';
 
 export const OPEN_PAYWALL_EVENT = 'vt-open-insufficient-credits-paywall';
 
@@ -100,19 +101,26 @@ export function InsufficientCreditsPaywall() {
               <h2 id="credits-paywall-title" className="mt-1 text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
                 {hasBalanceDetail ? 'Add credits to continue' : payload.title ?? 'Not enough credits'}
               </h2>
-              {hasBalanceDetail ? (
-                <p
-                  id="credits-paywall-balance"
-                  className="mt-2 max-w-[65ch] text-sm leading-relaxed text-muted-foreground"
-                >
-                  This action needs <strong className="text-foreground">{payload.need}</strong> credit
-                  {payload.need === 1 ? '' : 's'} · you have <strong className="text-foreground">{payload.have}</strong>.
-                </p>
-              ) : payload.description ? (
-                <p id="credits-paywall-desc" className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                  {payload.description}
-                </p>
-              ) : null}
+              <div className="mt-2 flex flex-wrap items-center gap-x-1.5 gap-y-1">
+                {hasBalanceDetail ? (
+                  <p
+                    id="credits-paywall-balance"
+                    className="min-w-0 max-w-[min(40rem,calc(100vw-5rem))] text-sm leading-relaxed text-muted-foreground"
+                  >
+                    This action needs <strong className="text-foreground">{payload.need}</strong> credit
+                    {payload.need === 1 ? '' : 's'} · you have <strong className="text-foreground">{payload.have}</strong>.
+                  </p>
+                ) : payload.description ? (
+                  <p id="credits-paywall-desc" className="min-w-0 max-w-[min(40rem,calc(100vw-5rem))] text-sm leading-relaxed text-muted-foreground">
+                    {payload.description}
+                  </p>
+                ) : null}
+                <InfoHint
+                  className="shrink-0"
+                  buttonLabel="Credit packs basics"
+                  helpBody={<p>Add one-time bundles when you&apos;re ready—pricing reflects prepaid generation capacity, no subscription.</p>}
+                />
+              </div>
             </div>
             <Button type="button" variant="ghost" size="sm" className="shrink-0 text-muted-foreground" onClick={() => setOpen(false)}>
               Close
@@ -121,7 +129,18 @@ export function InsufficientCreditsPaywall() {
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-7 sm:py-6">
-          <h3 className="mb-4 text-base font-semibold text-foreground">Credit packs</h3>
+          <div className="mb-4 flex flex-wrap items-center gap-x-1.5 gap-y-1">
+            <h3 className="min-w-0 text-base font-semibold text-foreground">Credit packs</h3>
+            <InfoHint
+              className="shrink-0"
+              buttonLabel="Choosing a credit pack"
+              helpBody={
+                <p>
+                  Larger bundles lower the per-generation cost upfront. Unused credits persist on your ledger until consumed.
+                </p>
+              }
+            />
+          </div>
           <CreditPacksGrid plans={PAYWALL_PACK_PLANS} className="lg:grid-cols-3" />
         </div>
 

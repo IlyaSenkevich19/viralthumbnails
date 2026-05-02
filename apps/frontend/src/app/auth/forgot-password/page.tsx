@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { AuthSplitLayout, authFormInputClassName } from '@/components/auth/auth-split-layout';
 import { useResetPasswordMutation } from '@/lib/hooks';
 import { Button } from '@/components/ui/button';
+import { InfoHint } from '@/components/ui/info-hint';
 import { Input } from '@/components/ui/input';
 import { AppRoutes } from '@/config/routes';
 import { PASSWORD_RESET_EMAIL_SESSION_KEY } from '@/lib/auth-password-reset-flow';
@@ -47,12 +48,20 @@ export default function ForgotPasswordPage() {
       }
     >
       <div>
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-          Reset your <span className="text-primary">password</span>
-        </h1>
-        <p className="mt-2 max-w-[65ch] text-sm leading-relaxed text-muted-foreground">
-          We&apos;ll email a ViralThumblify reset link whenever this address belongs to an account.
-        </p>
+        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
+          <h1 className="min-w-0 text-3xl font-semibold tracking-tight text-foreground">
+            Reset your <span className="text-primary">password</span>
+          </h1>
+          <InfoHint
+            className="shrink-0"
+            buttonLabel="When you receive a reset email"
+            helpBody={
+              <p>
+                Messages only go out when this address belongs to an account—check spam if nothing arrives after a minute.
+              </p>
+            }
+          />
+        </div>
       </div>
 
       <motion.form

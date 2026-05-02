@@ -19,6 +19,7 @@ import { submitLeadIntake } from '@/lib/api/lead-intake';
 import { isLikelyYoutubeUrl, normalizeHttpUrl } from '@/lib/youtube-channel-url';
 import { trackEvent } from '@/lib/analytics';
 import { vtSpring } from '@/lib/motion-presets';
+import { InfoHint } from '@/components/ui/info-hint';
 
 const PROBLEM_OPTIONS = [
   { value: 'time', label: 'Takes too long', icon: Clock },
@@ -471,14 +472,23 @@ export default function RegisterPage() {
         <div className="absolute inset-0 bg-[linear-gradient(to_bottom,_transparent_60%,_rgba(0,0,0,0.15))]" />
         <div className="relative z-[2] w-full space-y-12 px-10">
           <div className="mx-auto max-w-xl space-y-6">
-            <h2 className="text-3xl font-semibold leading-tight">
-              Store faces once.
-              <br />
-              Reuse thumbnail recipes per upload.
-            </h2>
-            <p className="max-w-[65ch] text-sm leading-relaxed text-muted-foreground">
-              Saved likenesses and niche-ready templates stay pinned to each workspace—less setup before every publish.
-            </p>
+            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
+              <h2 className="min-w-0 text-3xl font-semibold leading-tight">
+                Store faces once.
+                <br />
+                Reuse thumbnail recipes per upload.
+              </h2>
+              <InfoHint
+                className="shrink-0"
+                buttonLabel="What you can pin to a workspace"
+                helpBody={
+                  <p>
+                    Saved likenesses and niche-ready templates stay attached across uploads so you rebuild less bespoke
+                    art direction before each publish window.
+                  </p>
+                }
+              />
+            </div>
           </div>
           <AuthThumbnailMarquee />
         </div>

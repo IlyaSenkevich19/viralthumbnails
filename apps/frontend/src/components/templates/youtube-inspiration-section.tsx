@@ -9,7 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { VtPillToggleRow } from '@/components/motion/vt-pill-toggle-row';
-import { EmptyState } from '@/components/ui/empty-state';
+import { EmptyStateCard } from '@/components/ui/empty-state';
+import { InfoHint } from '@/components/ui/info-hint';
 import { InlineLoadError } from '@/components/ui/inline-load-error';
 import { cn } from '@/lib/utils';
 
@@ -83,14 +84,26 @@ export function YoutubeInspirationSection() {
   return (
     <section className="space-y-4 rounded-2xl border border-border/80 bg-muted/10 p-4 sm:p-6" aria-labelledby="yt-inspiration-heading">
       <div>
-        <h2 id="yt-inspiration-heading" className="text-lg font-semibold tracking-tight text-foreground">
-          YouTube inspiration
-        </h2>
-        <p className="mt-1 max-w-[65ch] text-sm leading-relaxed text-muted-foreground">
-          Queries ride the YouTube Data API with plain view-count ordering—not CTR guesses. Refresh schedules one lookup per tracked niche while thumbnail sprites arrive via CDN payloads in the listing. Never ship keys client-side—store{' '}
-          <code className="rounded bg-secondary px-1 text-xs">YOUTUBE_DATA_API_KEY</code> in{' '}
-          <code className="rounded bg-secondary px-1 text-xs">apps/frontend/.env.local</code>.
-        </p>
+        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
+          <h2 className="min-w-0 text-lg font-semibold leading-tight tracking-tight text-foreground" id="yt-inspiration-heading">
+            YouTube inspiration
+          </h2>
+          <InfoHint
+            buttonLabel="How YouTube inspiration data works"
+            helpBody={
+              <>
+                <p>
+                  Queries ride the official YouTube Data API with straightforward view-count ordering—not CTR guesses.
+                  Refresh batches one lookup per tracked niche while thumbnail sprites hydrate from CDN payloads in the grid.
+                  Never ship secrets to the browser: keep{' '}
+                  <code className="rounded bg-secondary px-1 text-[11px]">YOUTUBE_DATA_API_KEY</code> alongside other
+                  server env vars inside{' '}
+                  <code className="rounded bg-secondary px-1 text-[11px]">apps/frontend/.env.local</code>.
+                </p>
+              </>
+            }
+          />
+        </div>
         {data?.disclaimer ? (
           <p className="mt-2 text-xs text-muted-foreground">{data.disclaimer}</p>
         ) : null}
@@ -159,8 +172,9 @@ export function YoutubeInspirationSection() {
       ) : null}
 
       {!isPending && !isError && sortedItems.length === 0 ? (
-        <EmptyState
-          className="rounded-2xl border border-border/70 bg-muted/15 py-10"
+        <EmptyStateCard
+          cardClassName="rounded-2xl border border-border/70 bg-muted/15"
+          className="py-10"
           icon={<Video className="h-7 w-7" strokeWidth={1.75} aria-hidden />}
           title="No videos for this filter"
           description="Try another niche, duration, or time window, then refresh."

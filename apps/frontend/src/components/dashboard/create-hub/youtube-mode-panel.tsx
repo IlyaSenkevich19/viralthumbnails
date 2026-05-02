@@ -1,6 +1,9 @@
+'use client';
+
 import { memo } from 'react';
 import { isLikelyYoutubeUrl } from '@/lib/format';
 import { Input } from '@/components/ui/input';
+import { InfoHint } from '@/components/ui/info-hint';
 import type { YoutubeMetaPreview } from '../dashboard-create-hub.utils';
 
 type Props = {
@@ -23,12 +26,20 @@ export const YoutubeModePanel = memo(function YoutubeModePanel({
   return (
     <div className="flex h-full flex-col gap-3">
       <div className="flex flex-col gap-2">
-        <label htmlFor="dash-youtube" className="text-sm font-medium text-foreground">
-          YouTube URL
-        </label>
-        <p className="max-w-[65ch] text-xs leading-relaxed text-muted-foreground">
-          Accepts youtube.com or youtu.be links—we pull title, channel line, and poster art once the URL parses.
-        </p>
+        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
+          <label htmlFor="dash-youtube" className="min-w-0 text-sm font-medium leading-tight text-foreground">
+            YouTube URL
+          </label>
+          <InfoHint
+            buttonLabel="How YouTube URLs are used"
+            helpBody={
+              <p>
+                Standard youtube.com / youtu.be links work. Once the URL validates and metadata fetch succeeds we load
+                title, channel attribution, and poster art preview for confidence before generating.
+              </p>
+            }
+          />
+        </div>
       </div>
       <Input
         className="mt-0"

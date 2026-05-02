@@ -2,6 +2,7 @@
 
 import { ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { InfoHint } from '@/components/ui/info-hint';
 import { cn } from '@/lib/utils';
 import {
   SELECT_EMPTY_VALUE,
@@ -75,18 +76,25 @@ export function ProjectVariantsGeneratePanel({
     <section className="space-y-4">
       <div className="flex flex-col gap-2">
         <div className="space-y-1.5">
-          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-            <h2 className="text-base font-semibold tracking-tight text-foreground">Output</h2>
+          <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
+            <h2 className="text-base font-semibold leading-tight tracking-tight text-foreground">Output</h2>
             <span
               className="inline-flex shrink-0 items-center rounded-full border border-border bg-background/80 px-2.5 py-0.5 text-[11px] font-medium tabular-nums text-muted-foreground ring-1 ring-white/[0.04]"
               title={`This run costs ${creditCost} credit${creditCost === 1 ? '' : 's'}`}
             >
               {creditCost} credit{creditCost === 1 ? '' : 's'}
             </span>
+            <InfoHint
+              className="shrink-0"
+              buttonLabel="Thumbnail count vs credits"
+              helpBody={
+                <p>
+                  Each number corresponds to visually distinct directions we ask the renderer to propose in parallel.
+                  Larger batches multiply credit spend upfront because every layout attempt reserves capacity.
+                </p>
+              }
+            />
           </div>
-          <p className="max-w-[65ch] text-xs leading-relaxed text-muted-foreground">
-            How many distinct layout directions to request in one run (each costs credits).
-          </p>
         </div>
         <Select
           value={String(generateCount)}
@@ -155,9 +163,9 @@ export function ProjectVariantsGeneratePanel({
           </div>
 
           <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0">
+            <div className="flex min-w-0 items-center gap-x-1.5 gap-y-1">
               <span className="text-sm font-medium text-foreground">Prioritize likeness</span>
-              <p className="text-xs text-muted-foreground">{helperText}</p>
+              <InfoHint buttonLabel="How likeness prioritization behaves" helpBody={<p>{helperText}</p>} />
             </div>
             <button
               type="button"
@@ -194,8 +202,8 @@ export function ProjectVariantsGeneratePanel({
           </span>
         </Button>
         {pipelineBusy ? (
-          <p className="mt-2 text-center text-xs text-muted-foreground">
-            Video analysis is running. Generation unlocks when it finishes.
+          <p className="mt-2 text-center text-xs text-muted-foreground" role="status">
+            Analysis running — unlocks generation when finished.
           </p>
         ) : null}
       </div>

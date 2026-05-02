@@ -4,6 +4,7 @@ import { Check, ImageIcon, Loader2, Sparkles } from 'lucide-react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { vtSpring } from '@/lib/motion-presets';
 import { cn } from '@/lib/utils';
+import { InfoHint } from '@/components/ui/info-hint';
 import type { PipelineJobStatusResponse } from '@/lib/api/thumbnails';
 
 type ProjectVariantsPipelineProgressProps = {
@@ -73,7 +74,19 @@ export function ProjectVariantsPipelineProgress({
       animate={{ opacity: 1, y: 0 }}
       transition={reduceMotion ? { duration: 0 } : vtSpring.enter}
     >
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_0%,rgba(255,255,255,0.055),transparent_34%),radial-gradient(circle_at_82%_10%,rgba(255,59,59,0.13),transparent_30%)]" />
+      <div
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_0%,rgba(255,255,255,0.055),transparent_34%)]"
+        aria-hidden
+      />
+      <div
+        className={cn(
+          'pointer-events-none absolute inset-0',
+          pipelineFailed
+            ? 'bg-[radial-gradient(circle_at_82%_10%,rgba(251,191,36,0.14),transparent_32%)]'
+            : 'bg-[radial-gradient(circle_at_82%_10%,rgba(59,130,246,0.07),transparent_30%)]',
+        )}
+        aria-hidden
+      />
       <div className="relative space-y-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-3">
@@ -96,7 +109,19 @@ export function ProjectVariantsPipelineProgress({
               </div>
             </div>
             <div>
-              <h3 className="text-2xl font-semibold tracking-tight text-foreground">{heroTitle}</h3>
+              <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
+                <h3 className="min-w-0 text-2xl font-semibold tracking-tight text-foreground">{heroTitle}</h3>
+                <InfoHint
+                  className="shrink-0"
+                  buttonLabel="What the video pipeline covers"
+                  helpBody={
+                    <p>
+                      Ingest validates your source clip, scouts frames worth captioning, and only then emits thumbnail
+                      candidates. Messaging below echoes backend progress verbatim.
+                    </p>
+                  }
+                />
+              </div>
               <p className="mt-1 max-w-[65ch] text-sm leading-relaxed text-muted-foreground">
                 {progress?.label ??
                   (pipelineBusy
@@ -239,7 +264,7 @@ function PipelineSteps({
               complete && 'bg-primary/[0.07] text-primary',
               active && 'bg-primary/[0.12] text-primary shadow-soft ring-1 ring-primary/15',
               !complete && !active && 'bg-background/25 text-muted-foreground',
-              failed && active && 'bg-destructive/10 text-destructive ring-1 ring-destructive/20',
+              failed && active && 'bg-warning/12 text-warning ring-1 ring-warning/22',
             )}
           >
             {index < stages.length - 1 ? (

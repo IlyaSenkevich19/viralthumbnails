@@ -86,7 +86,7 @@ export function ProjectRowMenu({ projectId, projectTitle, onDeleteClick }: Proje
         <button
           type="button"
           role="menuitem"
-          className="motion-base flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-destructive hover:bg-destructive/10"
+          className="motion-base flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
           onClick={(e) => {
             e.stopPropagation();
             setOpen(false);
@@ -94,7 +94,7 @@ export function ProjectRowMenu({ projectId, projectTitle, onDeleteClick }: Proje
           }}
         >
           <Trash2 className="h-4 w-4 shrink-0" aria-hidden />
-          Delete
+          Delete project…
         </button>
       </div>
     ) : null;

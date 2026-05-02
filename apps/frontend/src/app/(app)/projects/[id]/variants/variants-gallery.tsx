@@ -117,9 +117,15 @@ function VariantsGalleryInner({ projectId }: { projectId: string }) {
           <ArrowLeft className="h-4 w-4" />
           Projects
         </Link>
-        <p className="text-sm text-destructive" role="alert">
-          You need to be signed in to view this project.
-        </p>
+        <InlineLoadError
+          tone="neutral"
+          message="You need to be signed in to view this project."
+          extraActions={
+            <Link href={AppRoutes.home} className={buttonVariants({ variant: 'default', size: 'sm' })}>
+              Sign in
+            </Link>
+          }
+        />
       </div>
     );
   }

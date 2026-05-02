@@ -8,7 +8,9 @@ import { pricingPlans } from '@/config/pricing-plans';
 import { CreditPacksGrid } from '@/components/billing/credit-packs-grid';
 import { SetPageFrame } from '@/components/layout/set-page-frame';
 import { EmptyState } from '@/components/ui/empty-state';
+import { InfoHint } from '@/components/ui/info-hint';
 import { InlineLoadError } from '@/components/ui/inline-load-error';
+import { SectionHeading } from '@/components/ui/section-heading';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useCreditLedger, useGenerationCredits } from '@/lib/hooks';
 import { cn } from '@/lib/utils';
@@ -80,10 +82,17 @@ export default function CreditsPricingPage() {
     <div className="space-y-10 pb-8">
       <SetPageFrame title="Credits" />
 
-      <p className="max-w-[65ch] text-sm leading-relaxed text-muted-foreground">
-        Credits fund thumbnail runs and edits. Balance updates after each pipeline; refunds show up automatically when a
-        run fails mid-flight.
-      </p>
+      <div className="flex justify-end sm:justify-start">
+        <InfoHint
+          buttonLabel="About credits and this page"
+          helpBody={
+            <p className="text-foreground">
+              Credits fund thumbnail runs and edits. Your balance updates after each pipeline completes; refunds show up
+              automatically when a run fails mid-flight or credits are reconciled after a faulty job.
+            </p>
+          }
+        />
+      </div>
 
       <section className="surface-dashboard relative overflow-hidden rounded-2xl p-5 sm:p-6">
         <div
@@ -91,11 +100,17 @@ export default function CreditsPricingPage() {
           aria-hidden
         />
         <div className="relative flex flex-wrap items-baseline justify-between gap-4">
-          <div>
-            <h3 className="text-base font-semibold text-foreground">Your balance</h3>
-            <p className="mt-1 max-w-[65ch] text-sm leading-relaxed text-muted-foreground">
-              Each thumbnail run consumes balance; refunds appear here when pipelines fail mid-flight.
-            </p>
+          <div className="min-w-0 flex-1">
+            <SectionHeading
+              title={<h3 className="text-base font-semibold text-foreground">Your balance</h3>}
+              helpLabel="How your balance changes"
+              helpBody={
+                <p>
+                  Each generation or edit consumes balance when the pipeline confirms spend. Amounts reconcile here — if a
+                  run fails partially, refunds may arrive as ledger rows afterward.
+                </p>
+              }
+            />
           </div>
           <p className="text-sm tabular-nums text-muted-foreground">
             <span className="sr-only">Current credits: </span>
@@ -116,15 +131,20 @@ export default function CreditsPricingPage() {
       </section>
 
       <section className="space-y-4" aria-labelledby="credits-packs-heading">
-        <div>
-          <h3 id="credits-packs-heading" className="text-base font-semibold text-foreground">
-            Credit packs
-          </h3>
-          <p className="mt-1 max-w-[65ch] text-sm leading-relaxed text-muted-foreground">
-            Targets for one-time balances. Purchase CTAs remain disabled until checkout is wired; use this page to
-            review pricing and reconcile usage.
-          </p>
-        </div>
+        <SectionHeading
+          title={
+            <h3 id="credits-packs-heading" className="text-base font-semibold text-foreground">
+              Credit packs
+            </h3>
+          }
+          helpLabel="About credit packs on this screen"
+          helpBody={
+            <p>
+              Packs describe one-time balances you buy to top up. Purchases CTAs stay disabled until checkout is wired —
+              meanwhile use this grid to preview pricing tiers and reconcile what you intend to provision.
+            </p>
+          }
+        />
         <CreditPacksGrid plans={pricingPlans} />
       </section>
 
@@ -134,22 +154,37 @@ export default function CreditsPricingPage() {
         aria-labelledby="credits-history-heading"
       >
         <div className="relative flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2 border-b border-border/60 pb-4">
-          <div>
-            <h3 id="credits-history-heading" className="text-base font-semibold text-foreground">
-              Credits history
-            </h3>
-            <p className="mt-1 max-w-[65ch] text-xs leading-relaxed text-muted-foreground">
-              Ledger of grants, spends, refunds, and manual adjustments tied to your account.
-            </p>
-          </div>
+          <SectionHeading
+            title={
+              <h3 id="credits-history-heading" className="text-base font-semibold text-foreground">
+                Credits history
+              </h3>
+            }
+            helpLabel="How to read credits history"
+            helpBody={
+              <p>
+                Every row mirrors a ledger mutation: grants, reserves for runs, completions, refunds, manual credits
+                from support, etc. Prefer the expandable table below for granular timestamps and deltas.
+              </p>
+            }
+          />
         </div>
 
         <details className="group relative [&_summary::-webkit-details-marker]:hidden">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-3 py-4 text-left motion-base rounded-lg outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 -mx-1 px-1 hover:bg-muted/25">
-            <span>
+            <span className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1">
               <span className="text-sm font-medium text-foreground">Recent balance changes</span>
-              <span className="mt-0.5 block text-xs text-muted-foreground">
-                Expand to load the full ledger table (same data as the collapsed summary below).
+              <span className="inline-flex" onClick={(e) => e.stopPropagation()}>
+                <InfoHint
+                  className="pointer-events-auto"
+                  buttonLabel="About the expandable ledger table"
+                  helpBody={
+                    <p>
+                      Open this section to hydrate the detailed table variant of the ledger. It&apos;s the same underlying
+                      data as summarized rows—you get timestamps, deltas, and running balances inline.
+                    </p>
+                  }
+                />
               </span>
             </span>
             <ChevronDown
@@ -200,9 +235,10 @@ export default function CreditsPricingPage() {
                 ) : ledgerError ? null : !ledger || ledger.length === 0 ? (
                   <tr>
                     <td className="p-0" colSpan={5}>
-                      <div className="py-4">
+                      <div className="py-2">
                         <EmptyState
-                          icon={<History className="h-7 w-7" strokeWidth={1.75} aria-hidden />}
+                          density="compact"
+                          icon={<History className="h-6 w-6" strokeWidth={1.75} aria-hidden />}
                           title="No ledger rows yet"
                           description="Runs from the generator and credit grants will populate this table automatically."
                         />
@@ -246,16 +282,29 @@ export default function CreditsPricingPage() {
         </details>
       </section>
 
-      <p className="text-center text-xs leading-relaxed text-muted-foreground">
-        Need another pack size or invoice billing? Ping support—we can provision balances manually.{' '}
-        <Link href={AppRoutes.create} className="font-medium text-primary underline-offset-4 hover:underline">
+      <div className="flex flex-wrap items-center justify-center gap-2">
+        <Link href={AppRoutes.create} className="text-xs font-medium text-primary underline-offset-4 hover:underline">
           Back to generator
         </Link>
-        {' · '}
-        <a href="#credits-history" className="font-medium text-primary underline-offset-4 hover:underline">
+        <span className="text-muted-foreground" aria-hidden>
+          ·
+        </span>
+        <a
+          href="#credits-history"
+          className="text-xs font-medium text-primary underline-offset-4 hover:underline"
+        >
           Jump to history
         </a>
-      </p>
+        <InfoHint
+          buttonLabel="Enterprise credit options"
+          helpBody={
+            <p>
+              Need another pack size or invoice-backed billing? Contact support — operational staff can manually
+              provision balances tied to procurement workflows.
+            </p>
+          }
+        />
+      </div>
     </div>
   );
 }

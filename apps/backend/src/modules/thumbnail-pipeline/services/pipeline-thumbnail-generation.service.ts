@@ -11,6 +11,7 @@ import { requestOpenRouterSingleThumbnailImage } from '../../openrouter/openrout
 import { userContentTextThenReferenceImages } from '../../openrouter/multipart-user-content';
 import type { OpenRouterMessage } from '../../openrouter/openrouter.types';
 import type { ReferenceBundle } from './pipeline-prompt-builder.service';
+import { THUMBNAIL_PROMPT_MAX_CHARS_OPENROUTER_MULTIMODAL } from '../../../common/optimized-thumbnail-prompt';
 
 const MULTIMODAL_HEADER =
   'Generate a single 16:9 YouTube thumbnail image. Reference images appear in priority order: selected video frame if present (source truth), then template reference(s) (layout only), then face reference if present (likeness). Never place text over the face, eyes, mouth, hands, or main object.';
@@ -56,7 +57,10 @@ export class PipelineThumbnailGenerationService {
       const prompt = params.prompts[i];
       try {
         const content: OpenRouterMessage['content'] = useMultimodal
-          ? userContentTextThenReferenceImages(`${MULTIMODAL_HEADER}\n\n${prompt.slice(0, 2500)}`, refUrls)
+          ? userContentTextThenReferenceImages(
+              `${MULTIMODAL_HEADER}\n\n${prompt.slice(0, THUMBNAIL_PROMPT_MAX_CHARS_OPENROUTER_MULTIMODAL)}`,
+              refUrls,
+            )
           : prompt;
 
         const img = await requestOpenRouterSingleThumbnailImage({

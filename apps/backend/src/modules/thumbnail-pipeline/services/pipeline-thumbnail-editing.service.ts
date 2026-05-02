@@ -7,6 +7,7 @@ import { OpenRouterClient } from '../../openrouter/openrouter.client';
 import { requestOpenRouterSingleThumbnailImage } from '../../openrouter/openrouter-requests';
 import { userContentTextThenReferenceImages } from '../../openrouter/multipart-user-content';
 import type { OpenRouterMessage } from '../../openrouter/openrouter.types';
+import { THUMBNAIL_PROMPT_MAX_CHARS_OPENROUTER_MULTIMODAL } from '../../../common/optimized-thumbnail-prompt';
 
 const EDIT_HEADER =
   'You are editing an existing 16:9 YouTube thumbnail. After this paragraph: first image is the current thumbnail; following images are template and/or face references in that order. Apply the edit instructions while preserving readability and contrast. Never place text over the face, eyes, mouth, hands, or main object.';
@@ -49,7 +50,7 @@ export class PipelineThumbnailEditingService {
     const faces = params.faceReferenceDataUrls ?? [];
     const ordered = [params.baseImageDataUrl, ...templates, ...faces];
 
-    const body = `${EDIT_HEADER}\n\n${params.instruction.trim().slice(0, 2500)}`;
+    const body = `${EDIT_HEADER}\n\n${params.instruction.trim().slice(0, THUMBNAIL_PROMPT_MAX_CHARS_OPENROUTER_MULTIMODAL)}`;
     const content: OpenRouterMessage['content'] = userContentTextThenReferenceImages(body, ordered);
 
     const or = getOpenRouterConfig(this.config);
@@ -115,7 +116,7 @@ export class PipelineThumbnailEditingService {
       const prompt = params.prompts[i];
       const baseFrameDataUrl = params.variantBaseFrameDataUrls?.[i] ?? params.baseFrameDataUrl;
       const ordered = [baseFrameDataUrl, ...templates, ...faces];
-      const body = `${VIDEO_FRAME_EDIT_HEADER}\n\n${referencePolicy}\n\nNegative overlay rules: no artificial red circles, no arrows, no yellow dots, no target rings, no fake annotation graphics, no fake UI markers.\n\nEdit instructions:\n${prompt.trim().slice(0, 2400)}`;
+      const body = `${VIDEO_FRAME_EDIT_HEADER}\n\n${referencePolicy}\n\nNegative overlay rules: no artificial red circles, no arrows, no yellow dots, no target rings, no fake annotation graphics, no fake UI markers.\n\nEdit instructions:\n${prompt.trim().slice(0, THUMBNAIL_PROMPT_MAX_CHARS_OPENROUTER_MULTIMODAL)}`;
       const content: OpenRouterMessage['content'] = userContentTextThenReferenceImages(body, ordered);
       try {
         const img = await requestOpenRouterSingleThumbnailImage({

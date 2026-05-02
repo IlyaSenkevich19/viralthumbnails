@@ -10,7 +10,10 @@ import {
   resolveFaceInThumbnailInstruction,
   resolveThumbnailStyleInstruction,
 } from '../../common/thumbnail-prompt-guidelines';
-import { generateOptimizedThumbnailPrompt } from '../../common/optimized-thumbnail-prompt';
+import {
+  generateOptimizedThumbnailPrompt,
+  THUMBNAIL_PROMPT_MAX_CHARS_OPENROUTER_MULTIMODAL,
+} from '../../common/optimized-thumbnail-prompt';
 import { userContentTextThenReferenceImages } from '../openrouter/multipart-user-content';
 import { OpenRouterClient } from '../openrouter/openrouter.client';
 import { requestOpenRouterSingleThumbnailImage } from '../openrouter/openrouter-requests';
@@ -541,7 +544,7 @@ export class ProjectVariantImageService {
 
     const header =
       'Generate a single 16:9 YouTube thumbnail image. After this paragraph, reference images appear in order (template first, then face if present).';
-    const fullPrompt = `${header}\n\n${opts.prompt.slice(0, 2500)}`;
+    const fullPrompt = `${header}\n\n${opts.prompt.slice(0, THUMBNAIL_PROMPT_MAX_CHARS_OPENROUTER_MULTIMODAL)}`;
 
     const content =
       opts.referenceDataUrls.length > 0

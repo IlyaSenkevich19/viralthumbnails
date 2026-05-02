@@ -2,10 +2,10 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useSignInMutation, useSignInWithGoogleMutation } from '@/lib/hooks';
 import { toast } from 'sonner';
+import { GoogleSignInButton } from '@/components/auth/google-sign-in-button';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AppRoutes } from '@/config/routes';
@@ -122,20 +122,7 @@ export function LoginScreen() {
         <span className="text-xs text-muted-foreground">or</span>
         <div className="h-px flex-1 bg-border" />
       </div>
-      <Button
-        type="button"
-        variant="outline"
-        className="flex h-11 w-full items-center justify-center gap-2"
-        onClick={handleGoogle}
-        disabled={googleLoading || loading}
-      >
-        <span className="inline-flex h-5 w-5 items-center justify-center rounded-sm bg-white">
-          <Image src="/google-logo.svg" alt="Google" width={16} height={16} priority />
-        </span>
-        <span className="text-sm font-medium text-foreground">
-          {googleLoading ? 'Connecting…' : 'Continue with Google'}
-        </span>
-      </Button>
+      <GoogleSignInButton onClick={handleGoogle} loading={googleLoading} disabled={loading} />
     </AuthSplitLayout>
   );
 }

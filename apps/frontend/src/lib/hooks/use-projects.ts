@@ -9,7 +9,6 @@ import { projectsApi } from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
 import type {
   PaginatedProjectsResponse,
-  ProjectRow,
   ProjectSourceType,
   ProjectWithVariants,
   ThumbnailVariantRow,
@@ -153,7 +152,7 @@ export function useCreateProjectAndGenerateMutation() {
         throw err;
       }
     },
-    onError: (err, _body, _context) => {
+    onError: (err) => {
       if (handleBillingMutationError(err)) {
         void queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
         return;

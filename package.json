@@ -8,11 +8,15 @@
     "dev": "node scripts/sync-frontend-env.js && turbo run dev",
     "build": "node scripts/sync-frontend-env.js && turbo run build",
     "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "validate": "turbo run typecheck lint",
+    "prepare": "husky",
     "dev:frontend": "node scripts/sync-frontend-env.js && turbo run dev --filter=frontend",
     "dev:backend": "turbo run dev --filter=backend"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
+    "husky": "9.1.7",
     "turbo": "^2.9.3",
     "typescript": "^5.9.0"
   },

@@ -1,0 +1,16 @@
+#!/usr/bin/env sh
+set -e
+
+push_to_main=0
+while read -r local_ref local_sha remote_ref remote_sha; do
+  case "$remote_ref" in refs/heads/main) push_to_main=1 ;; esac
+done
+
+if [ "$push_to_main" -ne 1 ]; then
+  exit 0
+fi
+
+cd "$(dirname "$0")/.."
+echo ""
+echo "[husky] Push targets main → running turbo typecheck + lint"
+yarn validate

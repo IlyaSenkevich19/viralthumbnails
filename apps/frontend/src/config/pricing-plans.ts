@@ -15,17 +15,17 @@ export type PricingPlan = {
 export const pricingPlans: PricingPlan[] = [
   {
     id: 'trial',
-    name: 'Trial',
+    name: 'Free starter',
     price: '$0',
     credits: 3,
-    description: 'Try the product with a small free balance.',
+    description: 'Onboarding balance to run real generations—no checkout.',
     features: [
-      '3 trial credits',
+      '3 free starter credits',
       'Core generation flow',
       'Templates and face references',
-      'No commitment',
+      'No recurring charge',
     ],
-    cta: 'Start Free',
+    cta: 'Included with signup',
     ctaStyle: 'outline',
   },
   {

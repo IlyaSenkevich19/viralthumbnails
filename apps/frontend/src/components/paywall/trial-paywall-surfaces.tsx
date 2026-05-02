@@ -27,14 +27,14 @@ export function TrialPaywallSurfaces() {
     }
     emitPaywallFunnelEvent('credits_low_hint', { balance: credits.balance });
     toast.message('Last credit', {
-      description: 'Your next generation uses your last trial credit. Credit packs are one-time — no subscription.',
+      description:
+        'Your next generation spends your last free credit — top up anytime with one-off packs when you are ready.',
       action: {
         label: 'View packs',
         onClick: () => {
           openInsufficientCreditsPaywall({
             title: 'Credit packs',
-            description:
-              'One-time packs — no subscription. Continue to checkout or browse the full credits page.',
+            description: 'Credit packs are one-time purchases — pick a tier, then checkout or review on the credits page.',
           });
         },
       },
@@ -59,7 +59,9 @@ export function TrialPaywallSurfaces() {
           <InfoHint
             className="shrink-0"
             buttonLabel="How to top up credits"
-            helpBody={<p>Buys consume your balance once per thumbnail run—packs refill available credits without a subscription.</p>}
+            helpBody={
+              <p>Each successful run pulls from your balance; one-off packs refill credits whenever you decide to buy more.</p>
+            }
           />
         </div>
         <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">

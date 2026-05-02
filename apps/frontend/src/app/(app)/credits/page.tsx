@@ -18,7 +18,7 @@ import { trackEvent } from '@/lib/analytics';
 import { History } from 'lucide-react';
 
 const REASON_LABEL: Record<string, string> = {
-  trial_grant: 'Trial grant',
+  trial_grant: 'Starter grant',
   purchase: 'Purchase',
   reserve: 'Generation reserve',
   refund: 'Refund',
@@ -30,7 +30,7 @@ function describeLedgerEntry(item: {
   reference_type: string | null;
   reference_id: string | null;
 }): string {
-  if (item.reason === 'trial_grant') return 'Trial credits granted';
+  if (item.reason === 'trial_grant') return 'Starter credits granted';
   if (item.reason === 'purchase') return 'Credit pack purchase';
   if (item.reason === 'manual_adjustment') return 'Manual balance update by admin';
 

@@ -1,4 +1,4 @@
-/** Used when no `profiles` row exists yet (same as DB default for new trials). */
+/** Fallback balance when profiles row isn’t loaded (matches DB default for new accounts). */
 export const DEFAULT_TRIAL_GENERATION_CREDITS = 3;
 
 /** First batch size after project create (dashboard + new project); backend caps at 5 per request. */

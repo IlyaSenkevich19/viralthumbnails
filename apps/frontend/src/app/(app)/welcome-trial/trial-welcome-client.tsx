@@ -47,11 +47,12 @@ export function TrialWelcomeClient() {
       if (user?.id) {
         queryClient.setQueryData(queryKeys.billing.credits(user.id), nextCredits);
       }
-      toast.success('Trial started');
+      toast.success('Starter credits unlocked');
       router.replace(AppRoutes.create);
     },
     onError: (err) => {
-      const message = err instanceof Error ? err.message : 'Could not start your trial.';
+      const message =
+        err instanceof Error ? err.message : 'Could not activate your starter credits. Try again in a moment.';
       toast.error(message);
     },
   });
@@ -61,12 +62,12 @@ export function TrialWelcomeClient() {
 
   return (
     <div className="mx-auto grid min-h-[calc(100dvh-12rem)] w-full max-w-6xl items-center gap-8 lg:grid-cols-[1.05fr_0.95fr]">
-      <SetPageFrame title="Start free trial" />
+      <SetPageFrame title="Free starter credits" />
 
       {isError ? (
         <div className="lg:col-span-2">
           <InlineLoadError
-            message="Could not load your trial status. Check your connection and try again."
+            message="Could not load your starter balance. Check your connection and try again."
             onRetry={() => void refetch()}
           />
         </div>
@@ -75,7 +76,7 @@ export function TrialWelcomeClient() {
       <section className="space-y-7">
         <div className="inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
           <Sparkles className="h-3.5 w-3.5" />
-          Free trial included
+          Free starter credits included
         </div>
         <div className="space-y-4">
           <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
@@ -84,11 +85,11 @@ export function TrialWelcomeClient() {
             </h1>
             <InfoHint
               className="shrink-0"
-              buttonLabel="How the trial compares to paid credits"
+              buttonLabel="How starter credits compare to packs"
               helpBody={
                 <p>
-                  Paid plans kick in only after credits run dry—the starter grants exist so onboarding always exercises
-                  real uploads before you evaluate a bigger pack.
+                  This balance is yours to spend on real generations. When it runs low, buy a one-time credit pack — no
+                  subscription. Larger packs reduce the average cost per run.
                 </p>
               }
             />
@@ -97,9 +98,9 @@ export function TrialWelcomeClient() {
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)_minmax(0,0.92fr)]">
           {[
-            { label: `${creditsCount} credits`, detail: 'Included trial balance' },
-            { label: 'No card', detail: 'Start without checkout' },
-            { label: 'Paid later', detail: 'Upgrade when credits run out' },
+            { label: `${creditsCount} credits`, detail: 'Starter balance on us' },
+            { label: 'No card', detail: 'Jump in without checkout' },
+            { label: 'Top up anytime', detail: 'Buy packs when you need more' },
           ].map((item, index) => (
             <div
               key={item.label}
@@ -133,8 +134,8 @@ export function TrialWelcomeClient() {
                 buttonLabel="When paid packs activate"
                 helpBody={
                   <p>
-                    Burn through the gratis balance against real uploads. Larger credit packs remain locked until you
-                    intentionally purchase them — nothing auto-renews silently.
+                    Use starter credits on real uploads and exports. Paid packs unlock when you choose to buy them —
+                    nothing enrolls or renews in the background.
                   </p>
                 }
               />
@@ -159,19 +160,22 @@ export function TrialWelcomeClient() {
             onClick={() => startTrial.mutate()}
             disabled={loading || startTrial.isPending || !accessToken || isError}
           >
-            {startTrial.isPending ? 'Starting trial…' : 'Start free trial'}
+            {startTrial.isPending ? 'Activating…' : 'Activate starter credits'}
             <ArrowRight className="h-4 w-4" />
           </Button>
 
           <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center">
             <span className="max-w-xl text-xs leading-5 text-muted-foreground">
-              Credits spend only while generating or refining thumbnails — no recurring charge today.
+              Credits debit when you generate or refine thumbnails — one-time packs only; no recurring charge.
             </span>
             <InfoHint
               className="shrink-0"
-              buttonLabel="Subscription status during trial"
+              buttonLabel="Subscriptions and recurring billing"
               helpBody={
-                <p>No subscription activates automatically. Charges apply only after you consciously buy packs.</p>
+                <p>
+                  There is no subscription. You only pay when you buy a credit pack — we never activate recurring billing
+                  for you automatically.
+                </p>
               }
             />
           </div>

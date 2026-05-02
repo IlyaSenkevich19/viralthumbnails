@@ -174,8 +174,9 @@ export function HeaderShell({
               <span className="hidden min-w-0 truncate text-primary/80 sm:inline">{pipelineJob.label}</span>
             </div>
           ) : null}
-          <div className="w-[5.5rem] sm:w-[6rem] lg:w-[6.5rem]">
-            <HeaderCreditsLink className="h-full w-full max-w-none" />
+          <div className="flex w-[5.75rem] shrink-0 sm:w-[6.25rem] lg:w-[6.75rem]">
+            {/* Do not pass h-full — parent has no height; it overrides Link’s h-9 and collapses the chip */}
+            <HeaderCreditsLink className="w-full" />
           </div>
           <button
             type="button"

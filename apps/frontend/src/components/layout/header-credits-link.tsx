@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Coins, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import { useGenerationCredits } from '@/lib/hooks';
@@ -8,17 +9,29 @@ import { cn } from '@/lib/utils';
 import { AppRoutes } from '@/config/routes';
 import { Skeleton } from '@/components/ui/skeleton';
 
+/** Header credits: glass tint from palette (`primary` / `warning`) — reads as chrome, not a solid CTA. */
 export function HeaderCreditsLink({ className }: { className?: string }) {
+  const pathname = usePathname();
+  const isCreditsPage = pathname === AppRoutes.credits;
   const { user, accessToken, isLoading: authLoading } = useAuth();
   const { data, isPending } = useGenerationCredits();
 
   if (authLoading) {
-    return <Skeleton className={cn('h-9 w-full rounded-full lg:h-10', className)} aria-hidden />;
+    return (
+      <Skeleton
+        className={cn(
+          'h-9 w-full min-w-[5rem] rounded-lg border border-primary/45 bg-primary/20 backdrop-blur-xl lg:h-10',
+          className,
+        )}
+        aria-hidden
+      />
+    );
   }
   if (!user?.id || !accessToken) return null;
 
   const balance = data?.balance;
   const balanceLoading = isPending && balance == null;
+  const exhausted = typeof balance === 'number' && balance <= 0;
   const label = balanceLoading
     ? 'Loading credits'
     : balance != null
@@ -29,39 +42,39 @@ export function HeaderCreditsLink({ className }: { className?: string }) {
     <Link
       href={AppRoutes.credits}
       className={cn(
-        'motion-base group relative inline-flex h-9 max-w-[10rem] items-center justify-center gap-1.5 overflow-hidden rounded-full border border-amber-500/40',
-        'bg-gradient-to-r from-amber-500/[0.18] via-amber-600/[0.1] to-primary/[0.12]',
-        'px-3 text-xs font-bold tabular-nums tracking-tight text-foreground shadow-md shadow-amber-950/25',
-        'before:pointer-events-none before:absolute before:inset-0 before:rounded-full before:bg-gradient-to-b before:from-white/[0.07] before:to-transparent',
-        'hover:border-amber-400/55 hover:from-amber-500/[0.26] hover:via-amber-500/[0.14] hover:shadow-lg hover:shadow-amber-950/30',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-        'lg:h-10 lg:max-w-[11rem] lg:gap-2 lg:px-3.5 lg:text-[13px]',
+        'motion-base relative inline-flex h-9 w-full min-w-[5rem] max-w-none shrink-0 items-center justify-center gap-2 rounded-lg border px-3',
+        'border-primary/48 bg-primary/14 text-sm font-semibold tabular-nums text-foreground backdrop-blur-xl',
+        'shadow-[inset_0_1px_0_rgb(255_255_255/0.14)] transition-[border-color,box-shadow,transform,background-color,color] duration-200 ease-[var(--ease-standard)]',
+        'hover:-translate-y-px hover:border-primary/72 hover:bg-primary/24 hover:shadow-[inset_0_1px_0_rgb(255_255_255/0.22),0_8px_20px_-8px_rgb(255_59_59/0.28)]',
+        'active:translate-y-0',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+        exhausted &&
+          'border-warning/55 bg-warning/16 text-foreground shadow-[inset_0_1px_0_rgb(255_255_255/0.12)] hover:border-warning/80 hover:bg-warning/26 hover:shadow-[0_8px_20px_-8px_rgb(251_191_36/0.22)]',
+        isCreditsPage &&
+          !exhausted &&
+          'border-primary/65 bg-primary/22 shadow-[inset_0_1px_0_rgb(255_255_255/0.18)]',
+        'lg:h-10 lg:min-w-[5.75rem] lg:gap-2.5 lg:px-[0.9375rem] lg:text-[0.8125rem]',
         className,
+        'min-h-9 lg:min-h-10',
       )}
       aria-label={`${label}. View credit packs and top up.`}
     >
-      <span
-        className={cn(
-          'relative z-[1] flex size-6 shrink-0 items-center justify-center rounded-md',
-          'bg-gradient-to-br from-amber-400/35 to-amber-600/25 text-amber-100',
-          'shadow-inner shadow-amber-950/20 ring-1 ring-amber-300/25',
-          'group-hover:from-amber-300/45 group-hover:to-amber-500/35 group-hover:text-amber-50',
-          'lg:size-7',
-        )}
+      <Coins
+        className={cn('size-3.5 shrink-0 text-primary lg:size-4', exhausted && 'text-warning')}
         aria-hidden
-      >
-        <Coins className="size-3 lg:size-3.5" strokeWidth={2.25} />
-      </span>
-      <span className="relative z-[1] flex min-h-[1em] min-w-[1.125rem] items-center justify-center">
+        strokeWidth={2.25}
+      />
+      <span className="min-w-[1rem] translate-y-[0.03em] text-center lg:min-w-[1.125rem]">
         {balanceLoading ? (
           <Loader2
-            className="size-3.5 shrink-0 animate-spin text-foreground/85 lg:size-4"
+            className={cn(
+              'mx-auto size-3.5 shrink-0 animate-spin lg:size-4',
+              exhausted ? 'text-warning/70' : 'text-muted-foreground',
+            )}
             aria-hidden
           />
         ) : (
-          <span className="-translate-y-px truncate leading-none text-foreground tabular-nums">
-            {balance ?? '—'}
-          </span>
+          <span className="tabular-nums tracking-tight">{balance ?? '—'}</span>
         )}
       </span>
     </Link>

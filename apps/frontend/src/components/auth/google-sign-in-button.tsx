@@ -30,7 +30,7 @@ export function GoogleSignInButton({
       aria-busy={loading}
       aria-label={loading ? 'Continuing with Google' : 'Continue with Google'}
       className={cn(
-        'motion-base flex h-12 w-full items-center justify-center gap-3 rounded-xl px-4',
+        'motion-base flex h-12 w-full items-center justify-center gap-3 rounded-lg px-4',
         'border border-border bg-card text-foreground shadow-[var(--shadow-soft)] ring-1 ring-white/[0.06]',
         'transition-[background-color,border-color,box-shadow,transform] duration-200',
         'hover:border-border-hover hover:bg-secondary',

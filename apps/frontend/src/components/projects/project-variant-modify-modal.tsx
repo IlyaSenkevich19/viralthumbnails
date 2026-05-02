@@ -150,7 +150,7 @@ export function ProjectVariantModifyModal({
                   ) : (
                     <div className="flex flex-col items-center gap-4 rounded-2xl border border-white/[0.06] bg-black/20 px-5 py-10">
                       <p className="text-sm text-muted-foreground">This thumbnail isn’t ready yet.</p>
-                      <Button type="button" variant="secondary" className="rounded-xl" onClick={() => onOpenChange(false)}>
+                      <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
                         Close
                       </Button>
                     </div>

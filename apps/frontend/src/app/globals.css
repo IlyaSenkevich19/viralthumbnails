@@ -43,7 +43,8 @@
   --border-hover: #5f697c;
   --input: #4f5767;
   --ring: rgba(255, 59, 59, 0.35);
-  --radius: 0.75rem;
+  /* Base corner radius (buttons/cards use rounded-lg/xl from tailwind.config). */
+  --radius: 0.5rem;
   --shadow-soft: 0 8px 24px -10px rgba(0, 0, 0, 0.2);
   --shadow-elevated: 0 16px 40px -18px rgba(0, 0, 0, 0.28);
   --duration-fast: 150ms;
@@ -123,12 +124,12 @@ textarea:-webkit-autofill:active {
   }
 
   .surface {
-    @apply rounded-xl border border-border bg-card shadow-[var(--shadow-soft)] ring-1 ring-white/[0.04];
+    @apply rounded-lg border border-border bg-card shadow-[var(--shadow-soft)] ring-1 ring-white/[0.04];
   }
 
   /** Dashboard create hub — same red/soft-light DNA as login hero panel */
   .surface-dashboard {
-    @apply rounded-xl border border-border shadow-[var(--shadow-soft)] ring-1 ring-white/[0.04];
+    @apply rounded-lg border border-border shadow-[var(--shadow-soft)] ring-1 ring-white/[0.04];
     background-color: var(--card);
     background-image: radial-gradient(
         ellipse 90% 78% at 100% -8%,

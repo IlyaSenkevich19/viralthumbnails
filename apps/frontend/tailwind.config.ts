@@ -31,8 +31,8 @@ const config: Config = {
       borderRadius: {
         md: "calc(var(--radius) - 2px)",
         lg: "var(--radius)",
-        xl: "calc(var(--radius) + 4px)",
-        "2xl": "calc(var(--radius) + 8px)",
+        xl: "calc(var(--radius) + 2px)",
+        "2xl": "calc(var(--radius) + 6px)",
       },
       boxShadow: {
         premium: "var(--shadow-elevated)",

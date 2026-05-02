@@ -19,9 +19,7 @@ import {
   ChevronRight,
   Youtube,
 } from 'lucide-react';
-import { useAdminStatus, useSignOutMutation } from '@/lib/hooks';
-import { toast } from 'sonner';
-import { useRouter } from 'next/navigation';
+import { useAdminStatus } from '@/lib/hooks';
 import { SidebarCreditsBlock } from '@/components/layout/sidebar-credits';
 import { CollapsedSidebarTooltip } from '@/components/layout/collapsed-sidebar-tooltip';
 import { Badge } from '@/components/ui/badge';
@@ -86,8 +84,6 @@ function SidebarUserBlock({ collapsed, inDrawer }: { collapsed: boolean; inDrawe
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const router = useRouter();
-  const signOut = useSignOutMutation();
   const compact = collapsed && !inDrawer;
 
   useEffect(() => {
@@ -100,17 +96,9 @@ function SidebarUserBlock({ collapsed, inDrawer }: { collapsed: boolean; inDrawe
   }, []);
 
   function handleSignOut() {
-    signOut.mutate(undefined, {
-      onSuccess: () => {
-        toast.success('Logged out');
-        router.push(AppRoutes.home);
-        router.refresh();
-        setOpen(false);
-      },
-      onError: () => {
-        toast.error('Could not sign out');
-      },
-    });
+    setOpen(false);
+    // Server route clears session cookies then redirects — avoids visible delay waiting on client signOut()
+    window.location.assign(AppRoutes.auth.signOut);
   }
 
   if (!user) return null;
@@ -172,7 +160,6 @@ function SidebarUserBlock({ collapsed, inDrawer }: { collapsed: boolean; inDrawe
           <button
             type="button"
             onClick={handleSignOut}
-            disabled={signOut.isPending}
             className="motion-base flex w-full items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:bg-secondary hover:text-foreground disabled:opacity-50"
           >
             <LogOut className="h-4 w-4" />

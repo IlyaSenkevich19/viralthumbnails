@@ -18,6 +18,8 @@ export const AppRoutes = {
   settings: '/settings',
   credits: '/credits',
   auth: {
+    /** Server route: clears Supabase cookies and redirects to home (faster than client-only signOut). */
+    signOut: '/auth/sign-out',
     register: '/auth/register',
     forgotPassword: '/auth/forgot-password',
     resetLinkSent: '/auth/reset-link-sent',

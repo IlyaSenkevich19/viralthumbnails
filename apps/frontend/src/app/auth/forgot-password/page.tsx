@@ -2,23 +2,33 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { BrandWordmark } from '@/components/layout/brand-wordmark';
+import { useRouter } from 'next/navigation';
+import { AuthSplitLayout, authFormInputClassName } from '@/components/auth/auth-split-layout';
 import { useResetPasswordMutation } from '@/lib/hooks';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AppRoutes } from '@/config/routes';
+import { PASSWORD_RESET_EMAIL_SESSION_KEY } from '@/lib/auth-password-reset-flow';
 
 export default function ForgotPasswordPage() {
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
-  const [sent, setSent] = useState(false);
   const reset = useResetPasswordMutation();
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
-    reset.mutate(email, {
-      onSuccess: () => setSent(true),
+    const trimmed = email.trim();
+    reset.mutate(trimmed, {
+      onSuccess: () => {
+        try {
+          sessionStorage.setItem(PASSWORD_RESET_EMAIL_SESSION_KEY, trimmed);
+        } catch {
+          /* ignore */
+        }
+        router.push(AppRoutes.auth.resetLinkSent);
+      },
       onError: (err) => {
         setError(err instanceof Error ? err.message : 'Could not send reset email.');
       },
@@ -26,48 +36,51 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-background px-6 py-10 sm:px-10">
-      <header className="mx-auto mb-8 flex w-full max-w-md items-center justify-between">
-        <BrandWordmark className="text-base" />
-        <Link href={AppRoutes.home} className="text-sm text-muted-foreground hover:text-foreground">
+    <AuthSplitLayout
+      headerRight={
+        <Link href={AppRoutes.home} className="font-medium text-foreground hover:underline">
           Sign in
         </Link>
-      </header>
-
-      <main className="mx-auto flex w-full max-w-md flex-1 flex-col">
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Reset password</h1>
+      }
+    >
+      <div>
+        <h1 className="text-3xl font-semibold tracking-tight text-foreground">
+          Reset your <span className="text-primary">password</span>
+        </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          We&apos;ll email you a link to choose a new password.
+          We&apos;ll send a ViralThumblify reset link if an account exists for this email.
         </p>
+      </div>
 
-        {sent ? (
-          <div className="surface mt-8 p-5 text-sm text-muted-foreground">
-            If an account exists for <span className="font-medium text-foreground">{email}</span>, check
-            your inbox for the reset link.
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="surface mt-8 space-y-4 p-6">
-            <div className="space-y-1">
-              <label htmlFor="forgot-email" className="text-sm font-medium text-foreground">
-                Email
-              </label>
-              <Input
-                id="forgot-email"
-                type="email"
-                autoComplete="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-            {error ? <p className="text-sm text-destructive">{error}</p> : null}
-            <Button type="submit" className="w-full" disabled={reset.isPending}>
-              {reset.isPending ? 'Sending…' : 'Send reset link'}
-            </Button>
-          </form>
-        )}
-      </main>
-    </div>
+      <form onSubmit={handleSubmit} className="surface relative space-y-4 overflow-hidden p-6">
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
+        <div className="space-y-1">
+          <label htmlFor="forgot-email" className="text-sm font-medium text-foreground">
+            Your email
+          </label>
+          <Input
+            id="forgot-email"
+            type="email"
+            autoComplete="email"
+            placeholder="you@example.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            className={authFormInputClassName}
+          />
+        </div>
+        {error ? <p className="text-sm text-destructive">{error}</p> : null}
+        <Button type="submit" className="w-full" disabled={reset.isPending}>
+          {reset.isPending ? 'Sending…' : 'Send reset link →'}
+        </Button>
+      </form>
+
+      <p className="text-center text-xs text-muted-foreground">
+        Remember your password?{' '}
+        <Link href={AppRoutes.home} className="font-medium text-foreground underline-offset-4 hover:underline">
+          Sign in
+        </Link>
+      </p>
+    </AuthSplitLayout>
   );
 }

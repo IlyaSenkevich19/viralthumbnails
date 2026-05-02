@@ -20,6 +20,9 @@ export const AppRoutes = {
   auth: {
     register: '/auth/register',
     forgotPassword: '/auth/forgot-password',
+    resetLinkSent: '/auth/reset-link-sent',
+    /** Server handler for email links with token_hash / type (see Supabase “Server-side”). */
+    confirm: '/auth/confirm',
     updatePassword: '/auth/update-password',
   },
 } as const;
@@ -47,6 +50,6 @@ export function projectVariantsSearchParams(options: {
 export function isSessionPublicPath(pathname: string): boolean {
   return (
     pathname === AppRoutes.home ||
-    pathname.startsWith(AppRoutes.auth.register)
+    pathname.startsWith('/auth/')
   );
 }

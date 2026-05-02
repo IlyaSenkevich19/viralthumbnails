@@ -2,8 +2,9 @@
 
 import { useMemo } from 'react';
 import Link from 'next/link';
+import type { PageBreadcrumbSegment } from '@/contexts/page-frame-context';
 import { usePathname } from 'next/navigation';
-import { Loader2, Menu, Plus } from 'lucide-react';
+import { ChevronRight, Loader2, Menu, Plus } from 'lucide-react';
 import { usePipelineJobSurface } from '@/lib/hooks/use-pipeline-job-surface';
 import { BrandWordmark } from '@/components/layout/brand-wordmark';
 import { AppRoutes } from '@/config/routes';
@@ -16,6 +17,57 @@ import { cn } from '@/lib/utils';
 import { HeaderCreditsLink } from '@/components/layout/header-credits-link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { buttonVariants } from '@/components/ui/button';
+
+function HeaderBreadcrumb({
+  segments,
+  eyebrowOffset,
+  isProjectDetail,
+}: {
+  segments: PageBreadcrumbSegment[];
+  eyebrowOffset: boolean;
+  isProjectDetail: boolean;
+}) {
+  return (
+    <nav
+      className={cn(
+        'flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-base leading-none',
+        eyebrowOffset ? 'mt-1.5 sm:mt-2' : 'mt-0',
+      )}
+      aria-label="Breadcrumb"
+    >
+      {segments.map((seg, i) => {
+        const isLast = i === segments.length - 1;
+        return (
+          <span key={`${seg.label}-${i}`} className="inline-flex min-w-0 max-w-full items-center gap-2">
+            {i > 0 ? (
+              <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground/45" aria-hidden />
+            ) : null}
+            {isLast ? (
+              <h1
+                className={cn(
+                  'min-w-0 text-base font-semibold tracking-tight text-foreground sm:text-[1.0625rem]',
+                  isProjectDetail && 'truncate',
+                )}
+                title={isProjectDetail ? seg.label : undefined}
+              >
+                {seg.label}
+              </h1>
+            ) : seg.href ? (
+              <Link
+                href={seg.href}
+                className="shrink-0 font-medium text-muted-foreground transition-colors hover:text-foreground"
+              >
+                {seg.label}
+              </Link>
+            ) : (
+              <span className="shrink-0 font-medium text-muted-foreground">{seg.label}</span>
+            )}
+          </span>
+        );
+      })}
+    </nav>
+  );
+}
 
 export function HeaderShell({
   onMobileMenuClick,
@@ -33,13 +85,15 @@ export function HeaderShell({
     () => ({
       title: frame.title ?? staticFrame?.title ?? null,
       eyebrow: frame.eyebrow ?? staticFrame?.eyebrow ?? null,
+      breadcrumb: frame.breadcrumb ?? staticFrame?.breadcrumb ?? null,
     }),
-    [frame.title, frame.eyebrow, staticFrame],
+    [frame.title, frame.eyebrow, frame.breadcrumb, staticFrame],
   );
 
   const variantsPending = isProjectVariantsPath(pathname) && !merged.title;
-  const hasPageHeader = Boolean(merged.title);
-  const isProjectDetailHeader = isProjectVariantsPath(pathname) && hasPageHeader;
+  const hasPageHeader = Boolean(merged.title) || Boolean(merged.breadcrumb?.length);
+  const isProjectDetailHeader =
+    isProjectVariantsPath(pathname) && (Boolean(merged.title) || Boolean(merged.breadcrumb?.length));
   const alignActionsTop = hasPageHeader || variantsPending;
   const showCreateCta = pathname !== AppRoutes.create;
 
@@ -68,16 +122,24 @@ export function HeaderShell({
                   {merged.eyebrow}
                 </p>
               ) : null}
-              <h1
-                className={cn(
-                  'text-xl font-semibold tracking-tight text-foreground sm:text-2xl lg:text-3xl',
-                  merged.eyebrow ? 'mt-1.5 sm:mt-2' : 'mt-0',
-                  isProjectDetailHeader && 'truncate',
-                )}
-                title={isProjectDetailHeader && typeof merged.title === 'string' ? merged.title : undefined}
-              >
-                {merged.title}
-              </h1>
+              {merged.breadcrumb && merged.breadcrumb.length > 0 ? (
+                <HeaderBreadcrumb
+                  segments={merged.breadcrumb}
+                  eyebrowOffset={Boolean(merged.eyebrow)}
+                  isProjectDetail={isProjectDetailHeader}
+                />
+              ) : (
+                <h1
+                  className={cn(
+                    'text-xl font-semibold tracking-tight text-foreground sm:text-2xl lg:text-3xl',
+                    merged.eyebrow ? 'mt-1.5 sm:mt-2' : 'mt-0',
+                    isProjectDetailHeader && 'truncate',
+                  )}
+                  title={isProjectDetailHeader && typeof merged.title === 'string' ? merged.title : undefined}
+                >
+                  {merged.title}
+                </h1>
+              )}
             </div>
           ) : (
             <div className="flex min-w-0 items-center pt-0.5">

@@ -1,12 +1,19 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/auth-context';
 import { projectVariantsPath } from '@/config/routes';
 import { projectsApi } from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
-import type { ProjectRow, ProjectSourceType, ProjectWithVariants } from '@/lib/types/project';
+import type {
+  PaginatedProjectsResponse,
+  ProjectRow,
+  ProjectSourceType,
+  ProjectWithVariants,
+  ThumbnailVariantRow,
+} from '@/lib/types/project';
 import { toast } from 'sonner';
 import { DEFAULT_NEW_PROJECT_VARIANT_COUNT } from '@/config/credits';
 import { handleBillingMutationError } from '@/lib/paywall-notify';
@@ -15,15 +22,73 @@ import { trackEvent } from '@/lib/analytics';
 export const createProjectAndGenerateMutationKey = ['projects', 'create-and-generate'] as const;
 export const createEmptyProjectMutationKey = ['projects', 'create-empty'] as const;
 
-export function useProjectsList() {
+const PROJECTS_LIST_STALE_MS = 45_000;
+
+export function useProjectsList(page: number, limit: number, q: string) {
   const { user, accessToken, isLoading: authLoading } = useAuth();
   const userId = user?.id;
+  const safePage = Number.isFinite(page) && page >= 1 ? page : 1;
+  const qKey = q.trim();
 
   return useQuery({
-    queryKey: queryKeys.projects.list(userId ?? '__pending__'),
-    queryFn: () => projectsApi.listProjects(accessToken!),
+    queryKey: queryKeys.projects.list(userId ?? '__pending__', safePage, limit, qKey),
+    queryFn: () =>
+      projectsApi.listProjects(accessToken!, {
+        page: safePage,
+        limit,
+        q: qKey || undefined,
+      }),
     enabled: !authLoading && Boolean(userId && accessToken),
+    placeholderData: (previousData, previousQuery) => {
+      if (!previousData || !previousQuery?.queryKey || previousQuery.queryKey.length < 6) {
+        return undefined;
+      }
+      const key = previousQuery.queryKey;
+      const prevUser = String(key[2]);
+      const prevPage = Number(key[3]);
+      const prevLimit = Number(key[4]);
+      const prevQ = String(key[5] ?? '');
+      if (
+        prevUser !== (userId ?? '__pending__') ||
+        prevPage !== safePage ||
+        prevLimit !== limit ||
+        prevQ !== qKey
+      ) {
+        return undefined;
+      }
+      return previousData as PaginatedProjectsResponse;
+    },
+    staleTime: PROJECTS_LIST_STALE_MS,
   });
+}
+
+/** Prefetch previous/next list page while user paginates or searches (warm cache). */
+export function usePrefetchAdjacentProjects(page: number, limit: number, q: string, total: number | undefined) {
+  const queryClient = useQueryClient();
+  const { user, accessToken, isLoading: authLoading } = useAuth();
+  const userId = user?.id;
+  const safePage = Number.isFinite(page) && page >= 1 ? page : 1;
+  const qKey = q.trim();
+
+  useEffect(() => {
+    if (authLoading || !userId || !accessToken || total == null || total <= 0) return;
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+    const prefetch = (p: number) => {
+      if (p < 1 || p > totalPages) return;
+      void queryClient.prefetchQuery({
+        queryKey: queryKeys.projects.list(userId, p, limit, qKey),
+        queryFn: () =>
+          projectsApi.listProjects(accessToken, {
+            page: p,
+            limit,
+            q: qKey || undefined,
+          }),
+        staleTime: PROJECTS_LIST_STALE_MS,
+      });
+    };
+    prefetch(safePage + 1);
+    prefetch(safePage - 1);
+  }, [accessToken, authLoading, limit, queryClient, qKey, safePage, total, userId]);
 }
 
 export function useProjectWithVariants(projectId: string) {
@@ -88,37 +153,7 @@ export function useCreateProjectAndGenerateMutation() {
         throw err;
       }
     },
-    onMutate: async (input) => {
-      if (!userId) return {};
-      const listKey = queryKeys.projects.list(userId);
-      await queryClient.cancelQueries({ queryKey: queryKeys.projects.lists() });
-      const previous = queryClient.getQueryData<ProjectRow[]>(listKey);
-      const optimisticId = `optimistic:${crypto.randomUUID()}`;
-      const now = new Date().toISOString();
-      const optimistic: ProjectRow = {
-        id: optimisticId,
-        user_id: userId,
-        title: input.title?.trim() || 'New project',
-        platform: input.platform ?? 'youtube',
-        source_type: input.source_type,
-        source_data: input.source_data,
-        status: 'generating',
-        cover_thumbnail_url: null,
-        created_at: now,
-        updated_at: now,
-      };
-      const next = previous?.length ? [optimistic, ...previous] : [optimistic];
-      queryClient.setQueryData(listKey, next);
-      return { previous, listKey, optimisticId };
-    },
-    onError: (err, _body, context) => {
-      if (context?.listKey) {
-        if (context.previous === undefined) {
-          queryClient.removeQueries({ queryKey: context.listKey });
-        } else {
-          queryClient.setQueryData(context.listKey, context.previous);
-        }
-      }
+    onError: (err, _body, _context) => {
       if (handleBillingMutationError(err)) {
         void queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
         return;
@@ -153,7 +188,7 @@ export function useCreateEmptyProjectMutation() {
     },
     onSuccess: (project) => {
       if (userId) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.projects.list(userId) });
+        queryClient.invalidateQueries({ queryKey: queryKeys.projects.listsForUser(userId) });
       }
       router.push(projectVariantsPath(project.id));
     },
@@ -174,21 +209,33 @@ export function useDeleteProjectMutation() {
       await projectsApi.deleteProject(accessToken, projectId);
     },
     onMutate: async (projectId) => {
-      const listKey = queryKeys.projects.list(userId);
       await queryClient.cancelQueries({ queryKey: queryKeys.projects.lists() });
-      const previous = queryClient.getQueryData<ProjectRow[]>(listKey);
-      if (previous) {
-        queryClient.setQueryData(
-          listKey,
-          previous.filter((p) => p.id !== projectId),
-        );
-      }
+      const previousEntries = queryClient.getQueriesData<PaginatedProjectsResponse>({
+        queryKey: queryKeys.projects.listsForUser(userId),
+      });
+
+      queryClient.setQueriesData<PaginatedProjectsResponse>(
+        { queryKey: queryKeys.projects.listsForUser(userId) },
+        (old) => {
+          if (!old) return old;
+          const had = old.items.some((p) => p.id === projectId);
+          if (!had) return old;
+          return {
+            ...old,
+            items: old.items.filter((p) => p.id !== projectId),
+            total: Math.max(0, old.total - 1),
+          };
+        },
+      );
+
       queryClient.removeQueries({ queryKey: queryKeys.projects.detail(userId, projectId) });
-      return { previous, listKey };
+      return { previousEntries };
     },
     onError: (err, _projectId, context) => {
-      if (context?.previous !== undefined && context.listKey) {
-        queryClient.setQueryData(context.listKey, context.previous);
+      if (context?.previousEntries) {
+        for (const [key, data] of context.previousEntries) {
+          if (data !== undefined) queryClient.setQueryData(key, data);
+        }
       }
       toast.error(err instanceof Error ? err.message : 'Could not delete project');
     },
@@ -244,6 +291,55 @@ export function useGenerateThumbnailsMutation(projectId: string) {
     onError: (err) => {
       if (handleBillingMutationError(err)) return;
       toast.error(err instanceof Error ? err.message : 'Generation failed');
+    },
+    onSettled: () => {
+      if (userId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.billing.credits(userId) });
+      }
+    },
+  });
+}
+
+export function useRefineThumbnailMutation(
+  projectId: string,
+  onSuccessVariant?: (variant: ThumbnailVariantRow) => void,
+) {
+  const queryClient = useQueryClient();
+  const { accessToken, user } = useAuth();
+  const userId = user?.id;
+
+  return useMutation({
+    mutationFn: async (input: {
+      variantId: string;
+      instruction: string;
+      template_id?: string;
+      avatar_id?: string;
+    }) => {
+      if (!accessToken) throw new Error('Not signed in');
+      return projectsApi.refineThumbnailVariant(accessToken, projectId, input.variantId, {
+        instruction: input.instruction.trim(),
+        template_id: input.template_id?.trim() || undefined,
+        avatar_id: input.avatar_id?.trim() || undefined,
+      });
+    },
+    onSuccess: (data) => {
+      trackEvent('thumbnail_refined', {
+        project_id: projectId,
+        variant_id: data.variant.id,
+      });
+      onSuccessVariant?.(data.variant);
+      toast.success('Updated thumbnail saved as a new version');
+      if (userId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(userId, projectId) });
+        queryClient.invalidateQueries({ queryKey: queryKeys.projects.listsForUser(userId) });
+      }
+    },
+    onError: (err) => {
+      if (handleBillingMutationError(err)) {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
+        return;
+      }
+      toast.error(err instanceof Error ? err.message : 'Could not refine thumbnail');
     },
     onSettled: () => {
       if (userId) {

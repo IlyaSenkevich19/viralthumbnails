@@ -14,6 +14,11 @@ function creditsCtaToast(title: string, description?: string) {
   });
 }
 
+function openInsufficientCreditsFromPrecheck(need: number, have: number) {
+  emitPaywallFunnelEvent('paywall_precheck_blocked', { need, have });
+  openInsufficientCreditsPaywall({ need, have });
+}
+
 /** Server rejected generation (403 INSUFFICIENT_CREDITS). */
 export function toastInsufficientCreditsFromApi(message?: string) {
   creditsCtaToast(
@@ -36,13 +41,7 @@ export function assertSufficientCredits(params: {
   if (cost <= 0) return true;
   if (balance === undefined) return true;
   if (balance < cost) {
-    emitPaywallFunnelEvent('paywall_precheck_blocked', { need: cost, have: balance });
-    openInsufficientCreditsPaywall({
-      title: 'Not enough credits to continue',
-      description: 'This action needs more credits. Top up once and continue immediately.',
-      need: cost,
-      have: balance,
-    });
+    openInsufficientCreditsFromPrecheck(cost, balance);
     return false;
   }
   return true;

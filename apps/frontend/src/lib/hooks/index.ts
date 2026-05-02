@@ -1,13 +1,27 @@
 export { useBackendHealth } from './use-backend-health';
 export { useBackendSetupHealth } from './use-backend-setup-health';
 export {
+  PROJECTS_DEFAULT_PAGE_SIZE,
+  PROJECTS_PAGE_SIZE_OPTIONS,
+  parseProjectsPageSizeParam,
+} from '@/lib/api/projects';
+export {
+  PROJECTS_PAGE_QUERY,
+  PROJECTS_Q_QUERY,
+  PROJECTS_LIMIT_QUERY,
+  PROJECTS_SEARCH_DEBOUNCE_MS,
+  useProjectsListRoute,
+} from './use-projects-list-route';
+export {
   createEmptyProjectMutationKey,
   createProjectAndGenerateMutationKey,
   useProjectsList,
+  usePrefetchAdjacentProjects,
   useProjectWithVariants,
   useCreateEmptyProjectMutation,
   useCreateProjectAndGenerateMutation,
   useGenerateThumbnailsMutation,
+  useRefineThumbnailMutation,
   useDeleteProjectMutation,
   useDeleteVariantMutation,
 } from './use-projects';

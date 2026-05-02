@@ -120,7 +120,7 @@ function usePipelineJobAppRecoveryValue(): PipelineJobActivityValue {
           }
           if (userId) {
             queryClient.invalidateQueries({ queryKey: queryKeys.billing.credits(userId) });
-            queryClient.invalidateQueries({ queryKey: queryKeys.projects.list(userId) });
+            queryClient.invalidateQueries({ queryKey: queryKeys.projects.listsForUser(userId) });
           }
           return;
         }
@@ -186,7 +186,7 @@ function usePipelineJobAppRecoveryValue(): PipelineJobActivityValue {
           setActivityLabel(null);
           if (userId) {
             queryClient.invalidateQueries({ queryKey: queryKeys.billing.credits(userId) });
-            queryClient.invalidateQueries({ queryKey: queryKeys.projects.list(userId) });
+            queryClient.invalidateQueries({ queryKey: queryKeys.projects.listsForUser(userId) });
           }
         }
       }

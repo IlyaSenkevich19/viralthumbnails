@@ -19,6 +19,7 @@ import { SupabaseGuard } from '../auth/guards/supabase.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { ProjectsService } from './projects.service';
 import { GenerateThumbnailsDto } from './dto/generate-thumbnails.dto';
+import { RefineThumbnailDto } from './dto/refine-thumbnail.dto';
 
 @ApiTags('thumbnail-variants')
 @ApiBearerAuth()
@@ -40,6 +41,18 @@ export class ThumbnailVariantsController {
       faceInThumbnail: dto.face_in_thumbnail,
       imageModelTier: dto.image_model_tier,
     });
+  }
+
+  @Post(':id/variants/:variantId/refine')
+  @UseGuards(UserIdThrottlerGuard)
+  @Throttle({ default: { ...THROTTLE_PROJECT_GENERATE } })
+  refine(
+    @CurrentUser() userId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('variantId', ParseUUIDPipe) variantId: string,
+    @Body() dto: RefineThumbnailDto,
+  ) {
+    return this.projects.refineThumbnailFromVariant(id, variantId, userId, dto);
   }
 
   @Get(':id/variants')

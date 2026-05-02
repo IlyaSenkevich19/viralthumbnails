@@ -1,8 +1,6 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import Link from 'next/link';
-import { ChevronRight, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import {
   NICHE_ALL,
@@ -10,14 +8,12 @@ import {
   useDeleteVariantMutation,
   useGenerateThumbnailsMutation,
   useGenerationCredits,
+  useRefineThumbnailMutation,
   useTemplateNiches,
   useTemplatesList,
 } from '@/lib/hooks';
 import { assertSufficientCredits } from '@/lib/paywall-notify';
 import { pickThumbnailStyles } from '@/lib/thumbnail-style-matrix';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
-import { AppRoutes } from '@/config/routes';
 import { toast } from 'sonner';
 import { ConfirmationModal } from '@/components/ui/confirmation-modal';
 import { Card, CardContent } from '@/components/ui/card';
@@ -55,6 +51,7 @@ export function ProjectVariantsWorkspace({
   );
   const generate = useGenerateThumbnailsMutation(projectId);
   const deleteVariant = useDeleteVariantMutation(projectId);
+  const refineThumbnail = useRefineThumbnailMutation(projectId, (next) => setSelectedVariantId(next.id));
 
   const { data: niches = [] } = useTemplateNiches();
 
@@ -206,9 +203,8 @@ export function ProjectVariantsWorkspace({
   const pipelineBusy = pipelineJob?.status === 'queued' || pipelineJob?.status === 'running';
   const pipelineFailed = pipelineJob?.status === 'failed';
 
-  const canGenerate = Boolean(
-    accessToken && (credits == null || credits.balance >= generationCreditCost) && !pipelineBusy,
-  );
+  /** Clicks through to paywall when balance is low; do not disable the button for credits only. */
+  const canGenerate = Boolean(accessToken && !pipelineBusy);
 
   return (
     <>
@@ -232,33 +228,6 @@ export function ProjectVariantsWorkspace({
 
       <div className="flex min-h-0 flex-col gap-8 xl:flex-row xl:items-start xl:gap-8">
         <aside className="w-full shrink-0 space-y-3.5 xl:sticky xl:top-6 xl:max-h-[calc(100vh-4rem)] xl:w-[min(100%,31rem)] xl:overflow-y-auto xl:pr-2">
-          <div className="flex items-center justify-between gap-3 px-1">
-            <nav className="flex min-w-0 items-center gap-1.5 text-sm" aria-label="Breadcrumb">
-              <Link
-                href={AppRoutes.projects}
-                className="shrink-0 text-muted-foreground transition-colors hover:text-foreground"
-              >
-                Projects
-              </Link>
-              <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground/60" aria-hidden />
-              <span className="truncate font-medium text-foreground" title={project.title ?? 'Project details'}>
-                {project.title ?? 'Project details'}
-              </span>
-            </nav>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground"
-              onClick={() => void onRefresh()}
-              disabled={refreshing}
-              aria-label="Refresh project"
-              title="Refresh project"
-            >
-              <RefreshCw className={cn('h-4 w-4', refreshing && 'animate-spin')} />
-            </Button>
-          </div>
-
           <Card className="overflow-visible border-transparent bg-card/65 shadow-[0_18px_55px_-36px_rgba(0,0,0,0.95)] ring-1 ring-white/[0.025] hover:border-transparent">
             <CardContent className="space-y-5 p-4">
               {hasSource ? (
@@ -326,9 +295,27 @@ export function ProjectVariantsWorkspace({
           selectedStyleLabel={selectedStyleLabel}
           previewUrl={previewUrl}
           onRequestDeleteVariant={(id) => setVariantToDelete(id)}
+          onRefresh={() => void onRefresh()}
+          refreshing={refreshing}
           pipelineJob={pipelineJob}
           pipelineBusy={pipelineBusy}
           pipelineFailed={pipelineFailed}
+          refineControls={{
+            applyPending: refineThumbnail.isPending,
+            creditsBalance: credits?.balance,
+            templateId: selectedTemplateId,
+            avatarId: selectedAvatarId.trim() || null,
+            onApply: (instruction) => {
+              if (!accessToken || !selectedVariantId) return;
+              if (selectedVariant?.status !== 'done') return;
+              refineThumbnail.mutate({
+                variantId: selectedVariantId,
+                instruction,
+                template_id: selectedTemplateId ?? undefined,
+                avatar_id: selectedAvatarId.trim() || undefined,
+              });
+            },
+          }}
         />
       </div>
     </>

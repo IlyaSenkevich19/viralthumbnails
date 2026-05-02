@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useRef } from 'react';
+import { Suspense, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
@@ -85,6 +85,14 @@ function VariantsGalleryInner({ projectId }: { projectId: string }) {
     writePipelineRecoveryJob(pipelineRecoveryKey, pipelineJobId);
   }, [pipelineJobId, pipelineJobQuery.data?.status, pipelineRecoveryKey]);
 
+  const projectBreadcrumb = useMemo(
+    () => [
+      { label: 'Projects', href: AppRoutes.projects },
+      { label: data?.title ?? 'Project' },
+    ],
+    [data?.title],
+  );
+
   async function handleRefresh() {
     const result = await refetch();
     if (result.isError) {
@@ -136,7 +144,7 @@ function VariantsGalleryInner({ projectId }: { projectId: string }) {
 
   return (
     <>
-      <SetPageFrame title={data.title} />
+      <SetPageFrame title={data.title} breadcrumb={projectBreadcrumb} />
       <ProjectVariantsWorkspace
         project={data}
         projectId={projectId}

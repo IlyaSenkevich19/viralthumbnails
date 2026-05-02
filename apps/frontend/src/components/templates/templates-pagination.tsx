@@ -9,6 +9,8 @@ type TemplatesPaginationProps = {
   total: number;
   limit: number;
   onPageChange: (page: number) => void;
+  /** Replaces default “No templates” when `total` is zero. */
+  emptySummaryLabel?: string;
   /** When set with `onPageSizeChange`, shows a per-page selector. */
   pageSizeOptions?: readonly number[];
   onPageSizeChange?: (limit: number) => void;
@@ -25,6 +27,7 @@ export function TemplatesPagination({
   pageSizeOptions,
   onPageSizeChange,
   isNavBusy = false,
+  emptySummaryLabel,
   className,
 }: TemplatesPaginationProps) {
   const totalPages = Math.max(1, Math.ceil(total / limit));
@@ -38,7 +41,7 @@ export function TemplatesPagination({
       <div className="flex flex-wrap items-center gap-3">
         <p className="text-sm text-muted-foreground">
           {total === 0 ? (
-            <>No templates</>
+            <>{emptySummaryLabel ?? 'No templates'}</>
           ) : (
             <>
               Showing <span className="font-medium text-foreground">{from}</span>–
@@ -55,7 +58,7 @@ export function TemplatesPagination({
               disabled={isNavBusy}
               onChange={(e) => onPageSizeChange(Number(e.target.value))}
               className="h-9 min-w-[4.5rem] rounded-lg border border-input bg-background px-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-              aria-label="Templates per page"
+              aria-label="Items per page"
             >
               {pageSizeOptions.map((n) => (
                 <option key={n} value={n}>

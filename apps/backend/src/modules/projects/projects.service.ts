@@ -1,9 +1,12 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   InternalServerErrorException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { SupabaseService } from '../supabase/supabase.service';
 import {
   BUCKET_PROJECT_THUMBNAILS,
@@ -11,18 +14,30 @@ import {
 } from '../storage/storage.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { inferProjectTitle } from './infer-project-title';
+import { RefineThumbnailDto } from './dto/refine-thumbnail.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { ThumbnailPipelineJobsService } from '../thumbnail-pipeline/services/thumbnail-pipeline-jobs.service';
 import { ThumbnailPipelineRunDto } from '../thumbnail-pipeline/dto/thumbnail-pipeline-run.dto';
 import { VideoPipelineDurationGateService } from '../video-thumbnails/services/video-pipeline-duration-gate.service';
+import { BillingService } from '../billing/billing.service';
+import { PipelineThumbnailEditingService } from '../thumbnail-pipeline/services/pipeline-thumbnail-editing.service';
+import { ProjectVariantImageService } from '../project-thumbnail-generation/project-variant-image.service';
+
+const THUMBNAIL_REFINE_FETCH_TIMEOUT_MS = 45_000;
+const THUMBNAIL_REFINE_MAX_SOURCE_BYTES = 14 * 1024 * 1024;
 
 @Injectable()
 export class ProjectsService {
+  private readonly logger = new Logger(ProjectsService.name);
+
   constructor(
     private readonly supabase: SupabaseService,
     private readonly storage: StorageService,
     private readonly pipelineJobs: ThumbnailPipelineJobsService,
     private readonly videoDurationGate: VideoPipelineDurationGateService,
+    private readonly billing: BillingService,
+    private readonly thumbnailEditing: PipelineThumbnailEditingService,
+    private readonly variantImageRefs: ProjectVariantImageService,
   ) {}
 
   async create(userId: string, dto: CreateProjectDto) {
@@ -47,16 +62,37 @@ export class ProjectsService {
     return this.signProjectRow(data as Record<string, unknown>);
   }
 
-  async listForUser(userId: string) {
+  /**
+   * Normalize search input for Postgres `ILIKE`: trim, length cap, strip `%`, `_`, `\` so literal match is predictable.
+   */
+  private sanitizeTitleSearch(raw: string | undefined): string | undefined {
+    if (typeof raw !== 'string') return undefined;
+    const t = raw.trim().slice(0, 200);
+    if (!t.length) return undefined;
+    return t.replace(/\\/g, '').replace(/%/g, '').replace(/_/g, '');
+  }
+
+  async listForUser(userId: string, opts: { page?: number; limit?: number; q?: string }) {
+    const page = Number.isFinite(opts.page) && (opts.page ?? 0) >= 1 ? Math.floor(opts.page!) : 1;
+    const limitRaw =
+      Number.isFinite(opts.limit) && (opts.limit ?? 0) >= 1 ? Math.floor(opts.limit!) : 24;
+    const limit = Math.min(100, Math.max(1, limitRaw));
+    const sliceFrom = (page - 1) * limit;
+    const sliceTo = sliceFrom + limit - 1;
+    const q = this.sanitizeTitleSearch(opts.q);
+
     const client = this.supabase.getAdminClient();
-    const { data, error } = await client
+    let qb = client
       .from('projects')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
+      .select('*', { count: 'exact' })
+      .eq('user_id', userId);
+    if (q) qb = qb.ilike('title', `%${q}%`);
+    const { data, error, count } = await qb.order('created_at', { ascending: false }).range(sliceFrom, sliceTo);
     if (error) throw new InternalServerErrorException(error.message);
     const rows = data ?? [];
-    return Promise.all(rows.map((r) => this.signProjectRow(r as Record<string, unknown>)));
+    const total = typeof count === 'number' ? count : rows.length;
+    const items = await Promise.all(rows.map((r) => this.signProjectRow(r as Record<string, unknown>)));
+    return { items, total, page, limit };
   }
 
   async getByIdForUser(projectId: string, userId: string) {
@@ -175,6 +211,185 @@ export class ProjectsService {
     if (delErr) throw new InternalServerErrorException(delErr.message);
 
     await this.reconcileProjectCover(projectId);
+  }
+
+  /**
+   * Edits one finished variant into a **new** row (costs {@link BillingService.reserveGenerationCredits} 1 credit).
+   * Runs the multimodal thumbnail edit model on the variant image plus optional template/avatar refs — no VL analysis.
+   */
+  async refineThumbnailFromVariant(
+    projectId: string,
+    sourceVariantId: string,
+    userId: string,
+    dto: RefineThumbnailDto,
+  ): Promise<{ variant: Record<string, unknown> }> {
+    const activeJob = await this.pipelineJobs.findActiveForUser(userId);
+    if (activeJob) {
+      throw new ConflictException({
+        code: 'PIPELINE_JOB_ALREADY_ACTIVE',
+        message: 'A pipeline generation is already in progress. Please wait until it finishes.',
+      });
+    }
+
+    await this.getByIdForUser(projectId, userId);
+
+    const runRef = randomUUID();
+    const creditCost = 1;
+    await this.billing.reserveGenerationCredits(userId, creditCost, {
+      referenceType: 'thumbnail_variant_refine',
+      referenceId: runRef,
+    });
+
+    let uploadedPath: string | null = null;
+    let variantPersisted = false;
+    try {
+      const client = this.supabase.getAdminClient();
+      const { data: row, error: findErr } = await client
+        .from('thumbnail_variants')
+        .select('*')
+        .eq('id', sourceVariantId)
+        .eq('project_id', projectId)
+        .maybeSingle();
+      if (findErr) throw new InternalServerErrorException(findErr.message);
+      if (!row) throw new NotFoundException('Thumbnail variant was not found.');
+
+      const status = typeof row.status === 'string' ? row.status : '';
+      if (status !== 'done') {
+        throw new BadRequestException({
+          code: 'VARIANT_NOT_READY',
+          message: 'Finish generation for this thumbnail before refining it.',
+        });
+      }
+
+      let fetchUrl: string | null = null;
+      const storagePath = row.generated_image_storage_path;
+      if (typeof storagePath === 'string' && storagePath.trim().length > 0) {
+        fetchUrl = await this.storage.createSignedUrl(BUCKET_PROJECT_THUMBNAILS, storagePath.trim());
+      } else if (typeof row.generated_image_url === 'string' && row.generated_image_url.trim().length > 0) {
+        fetchUrl = row.generated_image_url.trim();
+      }
+
+      if (!fetchUrl) {
+        throw new BadRequestException({
+          code: 'VARIANT_NO_IMAGE',
+          message: 'This variant has no image to edit.',
+        });
+      }
+
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), THUMBNAIL_REFINE_FETCH_TIMEOUT_MS);
+      let res: Response;
+      try {
+        res = await fetch(fetchUrl, { signal: controller.signal });
+      } finally {
+        clearTimeout(timer);
+      }
+      if (!res.ok) {
+        throw new InternalServerErrorException(`Could not download source thumbnail (${res.status}).`);
+      }
+      const buf = Buffer.from(await res.arrayBuffer());
+      if (buf.length > THUMBNAIL_REFINE_MAX_SOURCE_BYTES) {
+        throw new BadRequestException({
+          code: 'VARIANT_IMAGE_TOO_LARGE',
+          message: 'Source image is too large to refine.',
+        });
+      }
+
+      const headerMime = res.headers.get('content-type');
+      let mime =
+        headerMime?.split(';')[0]?.trim() ||
+        ((row.generated_image_storage_path as string | undefined)?.toLowerCase().endsWith('.png')
+          ? 'image/png'
+          : 'image/jpeg');
+      if (!mime.startsWith('image/')) mime = 'image/png';
+
+      const baseImageDataUrl = `data:${mime};base64,${buf.toString('base64')}`;
+
+      const templateRef = dto.template_id?.trim() || undefined;
+      const avatarRef = dto.avatar_id?.trim() || undefined;
+      const templateReferenceDataUrls: string[] = [];
+      const faceReferenceDataUrls: string[] = [];
+
+      if (templateRef || avatarRef) {
+        const refs = await this.variantImageRefs.resolveReferenceDataUrlsForUser({
+          userId,
+          templateId: templateRef,
+          avatarId: avatarRef,
+          logContext: `refine:${sourceVariantId}`,
+        });
+        if (refs.hasTemplateImage && refs.dataUrls[0]) templateReferenceDataUrls.push(refs.dataUrls[0]);
+        if (refs.hasAvatarImage && refs.dataUrls.length > 0) {
+          faceReferenceDataUrls.push(refs.dataUrls[refs.dataUrls.length - 1]!);
+        }
+      }
+
+      const edited = await this.thumbnailEditing.editThumbnail({
+        baseImageDataUrl,
+        instruction: dto.instruction.trim(),
+        templateReferenceDataUrls,
+        faceReferenceDataUrls,
+      });
+
+      const newVariantId = randomUUID();
+      const { path } = await this.storage.uploadProjectVariantImage({
+        userId,
+        projectId,
+        variantId: newVariantId,
+        body: edited.buffer,
+        contentType: edited.contentType,
+      });
+      uploadedPath = path;
+
+      const { data: inserted, error: insErr } = await client
+        .from('thumbnail_variants')
+        .insert({
+          id: newVariantId,
+          project_id: projectId,
+          generated_image_storage_path: path,
+          generated_image_url: null,
+          status: 'done',
+          template_id: dto.template_id ?? (typeof row.template_id === 'string' ? row.template_id : null),
+        })
+        .select()
+        .single();
+      if (insErr || !inserted) {
+        throw new InternalServerErrorException(insErr?.message ?? 'Could not save refined thumbnail.');
+      }
+
+      variantPersisted = true;
+
+      try {
+        const { error: coverErr } = await client
+          .from('projects')
+          .update({
+            cover_thumbnail_storage_path: path,
+            cover_thumbnail_url: null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', projectId);
+        if (coverErr) {
+          this.logger.warn(`refineThumbnailFromVariant: project cover update failed (variant saved): ${coverErr.message}`);
+        }
+      } catch (coverEx) {
+        this.logger.warn(
+          `refineThumbnailFromVariant: project cover update threw (variant saved): ${coverEx instanceof Error ? coverEx.message : coverEx}`,
+        );
+      }
+
+      const signed = await this.signVariantRow(inserted as Record<string, unknown>);
+      return { variant: signed };
+    } catch (e) {
+      if (uploadedPath && !variantPersisted) {
+        await this.storage.removeObjectsIfPresent(BUCKET_PROJECT_THUMBNAILS, [uploadedPath]);
+      }
+      if (!variantPersisted) {
+        await this.billing.refundGenerationCredits(userId, creditCost, {
+          referenceType: 'thumbnail_variant_refine',
+          referenceId: runRef,
+        });
+      }
+      throw e;
+    }
   }
 
   private async reconcileProjectCover(projectId: string): Promise<void> {

@@ -2,6 +2,11 @@ export { ApiError, isApiError } from './api/api-error';
 export * as authApi from './api/auth';
 export * as projectsApi from './api/projects';
 export {
+  PROJECTS_DEFAULT_PAGE_SIZE,
+  PROJECTS_PAGE_SIZE_OPTIONS,
+  parseProjectsPageSizeParam,
+} from './api/projects';
+export {
   TEMPLATES_DEFAULT_PAGE_SIZE,
   TEMPLATE_PAGE_SIZE_OPTIONS,
 } from './api/templates';

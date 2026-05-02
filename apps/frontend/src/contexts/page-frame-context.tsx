@@ -9,14 +9,20 @@ import {
   type ReactNode,
 } from 'react';
 
+/** `href` omitted = current page (not a link). */
+export type PageBreadcrumbSegment = { label: string; href?: string };
+
 export type PageFrameState = {
   title: string | null;
   eyebrow: string | null;
+  /** When set, header shows this trail instead of a plain title. */
+  breadcrumb: PageBreadcrumbSegment[] | null;
 };
 
 const defaultFrame: PageFrameState = {
   title: null,
   eyebrow: null,
+  breadcrumb: null,
 };
 
 type PageFrameContextValue = {

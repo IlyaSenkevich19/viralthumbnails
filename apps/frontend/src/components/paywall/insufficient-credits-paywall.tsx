@@ -3,16 +3,21 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AppRoutes } from '@/config/routes';
+import { pricingPlans } from '@/config/pricing-plans';
 import { Button } from '@/components/ui/button';
+import { CreditPacksGrid } from '@/components/billing/credit-packs-grid';
 import { trackEvent } from '@/lib/analytics';
 
 export const OPEN_PAYWALL_EVENT = 'vt-open-insufficient-credits-paywall';
 
-type InsufficientCreditsPayload = {
-  title: string;
-  description: string;
+/** Paid packs only — trial isn’t a purchase path from this gate */
+const PAYWALL_PACK_PLANS = pricingPlans.filter((p) => p.id !== 'trial');
+
+export type InsufficientCreditsPayload = {
   need?: number;
   have?: number;
+  title?: string;
+  description?: string;
 };
 
 export function openInsufficientCreditsPaywall(payload: InsufficientCreditsPayload) {
@@ -32,7 +37,7 @@ export function InsufficientCreditsPaywall() {
       setPayload(custom.detail);
       setOpen(true);
       trackEvent('paywall_viewed', {
-        title: custom.detail.title,
+        title: custom.detail.title ?? 'insufficient_credits',
         need: custom.detail.need,
         have: custom.detail.have,
       });
@@ -57,55 +62,82 @@ export function InsufficientCreditsPaywall() {
 
   if (!open || !payload) return null;
 
+  const hasBalanceDetail =
+    typeof payload.need === 'number' && typeof payload.have === 'number';
+
   return (
     <div
-      className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 px-4 py-10 backdrop-blur-sm sm:py-8"
+      className="fixed inset-0 z-[250] flex items-center justify-center bg-black/75 px-3 py-6 backdrop-blur-md sm:px-5 sm:py-8"
       role="presentation"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) setOpen(false);
       }}
     >
       <div
-        role="alertdialog"
+        role="dialog"
         aria-modal="true"
         aria-labelledby="credits-paywall-title"
-        aria-describedby="credits-paywall-desc"
-        className="relative w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-premium"
+        aria-describedby={
+          hasBalanceDetail ? 'credits-paywall-balance' : payload.description ? 'credits-paywall-desc' : undefined
+        }
+        className="flex max-h-[min(92vh,880px)] w-full max-w-6xl flex-col overflow-hidden rounded-[1.35rem] border border-white/[0.08] bg-card shadow-[0_40px_120px_-48px_rgba(0,0,0,0.95)]"
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <h2 id="credits-paywall-title" className="text-lg font-semibold tracking-tight text-foreground">
-          {payload.title}
-        </h2>
-        <p id="credits-paywall-desc" className="mt-2 text-sm leading-relaxed text-muted-foreground">
-          {payload.description}
-        </p>
-        {typeof payload.need === 'number' && typeof payload.have === 'number' ? (
-          <p className="mt-3 rounded-lg border border-border/80 bg-muted/30 px-3 py-2 text-xs text-foreground/90">
-            Need <strong>{payload.need}</strong> credit{payload.need === 1 ? '' : 's'}, you have{' '}
-            <strong>{payload.have}</strong>.
-          </p>
-        ) : null}
-        <div className="mt-6 flex flex-wrap items-center justify-end gap-2">
-          <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-            Continue editing
-          </Button>
-          <Button
-            type="button"
-            onClick={() => {
-              trackEvent('paywall_cta_clicked', {
-                cta: 'unlock_credits',
-                need: payload.need,
-                have: payload.have,
-              });
-              setOpen(false);
-              router.push(AppRoutes.credits);
-            }}
-          >
-            Unlock credits
-          </Button>
+        <div className="shrink-0 border-b border-border/60 px-5 py-4 sm:px-7 sm:py-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">Credits</p>
+              <h2 id="credits-paywall-title" className="mt-1 text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+                {hasBalanceDetail ? 'Add credits to continue' : payload.title ?? 'Not enough credits'}
+              </h2>
+              {hasBalanceDetail ? (
+                <p
+                  id="credits-paywall-balance"
+                  className="mt-2 text-sm text-muted-foreground"
+                >
+                  This action needs <strong className="text-foreground">{payload.need}</strong> credit
+                  {payload.need === 1 ? '' : 's'} · you have <strong className="text-foreground">{payload.have}</strong>.
+                </p>
+              ) : payload.description ? (
+                <p id="credits-paywall-desc" className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                  {payload.description}
+                </p>
+              ) : null}
+            </div>
+            <Button type="button" variant="ghost" size="sm" className="shrink-0 text-muted-foreground" onClick={() => setOpen(false)}>
+              Close
+            </Button>
+          </div>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-7 sm:py-6">
+          <h3 className="mb-4 text-base font-semibold text-foreground">Credit packs</h3>
+          <CreditPacksGrid plans={PAYWALL_PACK_PLANS} className="lg:grid-cols-3" />
+        </div>
+
+        <div className="shrink-0 border-t border-border/60 px-5 py-4 sm:px-7">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => setOpen(false)}>
+              Continue editing
+            </Button>
+            <button
+              type="button"
+              className="text-center text-sm font-medium text-primary underline-offset-4 hover:underline sm:text-right"
+              onClick={() => {
+                trackEvent('paywall_cta_clicked', {
+                  cta: 'credits_page_full',
+                  need: payload.need,
+                  have: payload.have,
+                });
+                setOpen(false);
+                router.push(AppRoutes.credits);
+              }}
+            >
+              Credits page — balance &amp; history
+            </button>
+          </div>
         </div>
       </div>
     </div>
   );
 }
-

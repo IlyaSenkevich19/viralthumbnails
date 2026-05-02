@@ -6,34 +6,49 @@ import type { ThumbnailVariantRow } from '@/lib/types/project';
 type VariantStripThumbProps = {
   variant: ThumbnailVariantRow;
   projectTitle: string;
+  /** 1-based order in project history */
+  versionIndex: number;
   styleLabel?: string;
   selected: boolean;
   onSelect: () => void;
   enterIndex: number;
+  /** Newest successfully generated variant (helps find latest after refining) */
+  isLatestDone?: boolean;
+  /** Tighter card for grid / dense galleries */
+  density?: 'default' | 'compact';
+  className?: string;
 };
 
 export function VariantStripThumb({
   variant,
   projectTitle,
+  versionIndex,
   styleLabel,
   selected,
   onSelect,
   enterIndex,
+  isLatestDone,
+  density = 'default',
+  className,
 }: VariantStripThumbProps) {
   const url = variant.generated_image_url;
   const showStatus = variant.status !== 'done';
+
+  const compact = density === 'compact';
 
   return (
     <button
       type="button"
       onClick={onSelect}
-      style={{ animationDelay: `${Math.min(enterIndex, 24) * 42}ms` }}
+      style={{ animationDelay: `${Math.min(enterIndex, 12) * 32}ms` }}
       className={cn(
-        'vt-variant-enter group relative w-36 shrink-0 overflow-hidden rounded-2xl border-2 bg-card/35 text-left transition-[background,border-color,transform]',
+        'vt-variant-enter group relative shrink-0 overflow-hidden rounded-2xl border-2 bg-card/35 text-left transition-[background,border-color,transform]',
+        compact ? 'w-full max-w-[9.25rem] sm:max-w-[10rem]' : 'w-36',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/70 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
         selected
           ? 'border-primary/80 bg-primary/10'
           : 'border-white/[0.1] hover:border-white/22 hover:bg-white/[0.04]',
+        className,
       )}
     >
       <div className="relative isolate aspect-video w-full overflow-hidden bg-muted">
@@ -50,6 +65,26 @@ export function VariantStripThumb({
           </div>
         )}
         <div className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-t from-black/35 via-transparent to-transparent opacity-80" />
+        {!showStatus && selected ? (
+          <span
+            className={cn(
+              'pointer-events-none absolute left-1.5 top-1.5 z-[2] rounded-full bg-primary/90 font-semibold uppercase tracking-wide text-primary-foreground shadow-sm ring-1 ring-white/15',
+              compact ? 'px-1.5 py-px text-[8px]' : 'left-2 top-2 px-2 py-0.5 text-[10px]',
+            )}
+          >
+            Current
+          </span>
+        ) : null}
+        {isLatestDone && !selected && !showStatus ? (
+          <span
+            className={cn(
+              'pointer-events-none absolute z-[2] rounded-full bg-emerald-500/85 font-semibold uppercase tracking-wide text-emerald-50 shadow-sm ring-1 ring-emerald-300/35',
+              compact ? 'right-1 top-1 px-1.5 py-px text-[8px]' : 'right-2 top-2 px-2 py-0.5 text-[9px]',
+            )}
+          >
+            Latest
+          </span>
+        ) : null}
         {showStatus ? (
           <span
             className={cn(
@@ -63,11 +98,35 @@ export function VariantStripThumb({
           </span>
         ) : null}
       </div>
-      {styleLabel ? (
-        <span className="block truncate bg-black/25 px-2.5 py-2 text-[11px] font-medium text-foreground/85">
-          {styleLabel}
+      <div
+        className={cn(
+          'flex items-center gap-1.5 bg-black/25 px-2',
+          compact ? 'min-h-[2rem] py-1.5' : 'min-h-[2.5rem] gap-2 px-2.5 py-2',
+        )}
+      >
+        <span
+          className={cn(
+            'shrink-0 rounded-md bg-white/[0.07] font-semibold tabular-nums text-foreground/80 ring-1 ring-white/[0.06]',
+            compact ? 'px-1 py-px text-[9px]' : 'px-1.5 py-0.5 text-[10px]',
+          )}
+        >
+          v{versionIndex}
         </span>
-      ) : null}
+        {styleLabel ? (
+          <span
+            className={cn(
+              'truncate font-medium text-foreground/85',
+              compact ? 'text-[10px]' : 'text-[11px]',
+            )}
+          >
+            {styleLabel}
+          </span>
+        ) : (
+          <span className={cn('truncate text-muted-foreground', compact ? 'text-[10px]' : 'text-[11px]')}>
+            Thumbnail
+          </span>
+        )}
+      </div>
       <span className="sr-only">Select variant for {projectTitle}</span>
     </button>
   );

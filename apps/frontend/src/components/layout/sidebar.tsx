@@ -229,46 +229,43 @@ export function Sidebar({
       ) : null}
       {!inDrawer && onToggleCollapsed && (
         <div className="absolute left-full top-[2.85rem] z-[60] -translate-x-1/2">
-          <CollapsedSidebarTooltip enabled={compact} label="Expand sidebar">
-            <button
-              type="button"
-              onClick={onToggleCollapsed}
-              title={compact ? undefined : 'Collapse sidebar'}
-              aria-label={compact ? 'Expand sidebar' : 'Collapse sidebar'}
-              className={cn(
-                'group flex h-7 w-7 shrink-0 items-center justify-center rounded-full',
-                'border border-black/35 bg-[var(--sidebar)] text-muted-foreground',
-                'shadow-[0_6px_18px_-10px_rgba(0,0,0,0.75)]',
-                'motion-base',
-                'hover:border-border/70 hover:bg-muted hover:text-foreground',
-                'hover:shadow-[0_8px_22px_-12px_rgba(0,0,0,0.75)]',
-                'active:scale-[0.94]',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--sidebar)]',
-              )}
-            >
-              <span
-                className="pointer-events-none absolute inset-0 rounded-full opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-                style={{
-                  background:
-                    'radial-gradient(120% 120% at 30% 20%, rgba(255,59,59,0.10), transparent 58%)',
-                }}
+          <button
+            type="button"
+            onClick={onToggleCollapsed}
+            aria-label={compact ? 'Expand sidebar' : 'Collapse sidebar'}
+            className={cn(
+              'group flex h-7 w-7 shrink-0 items-center justify-center rounded-full',
+              'border border-black/35 bg-[var(--sidebar)] text-muted-foreground',
+              'shadow-[0_6px_18px_-10px_rgba(0,0,0,0.75)]',
+              'motion-base',
+              'hover:border-border/70 hover:bg-muted hover:text-foreground',
+              'hover:shadow-[0_8px_22px_-12px_rgba(0,0,0,0.75)]',
+              'active:scale-[0.94]',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--sidebar)]',
+            )}
+          >
+            <span
+              className="pointer-events-none absolute inset-0 rounded-full opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+              style={{
+                background:
+                  'radial-gradient(120% 120% at 30% 20%, rgba(255,59,59,0.10), transparent 58%)',
+              }}
+              aria-hidden
+            />
+            {compact ? (
+              <ChevronRight
+                className="relative h-3.5 w-3.5 transition-transform duration-300 ease-[var(--ease-standard)] group-hover:translate-x-px"
+                strokeWidth={2.25}
                 aria-hidden
               />
-              {compact ? (
-                <ChevronRight
-                  className="relative h-3.5 w-3.5 transition-transform duration-300 ease-[var(--ease-standard)] group-hover:translate-x-px"
-                  strokeWidth={2.25}
-                  aria-hidden
-                />
-              ) : (
-                <ChevronLeft
-                  className="relative h-3.5 w-3.5 transition-transform duration-300 ease-[var(--ease-standard)] group-hover:-translate-x-px"
-                  strokeWidth={2.25}
-                  aria-hidden
-                />
-              )}
-            </button>
-          </CollapsedSidebarTooltip>
+            ) : (
+              <ChevronLeft
+                className="relative h-3.5 w-3.5 transition-transform duration-300 ease-[var(--ease-standard)] group-hover:-translate-x-px"
+                strokeWidth={2.25}
+                aria-hidden
+              />
+            )}
+          </button>
         </div>
       )}
 

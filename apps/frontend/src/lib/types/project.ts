@@ -22,6 +22,13 @@ export interface ProjectRow {
   updated_at: string;
 }
 
+export interface PaginatedProjectsResponse {
+  items: ProjectRow[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
 export interface ThumbnailVariantRow {
   id: string;
   project_id: string;
@@ -50,4 +57,8 @@ export interface GenerateThumbnailsResponse {
   job_id: string;
   status: 'queued' | 'running' | 'succeeded' | 'failed';
   created_at: string;
+}
+
+export interface RefineThumbnailResponse {
+  variant: ThumbnailVariantRow;
 }

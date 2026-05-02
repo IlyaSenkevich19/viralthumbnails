@@ -60,12 +60,7 @@ export function ProjectVariantsTemplatePicker({
 
   return (
     <div className="space-y-2.5">
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="text-base font-semibold tracking-tight text-foreground">Template (optional)</h2>
-        <p className="rounded-full border border-border/70 px-2 py-0.5 text-[11px] text-muted-foreground">
-          {filteredTemplates.length} shown
-        </p>
-      </div>
+      <h2 className="text-base font-semibold tracking-tight text-foreground">Template (optional)</h2>
       <div className="grid gap-2 sm:grid-cols-2">
         <div>
           <Select value={selectedNiche} onValueChange={(value) => onNicheChange(value)}>

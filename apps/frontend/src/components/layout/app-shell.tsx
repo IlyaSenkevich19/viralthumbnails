@@ -108,7 +108,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </div>
             </main>
           </div>
-          <InsufficientCreditsPaywall />
         </PageFrameProvider>
       </div>
 
@@ -138,6 +137,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <Sidebar inDrawer onClose={closeMobileSidebar} />
         </div>
       </div>
+
+      {/* Root-level mount so stacking isn’t trapped under `z-0` layout; full-screen checkout overlay */}
+      <InsufficientCreditsPaywall />
     </div>
   );
 }

@@ -7,7 +7,10 @@ export const queryKeys = {
   projects: {
     all: ['projects'] as const,
     lists: () => [...queryKeys.projects.all, 'list'] as const,
-    list: (userId: string) => [...queryKeys.projects.lists(), userId] as const,
+    /** Prefix for all paginated list queries for this user (invalidate after mutations). */
+    listsForUser: (userId: string) => [...queryKeys.projects.lists(), userId] as const,
+    list: (userId: string, page: number, limit: number, q: string) =>
+      [...queryKeys.projects.listsForUser(userId), page, limit, q] as const,
     details: () => [...queryKeys.projects.all, 'detail'] as const,
     detail: (userId: string, projectId: string) =>
       [...queryKeys.projects.details(), userId, projectId] as const,

@@ -9,6 +9,7 @@ import {
   ParseUUIDPipe,
   Post,
   Put,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
@@ -18,6 +19,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { ProjectsService } from './projects.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
+import { ListProjectsQueryDto } from './dto/list-projects-query.dto';
 
 @ApiTags('projects')
 @ApiBearerAuth()
@@ -32,8 +34,12 @@ export class ProjectsController {
   }
 
   @Get()
-  list(@CurrentUser() userId: string) {
-    return this.projects.listForUser(userId);
+  list(@CurrentUser() userId: string, @Query() query: ListProjectsQueryDto) {
+    return this.projects.listForUser(userId, {
+      page: query.page ?? 1,
+      limit: query.limit ?? 24,
+      q: query.q,
+    });
   }
 
   @Get(':id')

@@ -1,14 +1,38 @@
 import type {
   GenerateThumbnailsResponse,
+  PaginatedProjectsResponse,
   ProjectRow,
   ProjectSourceType,
   ProjectWithVariants,
+  RefineThumbnailResponse,
 } from '@/lib/types/project';
 import { ApiRoutes } from '@/config/api-routes';
 import { fetchJson } from './fetch-json';
 
-export async function listProjects(token: string | null): Promise<ProjectRow[]> {
-  return fetchJson<ProjectRow[]>(ApiRoutes.projects.root, token);
+/** Default matches backend `GET /projects`. Keep options within backend `@Max(100)`. */
+export const PROJECTS_DEFAULT_PAGE_SIZE = 24;
+
+export const PROJECTS_PAGE_SIZE_OPTIONS = [12, 24, 48] as const;
+export type ProjectsPageSizeOption = (typeof PROJECTS_PAGE_SIZE_OPTIONS)[number];
+
+export function parseProjectsPageSizeParam(raw: string | null): number {
+  if (raw == null || raw === '') return PROJECTS_DEFAULT_PAGE_SIZE;
+  const n = parseInt(raw, 10);
+  return (PROJECTS_PAGE_SIZE_OPTIONS as readonly number[]).includes(n) ? n : PROJECTS_DEFAULT_PAGE_SIZE;
+}
+
+export async function listProjects(
+  token: string | null,
+  options?: { page?: number; limit?: number; q?: string },
+): Promise<PaginatedProjectsResponse> {
+  const params = new URLSearchParams();
+  if (options?.page != null) params.set('page', String(options.page));
+  if (options?.limit != null) params.set('limit', String(options.limit));
+  const q = typeof options?.q === 'string' ? options.q.trim() : '';
+  if (q.length > 0) params.set('q', q);
+  const qs = params.toString();
+  const path = qs ? `${ApiRoutes.projects.root}?${qs}` : ApiRoutes.projects.root;
+  return fetchJson<PaginatedProjectsResponse>(path, token);
 }
 
 export async function getProject(
@@ -78,4 +102,20 @@ export async function deleteVariant(
   variantId: string,
 ): Promise<void> {
   await fetchJson(ApiRoutes.projects.variant(projectId, variantId), token, { method: 'DELETE' });
+}
+
+export async function refineThumbnailVariant(
+  token: string | null,
+  projectId: string,
+  variantId: string,
+  body: {
+    instruction: string;
+    template_id?: string;
+    avatar_id?: string;
+  },
+): Promise<RefineThumbnailResponse> {
+  return fetchJson<RefineThumbnailResponse>(ApiRoutes.projects.refineVariant(projectId, variantId), token, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
 }

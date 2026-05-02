@@ -51,19 +51,15 @@ export function ProjectVariantsSourceCard({
           {sourceFileName}
         </p>
       ) : null}
-      {pipelineJob ? (
+      {pipelineJob && (pipelineBusy || pipelineFailed) ? (
         <p
           className={cn(
             'text-xs leading-relaxed',
-            pipelineBusy ? 'text-primary' : pipelineFailed ? 'text-destructive' : 'text-muted-foreground',
+            pipelineBusy ? 'text-primary' : 'text-destructive',
           )}
         >
           {pipelineJob.progress?.label ??
-            (pipelineBusy
-              ? 'Analyzing source'
-              : pipelineFailed
-                ? pipelineJob.error?.message || 'Pipeline failed'
-                : 'Pipeline completed')}
+            (pipelineBusy ? 'Analyzing source' : pipelineJob.error?.message || 'Pipeline failed')}
         </p>
       ) : null}
     </section>

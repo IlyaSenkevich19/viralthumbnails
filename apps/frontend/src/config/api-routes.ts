@@ -26,6 +26,8 @@ export const ApiRoutes = {
     delete: (projectId: string) => `/projects/${projectId}`,
     variant: (projectId: string, variantId: string) =>
       `/projects/${projectId}/variants/${variantId}`,
+    refineVariant: (projectId: string, variantId: string) =>
+      `/projects/${projectId}/variants/${variantId}/refine`,
   },
   thumbnails: {
     pipelineRun: '/thumbnails/pipeline/run',

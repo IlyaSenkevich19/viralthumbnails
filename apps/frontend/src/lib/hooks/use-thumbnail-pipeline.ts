@@ -91,7 +91,7 @@ export function useThumbnailPipelineMutation(options?: PipelineRecoveryOptions) 
       setJobStatusLabel(null);
       if (userId) {
         queryClient.invalidateQueries({ queryKey: queryKeys.billing.credits(userId) });
-        queryClient.invalidateQueries({ queryKey: queryKeys.projects.list(userId) });
+        queryClient.invalidateQueries({ queryKey: queryKeys.projects.listsForUser(userId) });
       }
     },
   });

@@ -14,6 +14,6 @@ export class AuthController {
   @UseGuards(SupabaseGuard)
   @ApiBearerAuth()
   async getMe(@CurrentUser() userId: string) {
-    return this.authService.getUser(userId);
+    return this.authService.getBootstrap(userId);
   }
 }

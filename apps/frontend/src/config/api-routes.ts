@@ -6,6 +6,9 @@
 export const ApiRoutes = {
   health: '/health',
   healthSetup: '/health/setup',
+  auth: {
+    me: '/auth/me',
+  },
   billing: {
     credits: '/billing/credits',
     startTrial: '/billing/credits/start-trial',

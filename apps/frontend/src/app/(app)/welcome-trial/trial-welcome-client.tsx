@@ -27,19 +27,23 @@ const VALUE_POINTS = [
 export function TrialWelcomeClient() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { user, accessToken, isLoading: authLoading } = useAuth();
+  const {
+    user,
+    accessToken,
+    isLoading: authLoading,
+    trialStarted,
+    refreshTrialBootstrap,
+  } = useAuth();
   const { data: credits, isPending, isError, refetch } = useGenerationCredits();
 
   useEffect(() => {
-    if (isPending || isError || !credits) return;
-    if (credits.trialStarted) {
-      router.replace(AppRoutes.create);
-    }
-  }, [credits, isError, isPending, router]);
+    if (authLoading) return;
+    if (trialStarted === true) router.replace(AppRoutes.create);
+  }, [authLoading, router, trialStarted]);
 
   const startTrial = useMutation({
     mutationFn: () => billingApi.startCreditTrial(accessToken),
-    onSuccess: (nextCredits) => {
+    onSuccess: async (nextCredits) => {
       trackEvent('trial_started', {
         credits_balance: nextCredits.balance,
         credits_total_granted: nextCredits.totalGranted,
@@ -47,6 +51,7 @@ export function TrialWelcomeClient() {
       if (user?.id) {
         queryClient.setQueryData(queryKeys.billing.credits(user.id), nextCredits);
       }
+      await refreshTrialBootstrap();
       toast.success('Starter credits unlocked');
       router.replace(AppRoutes.create);
     },

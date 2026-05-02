@@ -19,5 +19,6 @@ export function useGenerationCredits() {
     queryKey: queryKeys.billing.credits(userId ?? '__pending__'),
     queryFn: () => billingApi.getGenerationCredits(accessToken!),
     enabled: !authLoading && Boolean(userId && accessToken),
+    staleTime: 60_000,
   });
 }

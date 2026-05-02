@@ -1,4 +1,5 @@
 export { ApiError, isApiError } from './api/api-error';
+export { fetchAuthBootstrap, type AuthBootstrapDto } from './api/auth-bootstrap';
 export * as authApi from './api/auth';
 export * as projectsApi from './api/projects';
 export {

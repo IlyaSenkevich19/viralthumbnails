@@ -54,29 +54,31 @@ export function LeadCustomSelect({
       </button>
 
       {open ? (
-        <div className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-lg border border-border bg-card shadow-xl shadow-black/40">
-          {options.map((option) => {
-            const selected = option === value;
-            return (
-              <button
-                key={option}
-                type="button"
-                onClick={() => {
-                  onChange(option);
-                  setOpen(false);
-                }}
-                className={cn(
-                  'flex w-full items-center justify-between px-4 py-2.5 text-left text-sm transition-colors',
-                  selected
-                    ? 'bg-primary/10 text-primary'
-                    : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-                )}
-              >
-                <span>{option}</span>
-                {selected ? <Check className="h-4 w-4 shrink-0" /> : null}
-              </button>
-            );
-          })}
+        <div className="absolute z-50 mt-1 w-full overflow-hidden rounded-lg border border-border bg-card shadow-xl shadow-black/40">
+          <div className="max-h-60 overflow-y-auto p-1">
+            {options.map((option) => {
+              const selected = option === value;
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => {
+                    onChange(option);
+                    setOpen(false);
+                  }}
+                  className={cn(
+                    'flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm transition-colors',
+                    selected
+                      ? 'bg-primary/10 text-primary'
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                  )}
+                >
+                  <span>{option}</span>
+                  {selected ? <Check className="h-4 w-4 shrink-0" /> : null}
+                </button>
+              );
+            })}
+          </div>
         </div>
       ) : null}
     </div>

@@ -69,7 +69,7 @@ export function ProjectRowMenu({ projectId, projectTitle, onDeleteClick }: Proje
           minWidth: MENU_MIN_WIDTH,
           zIndex: 200,
         }}
-        className="rounded-xl border border-border bg-card py-1 shadow-[0_16px_48px_-12px_rgba(0,0,0,0.55)]"
+        className="overflow-hidden rounded-xl border border-border bg-card py-1 shadow-[0_16px_48px_-12px_rgba(0,0,0,0.55)]"
       >
         <Link
           href={projectVariantsPath(projectId)}

@@ -151,7 +151,7 @@ function SidebarUserBlock({ collapsed, inDrawer }: { collapsed: boolean; inDrawe
       {open && (
         <div
           className={cn(
-            'absolute z-[70] rounded-xl border border-border bg-card py-1 shadow-soft',
+            'absolute z-[70] overflow-hidden rounded-xl border border-border bg-card py-1 shadow-soft',
             compact
               ? 'left-full top-1/2 ml-2 w-48 -translate-y-1/2'
               : 'bottom-full left-0 right-0 mb-1',

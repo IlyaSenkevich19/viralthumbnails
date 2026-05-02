@@ -13,7 +13,7 @@ type AuthSplitLayoutProps = {
  */
 export function AuthSplitLayout({ headerRight, children }: AuthSplitLayoutProps) {
   return (
-    <div className="flex min-h-screen items-stretch bg-background">
+    <div className="flex min-h-[100dvh] items-stretch bg-background">
       <div className="flex w-full flex-col px-6 py-8 sm:px-10 lg:w-1/2 lg:px-16">
         <header className="mb-10 flex items-center justify-between">
           <BrandWordmark className="text-base" />
@@ -30,13 +30,13 @@ export function AuthSplitLayout({ headerRight, children }: AuthSplitLayoutProps)
         <div className="absolute inset-0 bg-[linear-gradient(to_bottom,_transparent_60%,_rgba(0,0,0,0.15))]" />
         <div className="relative z-[2] w-full space-y-12 px-10">
           <div className="mx-auto max-w-xl space-y-6">
-            <h2 className="text-3xl font-semibold leading-tight">
-              Analyze video.
+            <h2 className="max-w-xl text-3xl font-semibold leading-tight">
+              Analyze footage.
               <br />
-              Generate and iterate fast.
+              Generate thumbnails; revise until they stick.
             </h2>
-            <p className="text-sm leading-relaxed text-muted-foreground">
-              One flow for prompt, URL, and upload. Pipeline models do the heavy lifting while you focus on CTR.
+            <p className="max-w-[65ch] text-sm leading-relaxed text-muted-foreground">
+              One flow for prompts, uploads, or a YouTube link. Outputs stay anchored to frames from your footage.
             </p>
           </div>
           <AuthThumbnailMarquee />
@@ -48,4 +48,4 @@ export function AuthSplitLayout({ headerRight, children }: AuthSplitLayoutProps)
 
 /** Shared input styling for auth forms (Sign in, reset password, etc.). */
 export const authFormInputClassName =
-  'h-auto rounded-lg border border-border bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground transition-all duration-200 focus-visible:border-primary/70 focus-visible:ring-2 focus-visible:ring-primary/20';
+  'motion-base h-auto rounded-lg border border-border bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus-visible:border-border-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0';

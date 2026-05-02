@@ -91,14 +91,14 @@ export function ThumbnailRefineForm({
           >
             <Wand2 className="h-4 w-4" strokeWidth={2} />
           </span>
-          <div className="min-w-0 space-y-1">
+          <div className="flex min-w-0 flex-col gap-2">
             <div className="flex flex-wrap items-center gap-2">
               <h3 className="text-sm font-semibold tracking-tight text-foreground">Describe your edit</h3>
               <span className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[10px] font-medium tabular-nums text-muted-foreground ring-1 ring-white/[0.06]">
                 {VARIANT_REFINE_CREDIT_COST} credit
               </span>
             </div>
-            <p className="text-xs leading-snug text-muted-foreground">
+            <p className="max-w-[65ch] text-xs leading-relaxed text-muted-foreground">
               Applies to the thumbnail selected in history above. Saves a brand-new version—you can switch back anytime.
               {refsActiveDescription ? (
                 <> Template / face picks on the left are sent as hints.</>

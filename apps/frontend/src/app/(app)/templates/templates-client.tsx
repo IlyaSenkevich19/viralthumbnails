@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import Image from 'next/image';
 import { LayoutTemplate } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
@@ -18,9 +19,12 @@ import {
 import { useAuth } from '@/contexts/auth-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { VtPillToggleRow } from '@/components/motion/vt-pill-toggle-row';
 import { TemplatesGridSkeleton } from '@/components/templates/templates-grid-skeleton';
 import { TemplatesPagination } from '@/components/templates/templates-pagination';
+import { EmptyState } from '@/components/ui/empty-state';
+import { InlineLoadError } from '@/components/ui/inline-load-error';
+import { vtSpring, vtStagger } from '@/lib/motion-presets';
 import { cn } from '@/lib/utils';
 
 const NICHE_QUERY = 'niche';
@@ -28,6 +32,7 @@ const PAGE_QUERY = 'page';
 const LIMIT_QUERY = 'limit';
 
 export function TemplatesClient() {
+  const reduceMotion = useReducedMotion();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -131,6 +136,7 @@ export function TemplatesClient() {
     isPlaceholderData,
     isError,
     error,
+    refetch,
   } = useTemplatesList(selectedNiche, page, pageSize);
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
@@ -155,42 +161,42 @@ export function TemplatesClient() {
         ? (error as Error).message
         : null;
 
+  const nichePillItems = useMemo(
+    () => [{ id: NICHE_ALL, label: 'Any niche' }, ...niches.map((n) => ({ id: n.code, label: n.label }))],
+    [niches],
+  );
+
+  const templateCardItemVariants = reduceMotion
+    ? {
+        hidden: { opacity: 1, y: 0, scale: 1 },
+        visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0 } },
+      }
+    : {
+        hidden: { opacity: 0, y: 14, scale: 0.99 },
+        visible: { opacity: 1, y: 0, scale: 1, transition: vtSpring.reveal },
+      };
+
   return (
     <div className="space-y-6">
       {hasSession && niches.length > 0 ? (
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Niche</span>
-          <div className="flex min-w-0 flex-1 flex-wrap gap-2">
-            <Button
-              type="button"
-              size="sm"
-              variant={selectedNiche === NICHE_ALL ? 'default' : 'outline'}
-              className={cn('rounded-full')}
-              onClick={() => setNiche(NICHE_ALL)}
-            >
-              All
-            </Button>
-            {niches.map((n) => (
-              <Button
-                key={n.code}
-                type="button"
-                size="sm"
-                variant={selectedNiche === n.code ? 'default' : 'outline'}
-                className="rounded-full"
-                onClick={() => setNiche(n.code)}
-              >
-                {n.label}
-              </Button>
-            ))}
-          </div>
+          <VtPillToggleRow
+            className="min-w-0 flex-1"
+            layoutId="vt-templates-niche-pill"
+            items={nichePillItems}
+            selectedId={selectedNiche}
+            onSelect={(id) => setNiche(id)}
+          />
         </div>
       ) : null}
 
-      {listError && (
-        <p className="text-sm text-destructive" role="alert">
-          {listError}
-        </p>
-      )}
+      {listError ? (
+        <InlineLoadError
+          message={listError}
+          onRetry={hasSession ? () => void refetch() : undefined}
+        />
+      ) : null}
       {loading ? (
         hasSession ? (
           <TemplatesGridSkeleton variant="page" count={Math.min(pageSize, 12)} />
@@ -199,91 +205,97 @@ export function TemplatesClient() {
         )
       ) : hasSession && items.length === 0 && total === 0 ? (
         <Card>
-          <CardContent className="flex flex-col items-center gap-5 px-6 py-12 text-center sm:py-14">
-            <div
-              className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/15 text-primary ring-1 ring-primary/20"
-              aria-hidden
-            >
-              <LayoutTemplate className="h-7 w-7" strokeWidth={1.75} />
-            </div>
-            <div className="space-y-3">
-              {selectedNiche !== NICHE_ALL ? (
-                <>
-                  <p className="text-base font-semibold tracking-tight text-foreground">
-                    No templates in {nicheLabel(selectedNiche)}
-                  </p>
-                  <p className="mx-auto max-w-md text-sm leading-relaxed text-muted-foreground">
+          <CardContent className="p-0">
+            <EmptyState
+              icon={<LayoutTemplate className="h-7 w-7" strokeWidth={1.75} aria-hidden />}
+              title={
+                selectedNiche !== NICHE_ALL ? `No templates in ${nicheLabel(selectedNiche)}` : 'No templates yet'
+              }
+              description={
+                selectedNiche !== NICHE_ALL ? (
+                  <>
                     Try another niche or{' '}
                     <button
                       type="button"
                       className="font-medium text-primary underline-offset-2 hover:underline"
                       onClick={() => setNiche(NICHE_ALL)}
                     >
-                      show all
+                      show every niche
                     </button>
                     .
-                  </p>
-                </>
-              ) : (
-                <>
-                  <p className="text-base font-semibold tracking-tight text-foreground">No templates yet</p>
-                  <p className="mx-auto max-w-md text-sm leading-relaxed text-muted-foreground">
+                  </>
+                ) : (
+                  <>
                     Your template library is empty. Add your first template to reuse layouts and style direction
                     across future generations.
-                  </p>
-                  <p className="mx-auto max-w-md text-xs leading-relaxed text-muted-foreground/90">
-                    For technical setup and API import options, see project documentation.
-                  </p>
-                </>
-              )}
-            </div>
+                    <span className="mt-2 block text-xs leading-relaxed text-muted-foreground/90">
+                      For technical setup and API import options, see project documentation.
+                    </span>
+                  </>
+                )
+              }
+            />
           </CardContent>
         </Card>
       ) : hasSession ? (
         <div className="space-y-4">
           {items.length > 0 ? (
-            <div
+            <motion.div
+              key={`${selectedNiche}-${page}-${limit}`}
               className={cn(
                 'grid gap-4 sm:grid-cols-2 lg:grid-cols-3',
                 paginationBusy && 'pointer-events-none opacity-55 transition-opacity',
               )}
+              initial="hidden"
+              animate="visible"
+              variants={{
+                hidden: {},
+                visible: {
+                  transition: {
+                    staggerChildren: reduceMotion ? 0 : vtStagger.card,
+                    delayChildren: reduceMotion ? 0 : 0.02,
+                  },
+                },
+              }}
             >
               {items.map((t) => (
-                <Card key={t.id} className="overflow-hidden">
-                  <div className="relative aspect-video bg-muted">
-                    {t.preview_url ? (
-                      <Image
-                        src={t.preview_url}
-                        alt={`Template preview: ${t.name}`}
-                        fill
-                        sizes="(min-width: 1024px) 24rem, (min-width: 640px) 50vw, 100vw"
-                        className="object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
-                        No preview
-                      </div>
-                    )}
-                  </div>
-                  <CardHeader className="pb-2 pt-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <CardTitle className="text-sm font-semibold">{t.name}</CardTitle>
-                      <div className="flex shrink-0 flex-wrap justify-end gap-1">
-                        {t.niche ? (
-                          <Badge variant="glass" className="text-[10px]">
-                            {nicheLabel(t.niche)}
-                          </Badge>
-                        ) : null}
-                        <Badge variant="default" className="text-[10px]">
-                          {t.user_id ? 'Yours' : 'System'}
-                        </Badge>
-                      </div>
+                <motion.div key={t.id} variants={templateCardItemVariants} className="min-w-0">
+                  <Card className="overflow-hidden">
+                    <div className="relative aspect-video bg-muted">
+                      {t.preview_url ? (
+                        <Image
+                          src={t.preview_url}
+                          alt={`Template preview: ${t.name}`}
+                          fill
+                          sizes="(min-width: 1024px) 24rem, (min-width: 640px) 50vw, 100vw"
+                          className="object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
+                          No preview
+                        </div>
+                      )}
                     </div>
-                    <p className="text-xs text-muted-foreground">slug: {t.slug}</p>
-                  </CardHeader>
-                </Card>
+                    <CardHeader className="pb-2 pt-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <CardTitle className="text-sm font-semibold">{t.name}</CardTitle>
+                        <div className="flex shrink-0 flex-wrap justify-end gap-1">
+                          {t.niche ? (
+                            <Badge variant="glass" className="text-[10px]">
+                              {nicheLabel(t.niche)}
+                            </Badge>
+                          ) : null}
+                          <Badge variant="default" className="text-[10px]">
+                            {t.user_id ? 'Yours' : 'System'}
+                          </Badge>
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground">slug: {t.slug}</p>
+                    </CardHeader>
+                  </Card>
+                </motion.div>
               ))}
-            </div>
+            </motion.div>
           ) : total > 0 ? (
             <p className="text-sm text-muted-foreground">No templates on this page.</p>
           ) : null}

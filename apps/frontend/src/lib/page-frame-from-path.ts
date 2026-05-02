@@ -7,13 +7,13 @@ import type { PageFrameState } from '@/contexts/page-frame-context';
  * When changing copy here, update the matching page’s SetPageFrame props.
  */
 const STATIC_PAGE_FRAMES: Record<string, PageFrameState> = {
-  [AppRoutes.create]: { title: 'Create', eyebrow: null, breadcrumb: null },
-  [AppRoutes.dashboard]: { title: 'Create', eyebrow: null, breadcrumb: null },
+  [AppRoutes.create]: { title: 'Generate thumbnails', eyebrow: null, breadcrumb: null },
+  [AppRoutes.dashboard]: { title: 'Generate thumbnails', eyebrow: null, breadcrumb: null },
   [AppRoutes.projects]: { title: 'Projects', eyebrow: null, breadcrumb: null },
   [AppRoutes.templates]: { title: 'Templates', eyebrow: null, breadcrumb: null },
   [AppRoutes.avatars]: { title: 'My faces', eyebrow: null, breadcrumb: null },
   [AppRoutes.settings]: { title: 'Settings', eyebrow: null, breadcrumb: null },
-  [AppRoutes.credits]: { title: 'Credit packs', eyebrow: null, breadcrumb: null },
+  [AppRoutes.credits]: { title: 'Credits', eyebrow: null, breadcrumb: null },
   [AppRoutes.adminYoutubeInspiration]: {
     eyebrow: 'Admin',
     title: 'YouTube inspiration',

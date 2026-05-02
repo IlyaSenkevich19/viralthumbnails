@@ -4,8 +4,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { SetPageFrame } from '@/components/layout/set-page-frame';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { EmptyState } from '@/components/ui/empty-state';
 import { QA_STORAGE_KEY, QA_TEST_GROUPS, type QATestCase } from '@/lib/qa/qa-test-cases';
 import { cn } from '@/lib/utils';
+import { ClipboardList } from 'lucide-react';
 
 function loadChecks(): Record<string, boolean> {
   if (typeof window === 'undefined') return {};
@@ -69,8 +71,8 @@ export function QAChecklistClient() {
       <SetPageFrame title="QA checklist" />
       <div className="mx-auto max-w-3xl space-y-6 px-1 pb-16">
         <div className="space-y-2">
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Manual QA checklist</h1>
-          <p className="text-sm text-muted-foreground">
+          <h2 className="text-2xl font-semibold tracking-tight text-foreground">Manual QA checklist</h2>
+          <p className="text-sm leading-relaxed text-muted-foreground">
             Development only. Progress is stored in this browser (localStorage). See also{' '}
             <code className="rounded bg-muted px-1.5 py-0.5 text-xs">docs/qa-manual-test-checklist.md</code> in
             the repo.
@@ -90,6 +92,17 @@ export function QAChecklistClient() {
             </Button>
           </div>
         </div>
+
+        {doneCount === 0 ? (
+          <div className="rounded-xl border border-border/70 bg-muted/15">
+            <EmptyState
+              className="py-10 sm:py-12"
+              icon={<ClipboardList className="h-7 w-7" strokeWidth={1.75} aria-hidden />}
+              title="No checks recorded yet"
+              description="Work through the groups below and mark items as you verify them. Progress is saved in this browser only (localStorage)."
+            />
+          </div>
+        ) : null}
 
         {QA_TEST_GROUPS.map((group) => (
           <Card key={group.id}>

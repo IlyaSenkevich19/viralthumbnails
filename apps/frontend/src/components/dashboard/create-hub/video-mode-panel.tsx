@@ -58,13 +58,15 @@ export const VideoModePanel = memo(function VideoModePanel({ videoFile, onVideoF
 
   return (
     <div className="flex h-full flex-col">
-      <label htmlFor="dash-video-file" className="mb-1 text-sm font-medium text-foreground">
-        Source video
-      </label>
-      <p className="mb-2 text-xs text-muted-foreground">
-        Upload a short clip for context-aware thumbnail analysis before generation.
-      </p>
-      <div className="space-y-1.5">
+      <div className="flex flex-col gap-2">
+        <label htmlFor="dash-video-file" className="text-sm font-medium text-foreground">
+          Source video
+        </label>
+        <p className="max-w-[65ch] text-xs leading-relaxed text-muted-foreground">
+          Upload a short clip so the analyzer can pull real frames before generation.
+        </p>
+      </div>
+      <div className="mt-3 flex flex-col gap-3">
         <input
           ref={inputRef}
           id="dash-video-file"
@@ -75,7 +77,7 @@ export const VideoModePanel = memo(function VideoModePanel({ videoFile, onVideoF
           onChange={(e) => onVideoFileChange(e.target.files?.[0] ?? null)}
         />
         {videoFile && previewUrl ? (
-          <div className="mt-1.5 space-y-2.5 rounded-2xl bg-card/25 p-3">
+          <div className="space-y-2.5 rounded-2xl bg-card/25 p-3">
             <div className="group relative overflow-hidden rounded-xl border border-white/10 bg-black/40 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
               <video
                 src={previewUrl}
@@ -125,7 +127,7 @@ export const VideoModePanel = memo(function VideoModePanel({ videoFile, onVideoF
         ) : (
           <div
             className={cn(
-              'mt-1.5 flex min-h-[9.5rem] cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed px-5 py-6 text-center transition-colors',
+              'flex min-h-[9.5rem] cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed px-5 py-6 text-center transition-colors active:scale-[0.995]',
               dragging
                 ? 'border-primary/65 bg-primary/8'
                 : 'border-border/45 bg-card/20 hover:border-primary/35 hover:bg-card/30',

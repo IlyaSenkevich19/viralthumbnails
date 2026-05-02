@@ -1,8 +1,9 @@
 'use client';
 
 import { Suspense, useCallback, useState } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import Image from 'next/image';
-import { FolderOpen, Loader2, Plus, Search, X } from 'lucide-react';
+import { FolderOpen, Loader2, Plus, Search as SearchIcon, X } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
@@ -26,9 +27,12 @@ import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { ConfirmationModal } from '@/components/ui/confirmation-modal';
+import { EmptyState } from '@/components/ui/empty-state';
+import { InlineLoadError } from '@/components/ui/inline-load-error';
 import { ProjectRowMenu } from '@/components/projects/project-row-menu';
 import { SetPageFrame } from '@/components/layout/set-page-frame';
 import { TemplatesPagination } from '@/components/templates/templates-pagination';
+import { vtSpring, vtStagger } from '@/lib/motion-presets';
 
 function ProjectsPageSuspenseFallback() {
   return (
@@ -59,6 +63,7 @@ function ProjectsPageSuspenseFallback() {
 }
 
 function ProjectsPageContent() {
+  const reduceMotion = useReducedMotion();
   const router = useRouter();
   const { page, limit, qFromUrl, draftQ, setDraftQ, searchDirty, setPage, setLimit, clearSearch } =
     useProjectsListRoute();
@@ -71,6 +76,7 @@ function ProjectsPageContent() {
     error,
     isFetching,
     isPlaceholderData,
+    refetch,
   } = useProjectsList(page, limit, qFromUrl);
   const projects = data?.items ?? [];
   const total = data?.total ?? 0;
@@ -107,6 +113,28 @@ function ProjectsPageContent() {
     if (isOptimisticProjectId(p.id)) return;
     void router.prefetch(projectVariantsPath(p.id));
   }, [router]);
+
+  const rowListVariants = {
+    hidden: {},
+    visible: {
+      transition: {
+        staggerChildren: reduceMotion ? 0 : vtStagger.card,
+        delayChildren: reduceMotion ? 0 : 0.02,
+      },
+    },
+  };
+
+  const rowItemVariants = reduceMotion
+    ? {
+        hidden: { opacity: 1, y: 0 },
+        visible: { opacity: 1, y: 0, transition: { duration: 0 } },
+      }
+    : {
+        hidden: { opacity: 0, y: 8 },
+        visible: { opacity: 1, y: 0, transition: vtSpring.reveal },
+      };
+
+  const listMotionKey = `${page}-${limitFromApi}-${qFromUrl ?? ''}`;
 
   return (
     <div className="space-y-6">
@@ -150,7 +178,7 @@ function ProjectsPageContent() {
           <label htmlFor="projects-search" className="sr-only">
             Search projects by title
           </label>
-          <Search
+          <SearchIcon
             className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
             aria-hidden
           />
@@ -209,11 +237,12 @@ function ProjectsPageContent() {
         </Button>
       </div>
 
-      {listError && (
-        <p className="text-sm text-destructive" role="alert">
-          {listError}
-        </p>
-      )}
+      {listError ? (
+        <InlineLoadError
+          message={listError}
+          onRetry={hasSession ? () => void refetch() : undefined}
+        />
+      ) : null}
       <section aria-label="Project list results" aria-busy={Boolean(listBusy && hasSession)}>
         {showSkeleton ? (
           <div className="surface overflow-hidden">
@@ -232,54 +261,57 @@ function ProjectsPageContent() {
           </div>
         ) : total === 0 && !qFromUrl ? (
           <Card>
-            <CardContent className="flex flex-col items-center gap-5 px-6 py-14 text-center sm:py-16">
-              <div
-                className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/15 text-primary ring-1 ring-primary/20"
-                aria-hidden
+            <CardContent className="p-0">
+              <EmptyState
+                icon={<FolderOpen className="h-7 w-7" strokeWidth={1.75} aria-hidden />}
+                title="No projects yet"
+                description={
+                  <>
+                    Name a workspace, attach template and optional face references, then generate thumbnails in the
+                    studio. For a shortcut from prompt, URL, or upload, jump to{' '}
+                    <Link href={AppRoutes.create} className="font-medium text-primary underline-offset-2 hover:underline">
+                      Generate thumbnails
+                    </Link>
+                    .
+                  </>
+                }
               >
-                <FolderOpen className="h-7 w-7" strokeWidth={1.75} />
-              </div>
-              <div className="space-y-2">
-                <p className="text-base font-semibold tracking-tight text-foreground">No projects yet</p>
-                <p className="mx-auto max-w-sm text-sm leading-relaxed text-muted-foreground">
-                  Create a project, then pick a template and face and generate thumbnails on the next screen. For a
-                  one-step run from a prompt, YouTube link, or video, use the{' '}
-                  <Link href={AppRoutes.create} className="font-medium text-primary underline-offset-2 hover:underline">
-                    Create
-                  </Link>
-                  .
-                </p>
-              </div>
-              <Button
-                type="button"
-                className={buttonVariants()}
-                disabled={!hasSession || createEmptyProject.isPending}
-                onClick={() => createEmptyProject.mutate()}
-              >
-                {createEmptyProject.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                ) : (
-                  <Plus className="h-4 w-4" aria-hidden />
-                )}
-                Create project
-              </Button>
+                <Button
+                  type="button"
+                  className={buttonVariants()}
+                  disabled={!hasSession || createEmptyProject.isPending}
+                  onClick={() => createEmptyProject.mutate()}
+                >
+                  {createEmptyProject.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                  ) : (
+                    <Plus className="h-4 w-4" aria-hidden />
+                  )}
+                  Create project
+                </Button>
+              </EmptyState>
             </CardContent>
           </Card>
         ) : total === 0 && qFromUrl ? (
           <Card>
-            <CardContent className="flex flex-col items-center gap-4 px-6 py-12 text-center">
-              <p className="text-base font-semibold tracking-tight text-foreground">No matching projects</p>
-              <p className="max-w-sm text-sm text-muted-foreground">
-                Nothing matched “{qFromUrl}”. Try another keyword or{' '}
-                <button
-                  type="button"
-                  className="font-medium text-primary underline-offset-2 hover:underline"
-                  onClick={() => clearSearch()}
-                >
-                  clear search
-                </button>
-                .
-              </p>
+            <CardContent className="p-0">
+              <EmptyState
+                icon={<SearchIcon className="h-7 w-7" strokeWidth={1.75} aria-hidden />}
+                title="No matching projects"
+                description={
+                  <>
+                    Nothing matched &quot;{qFromUrl}&quot;. Try another keyword or{' '}
+                    <button
+                      type="button"
+                      className="font-medium text-primary underline-offset-2 hover:underline"
+                      onClick={() => clearSearch()}
+                    >
+                      clear search
+                    </button>
+                    .
+                  </>
+                }
+              />
             </CardContent>
           </Card>
         ) : (
@@ -311,12 +343,19 @@ function ProjectsPageContent() {
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border bg-background">
+                <motion.tbody
+                  key={listMotionKey}
+                  className="divide-y divide-border bg-background"
+                  initial="hidden"
+                  animate="visible"
+                  variants={rowListVariants}
+                >
                   {projects.map((p) => {
                     const optimistic = isOptimisticProjectId(p.id);
                     return (
-                      <tr
+                      <motion.tr
                         key={p.id}
+                        variants={rowItemVariants}
                         tabIndex={optimistic ? -1 : 0}
                         className={cn(
                           'motion-base hover:bg-secondary/50',
@@ -376,37 +415,43 @@ function ProjectsPageContent() {
                             />
                           )}
                         </td>
-                      </tr>
+                      </motion.tr>
                     );
                   })}
-                </tbody>
+                </motion.tbody>
               </table>
             </div>
 
-            <div className="space-y-3 md:hidden">
+            <motion.div
+              key={listMotionKey}
+              className="space-y-3 md:hidden"
+              initial="hidden"
+              animate="visible"
+              variants={rowListVariants}
+            >
               {projects.map((p) => {
                 const optimistic = isOptimisticProjectId(p.id);
                 return (
-                  <Card
-                    key={p.id}
-                    role={optimistic ? undefined : 'button'}
-                    tabIndex={optimistic ? -1 : 0}
-                    className={cn(
-                      'overflow-hidden',
-                      !optimistic &&
-                        'cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                    )}
-                    onMouseEnter={() => prefetchProjectVariants(p)}
-                    onFocus={() => prefetchProjectVariants(p)}
-                    onClick={() => openProject(p)}
-                    onKeyDown={(e) => {
-                      if (optimistic) return;
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        openProject(p);
-                      }
-                    }}
-                  >
+                  <motion.div key={p.id} variants={rowItemVariants} className="min-w-0">
+                    <Card
+                      role={optimistic ? undefined : 'button'}
+                      tabIndex={optimistic ? -1 : 0}
+                      className={cn(
+                        'overflow-hidden',
+                        !optimistic &&
+                          'cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                      )}
+                      onMouseEnter={() => prefetchProjectVariants(p)}
+                      onFocus={() => prefetchProjectVariants(p)}
+                      onClick={() => openProject(p)}
+                      onKeyDown={(e) => {
+                        if (optimistic) return;
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          openProject(p);
+                        }
+                      }}
+                    >
                     <CardContent className="flex gap-3 p-4">
                       <div className="h-16 w-28 shrink-0 overflow-hidden rounded-lg bg-muted">
                         {p.cover_thumbnail_url ? (
@@ -448,10 +493,11 @@ function ProjectsPageContent() {
                         </Badge>
                       </div>
                     </CardContent>
-                  </Card>
+                    </Card>
+                  </motion.div>
                 );
               })}
-            </div>
+            </motion.div>
 
             {projects.length === 0 && total > 0 ? (
               <p className="text-center text-sm text-muted-foreground">No projects on this page.</p>

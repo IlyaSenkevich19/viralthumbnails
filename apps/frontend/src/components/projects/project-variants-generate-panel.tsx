@@ -35,6 +35,9 @@ type ProjectVariantsGeneratePanelProps = {
   pipelineBusy: boolean;
   canGenerate: boolean;
   generateLabel: string;
+  /** When known, shows balance vs this run; low balance shows a non-blocking hint (paywall still opens on click). */
+  creditsBalance?: number;
+  creditsPending?: boolean;
 };
 
 export function ProjectVariantsGeneratePanel({
@@ -52,6 +55,8 @@ export function ProjectVariantsGeneratePanel({
   pipelineBusy,
   canGenerate,
   generateLabel,
+  creditsBalance,
+  creditsPending = false,
 }: ProjectVariantsGeneratePanelProps) {
   const faceless = templateFaceFilter === TEMPLATE_FACE_FILTER.faceless;
   const hasAvatar = Boolean(selectedAvatarId.trim());
@@ -68,14 +73,19 @@ export function ProjectVariantsGeneratePanel({
 
   return (
     <section className="space-y-4">
-      <div className="space-y-2">
-        <div className="flex items-center justify-between gap-2">
-          <div>
+      <div className="flex flex-col gap-2">
+        <div className="space-y-1.5">
+          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
             <h2 className="text-base font-semibold tracking-tight text-foreground">Output</h2>
-            <p className="text-xs text-muted-foreground">Choose how many distinct directions to generate.</p>
+            <span
+              className="inline-flex shrink-0 items-center rounded-full border border-border bg-background/80 px-2.5 py-0.5 text-[11px] font-medium tabular-nums text-muted-foreground ring-1 ring-white/[0.04]"
+              title={`This run costs ${creditCost} credit${creditCost === 1 ? '' : 's'}`}
+            >
+              {creditCost} credit{creditCost === 1 ? '' : 's'}
+            </span>
           </div>
-          <p className="rounded-full border border-primary/25 bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
-            {creditCost} credit{creditCost === 1 ? '' : 's'}
+          <p className="max-w-[65ch] text-xs leading-relaxed text-muted-foreground">
+            How many distinct layout directions to request in one run (each costs credits).
           </p>
         </div>
         <Select
@@ -93,6 +103,27 @@ export function ProjectVariantsGeneratePanel({
             ))}
           </SelectContent>
         </Select>
+        {creditsPending ? (
+          <p className="text-xs text-muted-foreground" aria-live="polite">
+            Loading credit balance…
+          </p>
+        ) : typeof creditsBalance === 'number' ? (
+          <div className="space-y-1">
+            <p className="text-xs text-muted-foreground">
+              Balance{' '}
+              <span className="font-medium tabular-nums text-foreground">{creditsBalance}</span>
+              {' · '}
+              this run{' '}
+              <span className="font-medium tabular-nums text-foreground">{creditCost}</span>
+            </p>
+            {creditsBalance < creditCost ? (
+              <p className="text-xs leading-relaxed text-amber-600 dark:text-amber-200/90" role="status">
+                Not enough credits for this batch — choose fewer thumbnails above, or confirm to add packs when
+                prompted.
+              </p>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       <details className="group rounded-2xl bg-muted/25">
@@ -101,7 +132,7 @@ export function ProjectVariantsGeneratePanel({
           <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180" />
         </summary>
         <div className="space-y-4 px-3 pb-3 pt-2">
-          <div className="space-y-1.5">
+          <div className="flex flex-col gap-2">
             <label htmlFor="variant-character" className="text-sm font-medium text-foreground">
               Character reference
             </label>
@@ -150,10 +181,10 @@ export function ProjectVariantsGeneratePanel({
         </div>
       </details>
 
-      <div className="sticky bottom-2 z-10 rounded-[1.35rem] bg-[radial-gradient(ellipse_at_top_right,rgba(255,59,59,0.16),transparent_50%),rgba(18,23,32,0.94)] p-3 shadow-[0_22px_60px_-30px_rgba(0,0,0,0.9)] backdrop-blur">
+      <div className="sticky bottom-2 z-10 rounded-2xl border border-border/90 bg-card/92 p-3 shadow-[0_18px_50px_-32px_rgba(0,0,0,0.75)] ring-1 ring-white/[0.04] backdrop-blur-xl supports-[backdrop-filter]:bg-card/85">
         <Button
           type="button"
-          className="relative h-12 w-full gap-2 text-base font-semibold"
+          className="relative h-12 w-full gap-3 text-base font-semibold hover:translate-y-0 hover:shadow-md"
           onClick={onGenerate}
           disabled={generatePending || !canGenerate}
         >

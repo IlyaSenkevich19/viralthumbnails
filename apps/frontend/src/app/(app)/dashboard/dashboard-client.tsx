@@ -7,7 +7,7 @@ import { TrialPaywallSurfaces } from '@/components/paywall/trial-paywall-surface
 export function DashboardClient() {
   return (
     <div className="space-y-8">
-      <SetPageFrame title="Create" />
+      <SetPageFrame title="Generate thumbnails" />
       <TrialPaywallSurfaces />
 
       <DashboardCreateHub />

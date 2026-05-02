@@ -1,12 +1,15 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { AppRoutes } from '@/config/routes';
 import { pricingPlans } from '@/config/pricing-plans';
 import { Button } from '@/components/ui/button';
 import { CreditPacksGrid } from '@/components/billing/credit-packs-grid';
 import { trackEvent } from '@/lib/analytics';
+import { vtSpring } from '@/lib/motion-presets';
+import { useFocusTrap } from '@/lib/use-focus-trap';
 
 export const OPEN_PAYWALL_EVENT = 'vt-open-insufficient-credits-paywall';
 
@@ -26,9 +29,12 @@ export function openInsufficientCreditsPaywall(payload: InsufficientCreditsPaylo
 }
 
 export function InsufficientCreditsPaywall() {
+  const reduceMotion = useReducedMotion();
   const router = useRouter();
+  const dialogRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [payload, setPayload] = useState<InsufficientCreditsPayload | null>(null);
+  useFocusTrap(open && Boolean(payload), dialogRef);
 
   useEffect(() => {
     const onEvent = (e: Event) => {
@@ -73,14 +79,18 @@ export function InsufficientCreditsPaywall() {
         if (e.target === e.currentTarget) setOpen(false);
       }}
     >
-      <div
+      <motion.div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="credits-paywall-title"
         aria-describedby={
           hasBalanceDetail ? 'credits-paywall-balance' : payload.description ? 'credits-paywall-desc' : undefined
         }
-        className="flex max-h-[min(92vh,880px)] w-full max-w-6xl flex-col overflow-hidden rounded-[1.35rem] border border-white/[0.08] bg-card shadow-[0_40px_120px_-48px_rgba(0,0,0,0.95)]"
+        className="flex max-h-[min(92dvh,880px)] w-full max-w-6xl flex-col overflow-hidden rounded-[1.35rem] border border-white/[0.08] bg-card shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_40px_120px_-48px_rgba(0,0,0,0.95)]"
+        initial={reduceMotion ? false : { opacity: 0, scale: 0.97, y: 10 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={reduceMotion ? { duration: 0 } : vtSpring.enter}
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="shrink-0 border-b border-border/60 px-5 py-4 sm:px-7 sm:py-5">
@@ -93,7 +103,7 @@ export function InsufficientCreditsPaywall() {
               {hasBalanceDetail ? (
                 <p
                   id="credits-paywall-balance"
-                  className="mt-2 text-sm text-muted-foreground"
+                  className="mt-2 max-w-[65ch] text-sm leading-relaxed text-muted-foreground"
                 >
                   This action needs <strong className="text-foreground">{payload.need}</strong> credit
                   {payload.need === 1 ? '' : 's'} · you have <strong className="text-foreground">{payload.have}</strong>.
@@ -137,7 +147,7 @@ export function InsufficientCreditsPaywall() {
             </button>
           </div>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

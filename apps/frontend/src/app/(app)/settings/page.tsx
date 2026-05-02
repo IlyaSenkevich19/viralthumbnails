@@ -12,7 +12,9 @@ export default function SettingsPage() {
       <PrimaryActionPanel>
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Workspace preferences</CardTitle>
-          <p className="text-sm text-muted-foreground">Personal settings for your editor and generation workflow.</p>
+          <p className="max-w-[65ch] text-sm leading-relaxed text-muted-foreground">
+            Personal knobs for thumbnail generation workflows—more controls arrive as preferences ship.
+          </p>
         </CardHeader>
         <CardContent className="space-y-2 text-sm text-muted-foreground">
           <p>Preference controls will appear here in upcoming updates.</p>
@@ -23,7 +25,9 @@ export default function SettingsPage() {
       <PrimaryActionPanel>
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Diagnostics</CardTitle>
-          <p className="text-sm text-muted-foreground">Whether the app can reach the API server.</p>
+          <p className="max-w-[65ch] text-sm leading-relaxed text-muted-foreground">
+            Confirms authenticated calls can reach the ViralThumblify backend you configured.
+          </p>
         </CardHeader>
         <CardContent className="flex flex-wrap items-center gap-3">
           <BackendHealth />

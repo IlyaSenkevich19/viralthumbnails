@@ -44,7 +44,7 @@ export function ProjectVariantsWorkspace({
   initialAvatarId = null,
 }: ProjectVariantsWorkspaceProps) {
   const { accessToken } = useAuth();
-  const { data: credits } = useGenerationCredits();
+  const { data: credits, isPending: creditsPending } = useGenerationCredits();
   const variants = useMemo(
     () => project.thumbnail_variants ?? [],
     [project.thumbnail_variants],
@@ -227,9 +227,13 @@ export function ProjectVariantsWorkspace({
       />
 
       <div className="flex min-h-0 flex-col gap-8 xl:flex-row xl:items-start xl:gap-8">
-        <aside className="w-full shrink-0 space-y-3.5 xl:sticky xl:top-6 xl:max-h-[calc(100vh-4rem)] xl:w-[min(100%,31rem)] xl:overflow-y-auto xl:pr-2">
+        <aside className="w-full shrink-0 space-y-3.5 xl:sticky xl:top-6 xl:max-h-[calc(100dvh-4rem)] xl:w-[min(100%,31rem)] xl:overflow-y-auto xl:pr-2">
           <Card className="overflow-visible border-transparent bg-card/65 shadow-[0_18px_55px_-36px_rgba(0,0,0,0.95)] ring-1 ring-white/[0.025] hover:border-transparent">
             <CardContent className="space-y-5 p-4">
+              <p className="max-w-[65ch] text-xs leading-relaxed text-muted-foreground">
+                Source summary and template live here; the large preview and version rail stay on the right so you
+                judge output first.
+              </p>
               {hasSource ? (
                 <>
                   <ProjectVariantsSourceCard
@@ -280,6 +284,8 @@ export function ProjectVariantsWorkspace({
                 pipelineBusy={pipelineBusy}
                 canGenerate={canGenerate}
                 generateLabel={generate.isPending ? 'Generating…' : 'Generate thumbnails'}
+                creditsBalance={typeof credits?.balance === 'number' ? credits.balance : undefined}
+                creditsPending={creditsPending && credits == null}
               />
             </CardContent>
           </Card>

@@ -135,8 +135,9 @@ export function ProjectVariantsResults({
               <div className="space-y-2">
                 <p className="text-base font-semibold tracking-tight text-foreground">No variants yet</p>
                 <p className="mx-auto max-w-sm text-sm leading-relaxed text-muted-foreground">
-                  Pick a template on the left (optional), set face if you want, then{' '}
-                  <strong className="text-foreground/90">Generate thumbnails</strong>.
+                  Pick a template in the left stack (optional), tune character settings, then run{' '}
+                  <strong className="font-semibold text-foreground">Generate thumbnails</strong>—variants land in the
+                  rail below.
                 </p>
               </div>
             </CardContent>
@@ -145,7 +146,7 @@ export function ProjectVariantsResults({
       ) : (
         <>
           <div className="overflow-hidden rounded-[1.5rem] bg-card/70 shadow-[0_24px_70px_-42px_rgba(0,0,0,0.95)] ring-1 ring-white/[0.025]">
-            <div className="relative aspect-video max-h-[min(70vh,520px)] w-full bg-muted">
+            <div className="relative aspect-video max-h-[min(70dvh,520px)] w-full bg-muted">
               {previewUrl ? (
                 <div
                   key={selectedVariantId}
@@ -282,7 +283,7 @@ export function ProjectVariantsResults({
               className={cn(
                 'rounded-2xl border border-white/[0.06] bg-black/[0.2] p-3 sm:p-4',
                 galleryScrollable &&
-                  'max-h-[min(46vh,420px)] overflow-y-auto overscroll-contain [scrollbar-width:thin]',
+                  'max-h-[min(46dvh,420px)] overflow-y-auto overscroll-contain [scrollbar-width:thin]',
               )}
             >
               <div className="grid grid-cols-2 justify-items-center gap-2.5 sm:grid-cols-3 sm:gap-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">

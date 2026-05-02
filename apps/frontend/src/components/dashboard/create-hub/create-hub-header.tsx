@@ -7,9 +7,11 @@ export const CreateHubHeader = memo(function CreateHubHeader() {
         id="dashboard-create-heading"
         className="text-lg font-semibold tracking-tight text-foreground sm:text-xl"
       >
-        Create <span className="text-primary">thumbnails</span>
+        Inputs for <span className="text-primary">generation</span>
       </h2>
-      <p className="mt-1 text-xs text-muted-foreground">Choose a source to start generation.</p>
+      <p className="mt-1 max-w-[65ch] text-xs leading-relaxed text-muted-foreground">
+        Prompt, recording, or YouTube URL. Next steps keep thumbnail previews large on small screens too.
+      </p>
     </div>
   );
 });

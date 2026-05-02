@@ -100,7 +100,7 @@ export function HeaderShell({
   return (
     <header
       className={cn(
-        'sticky top-0 z-30 shrink-0 border-b border-border bg-card/80 shadow-sm backdrop-blur-xl',
+        'sticky top-0 z-30 shrink-0 border-b border-border bg-card/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.08)] backdrop-blur-xl',
         className,
       )}
     >
@@ -156,10 +156,14 @@ export function HeaderShell({
           {showCreateCta ? (
             <Link
               href={AppRoutes.create}
-              className={cn(buttonVariants({ size: 'sm' }), 'hidden gap-1.5 px-3 lg:inline-flex')}
+              className={cn(
+                buttonVariants({ size: 'sm' }),
+                'hidden max-w-[11.5rem] gap-1.5 px-3 lg:inline-flex xl:max-w-none',
+              )}
+              title="Open the thumbnail generator"
             >
-              <Plus className="h-3.5 w-3.5" aria-hidden />
-              Create
+              <Plus className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              <span className="truncate">Generate thumbnails</span>
             </Link>
           ) : null}
           {pipelineJob.active && pipelineJob.label ? (

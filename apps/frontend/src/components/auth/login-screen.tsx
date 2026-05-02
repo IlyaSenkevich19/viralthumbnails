@@ -1,5 +1,6 @@
 'use client';
 
+import { motion, useReducedMotion } from 'framer-motion';
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -10,8 +11,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AppRoutes } from '@/config/routes';
 import { AuthSplitLayout, authFormInputClassName } from '@/components/auth/auth-split-layout';
+import { vtSpring } from '@/lib/motion-presets';
 
 export function LoginScreen() {
+  const reduceMotion = useReducedMotion();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -68,14 +71,20 @@ export function LoginScreen() {
         <h1 className="text-3xl font-semibold tracking-tight text-foreground">
           Welcome <span className="text-primary">back</span>
         </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Sign in to keep generating and iterating thumbnail variants.
+        <p className="mt-2 max-w-[65ch] text-sm leading-relaxed text-muted-foreground">
+          Continue where you left off—runs, thumbnails, and project history stay tied to this account.
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="surface relative space-y-4 overflow-hidden p-6">
+      <motion.form
+        onSubmit={handleSubmit}
+        className="surface relative space-y-4 overflow-hidden p-6"
+        initial={reduceMotion ? false : { opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={reduceMotion ? { duration: 0 } : vtSpring.reveal}
+      >
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
-        <div className="space-y-1">
+        <div className="flex flex-col gap-2">
           <label htmlFor="login-email" className="text-sm font-medium text-foreground">
             Your email
           </label>
@@ -87,9 +96,11 @@ export function LoginScreen() {
             onChange={(e) => setEmail(e.target.value)}
             required
             className={authFormInputClassName}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error ? 'login-auth-error' : undefined}
           />
         </div>
-        <div className="space-y-1">
+        <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between gap-2">
             <label htmlFor="login-password" className="text-sm font-medium text-foreground">
               Password
@@ -109,13 +120,19 @@ export function LoginScreen() {
             onChange={(e) => setPassword(e.target.value)}
             required
             className={authFormInputClassName}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error ? 'login-auth-error' : undefined}
           />
         </div>
-        {error ? <p className="text-sm text-destructive">{error}</p> : null}
+        {error ? (
+          <p id="login-auth-error" className="text-sm text-destructive" role="alert">
+            {error}
+          </p>
+        ) : null}
         <Button type="submit" className="w-full" disabled={loading || googleLoading}>
-          {loading ? 'Signing in...' : 'Sign in →'}
+          {loading ? 'Signing in…' : 'Sign in →'}
         </Button>
-      </form>
+      </motion.form>
 
       <div className="flex items-center gap-2">
         <div className="h-px flex-1 bg-border" />

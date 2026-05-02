@@ -38,9 +38,10 @@ export function LeadCustomSelect({
         type="button"
         onClick={() => setOpen((prev) => !prev)}
         className={cn(
-          'flex w-full items-center justify-between rounded-lg border bg-background px-4 py-3 text-left text-sm outline-none transition-all duration-200',
+          'motion-base flex w-full items-center justify-between rounded-lg border bg-background px-4 py-3 text-left text-sm outline-none shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] focus-visible:outline-none active:scale-[0.995]',
+          'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0',
           open
-            ? 'border-primary/70 ring-2 ring-primary/20'
+            ? 'border-border-hover ring-1 ring-ring/45'
             : 'border-border hover:border-[color:var(--border-hover)]',
         )}
       >

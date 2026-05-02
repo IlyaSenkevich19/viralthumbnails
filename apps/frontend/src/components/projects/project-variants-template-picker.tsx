@@ -1,5 +1,6 @@
 'use client';
 
+import { motion, useReducedMotion } from 'framer-motion';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -17,6 +18,7 @@ import {
   TEMPLATE_FACE_FILTER,
   type TemplateFaceFilter,
 } from '@/components/projects/project-variants-workspace.constants';
+import { vtSpring } from '@/lib/motion-presets';
 
 type ProjectVariantsTemplatePickerProps = {
   niches: TemplateNicheOption[];
@@ -49,6 +51,7 @@ export function ProjectVariantsTemplatePicker({
   selectedTemplateId,
   onToggleTemplate,
 }: ProjectVariantsTemplatePickerProps) {
+  const reduceMotion = useReducedMotion();
   const selectedNicheLabel =
     selectedNiche === NICHE_ALL ? 'Any niche' : niches.find((n) => n.code === selectedNiche)?.label;
   const selectedFaceLabel =
@@ -60,7 +63,12 @@ export function ProjectVariantsTemplatePicker({
 
   return (
     <div className="space-y-2.5">
-      <h2 className="text-base font-semibold tracking-tight text-foreground">Template (optional)</h2>
+      <div>
+        <h2 className="text-base font-semibold tracking-tight text-foreground">Template (optional)</h2>
+        <p className="mt-1 max-w-[65ch] text-xs leading-relaxed text-muted-foreground">
+          Guides composition; clear it anytime to rely on prompts and source frames only.
+        </p>
+      </div>
       <div className="grid gap-2 sm:grid-cols-2">
         <div>
           <Select value={selectedNiche} onValueChange={(value) => onNicheChange(value)}>
@@ -103,15 +111,17 @@ export function ProjectVariantsTemplatePicker({
           {filteredTemplates.map((t) => {
             const active = selectedTemplateId === t.id;
             return (
-              <button
+              <motion.button
                 key={t.id}
                 type="button"
+                whileTap={reduceMotion ? undefined : { scale: 0.985 }}
+                transition={vtSpring.tap}
                 onClick={() => onToggleTemplate(t.id, active)}
                 aria-label={`Template: ${t.name}${active ? ' (selected)' : ''}`}
                 className={cn(
                   'overflow-hidden rounded-xl border-2 bg-card text-left transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                   active
-                    ? 'border-primary shadow-md shadow-primary/15'
+                    ? 'border-primary shadow-md shadow-black/30 ring-1 ring-primary/35'
                     : 'border-transparent ring-1 ring-border',
                 )}
               >
@@ -131,7 +141,7 @@ export function ProjectVariantsTemplatePicker({
                   )}
                 </div>
                 <p className="truncate px-2 py-1.5 text-xs font-medium text-foreground">{t.name}</p>
-              </button>
+              </motion.button>
             );
           })}
         </div>

@@ -1,6 +1,8 @@
 'use client';
 
 import { Check, ImageIcon, Loader2, Sparkles } from 'lucide-react';
+import { motion, useReducedMotion } from 'framer-motion';
+import { vtSpring } from '@/lib/motion-presets';
 import { cn } from '@/lib/utils';
 import type { PipelineJobStatusResponse } from '@/lib/api/thumbnails';
 
@@ -15,6 +17,7 @@ export function ProjectVariantsPipelineProgress({
   pipelineBusy,
   pipelineFailed,
 }: ProjectVariantsPipelineProgressProps) {
+  const reduceMotion = useReducedMotion();
   const progress = pipelineJob?.progress;
   const progressAnalysis = progress?.analysis;
   const resultAnalysis = pipelineJob?.result?.analysis;
@@ -64,7 +67,12 @@ export function ProjectVariantsPipelineProgress({
         : 'Ready to generate';
 
   return (
-    <div className="relative overflow-hidden rounded-[1.75rem] border border-transparent bg-card/70 p-5 shadow-[0_24px_70px_-42px_rgba(0,0,0,0.95)] ring-1 ring-white/[0.025]">
+    <motion.div
+      className="relative overflow-hidden rounded-[1.75rem] border border-transparent bg-card/70 p-5 shadow-[0_24px_70px_-42px_rgba(0,0,0,0.95)] ring-1 ring-white/[0.025]"
+      initial={reduceMotion ? false : { opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={reduceMotion ? { duration: 0 } : vtSpring.enter}
+    >
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_0%,rgba(255,255,255,0.055),transparent_34%),radial-gradient(circle_at_82%_10%,rgba(255,59,59,0.13),transparent_30%)]" />
       <div className="relative space-y-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -89,7 +97,7 @@ export function ProjectVariantsPipelineProgress({
             </div>
             <div>
               <h3 className="text-2xl font-semibold tracking-tight text-foreground">{heroTitle}</h3>
-              <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+              <p className="mt-1 max-w-[65ch] text-sm leading-relaxed text-muted-foreground">
                 {progress?.label ??
                   (pipelineBusy
                     ? 'Analyzing the video, selecting a clickable moment, then generating variants.'
@@ -142,8 +150,8 @@ export function ProjectVariantsPipelineProgress({
           </div>
 
           <div className="space-y-4 rounded-2xl bg-background/30 p-4 ring-1 ring-white/[0.03]">
-            <div className="space-y-1">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">What the AI picked</p>
+            <div className="flex flex-col gap-2">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">What the model picked</p>
               <p className="text-sm font-medium text-foreground">
                 {selectedFrameIndex ? `Frame ${selectedFrameIndex}` : 'Waiting for frame selection'}
                 {typeof selectedFrameTime === 'number' ? ` at ${formatTime(selectedFrameTime)}` : ''}
@@ -178,7 +186,7 @@ export function ProjectVariantsPipelineProgress({
           </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 

@@ -1,8 +1,11 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useFocusTrap } from '@/lib/use-focus-trap';
+import { vtSpring } from '@/lib/motion-presets';
 
 export type ConfirmationModalProps = {
   open: boolean;
@@ -26,6 +29,10 @@ export function ConfirmationModal({
   variant = 'default',
   onConfirm,
 }: ConfirmationModalProps) {
+  const reduceMotion = useReducedMotion();
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(open, dialogRef);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -53,21 +60,26 @@ export function ConfirmationModal({
         if (e.target === e.currentTarget) onOpenChange(false);
       }}
     >
-      <div
+      <motion.div
+        ref={dialogRef}
         role="alertdialog"
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={description ? descId : undefined}
         className={cn(
-          'relative w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-premium motion-base',
+          'relative w-full max-w-md rounded-2xl border border-border bg-card p-6 motion-base',
+          'shadow-[inset_0_1px_0_rgba(255,255,255,0.06),var(--shadow-elevated)]',
         )}
+        initial={reduceMotion ? false : { opacity: 0, scale: 0.965 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={reduceMotion ? { duration: 0 } : vtSpring.enter}
         onMouseDown={(e) => e.stopPropagation()}
       >
         <h2 id={titleId} className="text-lg font-semibold tracking-tight text-foreground">
           {title}
         </h2>
         {description ? (
-          <p id={descId} className="mt-2 text-sm leading-relaxed text-muted-foreground">
+          <p id={descId} className="mt-2 max-w-[65ch] text-sm leading-relaxed text-muted-foreground">
             {description}
           </p>
         ) : null}
@@ -83,7 +95,7 @@ export function ConfirmationModal({
             {confirmLabel}
           </Button>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

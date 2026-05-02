@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Clock, DollarSign, FlaskConical, MousePointerClick, Paintbrush } from 'lucide-react';
@@ -17,6 +18,7 @@ import { LeadCustomSelect } from '@/components/ui/lead-custom-select';
 import { submitLeadIntake } from '@/lib/api/lead-intake';
 import { isLikelyYoutubeUrl, normalizeHttpUrl } from '@/lib/youtube-channel-url';
 import { trackEvent } from '@/lib/analytics';
+import { vtSpring } from '@/lib/motion-presets';
 
 const PROBLEM_OPTIONS = [
   { value: 'time', label: 'Takes too long', icon: Clock },
@@ -37,6 +39,7 @@ const SUBSCRIBER_OPTIONS = [
 const VIDEOS_PER_WEEK_OPTIONS = ['1–2 videos', '3–4 videos', '5+ videos'] as const;
 
 export default function RegisterPage() {
+  const reduceMotion = useReducedMotion();
   const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [biggestProblem, setBiggestProblem] = useState('');
   const [subscriberCount, setSubscriberCount] = useState('');
@@ -58,7 +61,7 @@ export default function RegisterPage() {
     return `lead_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
   }, []);
   const inputClassName =
-    'h-auto rounded-lg border border-border bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground transition-all duration-200 focus-visible:border-primary/70 focus-visible:ring-2 focus-visible:ring-primary/20';
+    'motion-base h-auto rounded-lg border border-border bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus-visible:border-border-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0';
 
   useEffect(() => {
     setAttribution(collectLeadAttribution());
@@ -149,7 +152,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-stretch bg-background">
+    <div className="flex min-h-[100dvh] items-stretch bg-background">
       <div className="flex w-full flex-col px-6 py-8 sm:px-10 lg:w-1/2 lg:px-16">
         <header className="mb-10 flex items-center justify-between">
           <BrandWordmark className="text-base" />
@@ -162,56 +165,70 @@ export default function RegisterPage() {
         </header>
 
         <main className="flex flex-1 items-center">
-          <div className="w-full max-w-md space-y-8">
-            {!registered ? (
-              <>
-                <div>
-                  <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-                    {step < 5 ? (
-                      <>
-                        Quick <span className="text-primary">onboarding</span>
-                      </>
-                    ) : (
-                      <>
-                        Create your <span className="text-primary">account</span>
-                      </>
-                    )}
-                  </h1>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    {step < 5
-                      ? 'Answer a few quick questions, then continue when you are ready.'
-                      : 'Last step: email and password.'}
-                  </p>
-                </div>
-
-                <form
-                  onSubmit={handleSubmit}
-                  className="surface space-y-4 p-6"
+          <div className="w-full max-w-md">
+            <AnimatePresence mode="wait" initial={false}>
+              {!registered ? (
+                <motion.div
+                  key="register-wizard"
+                  className="space-y-8"
+                  initial={reduceMotion ? false : { opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={reduceMotion ? undefined : { opacity: 0, y: -6 }}
+                  transition={reduceMotion ? { duration: 0 } : vtSpring.reveal}
                 >
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <span>
-                        {step < 5 ? (
-                          <>
-                            {step === 4 ? 'Almost done' : `Question ${step} of ${totalSteps - 1}`}
-                          </>
-                        ) : (
-                          'Account'
-                        )}
-                      </span>
-                      <span>{Math.round(progressPercent)}%</span>
-                    </div>
-                    <div className="h-1.5 w-full rounded-full bg-muted">
-                      <div
-                        className="h-full rounded-full bg-primary transition-all duration-300"
-                        style={{ width: `${progressPercent}%` }}
-                      />
-                    </div>
+                  <div>
+                    <h1 className="text-3xl font-semibold tracking-tight text-foreground">
+                      {step < 5 ? (
+                        <>
+                          Answer <span className="text-primary">four questions</span>
+                        </>
+                      ) : (
+                        <>
+                          Create your <span className="text-primary">account</span>
+                        </>
+                      )}
+                    </h1>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      {step < 5
+                        ? 'Answer a few quick questions, then continue when you are ready.'
+                        : 'Last step: email and password.'}
+                    </p>
                   </div>
 
-                  {step === 1 ? (
+                  <form onSubmit={handleSubmit} className="surface space-y-4 p-6">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span>
+                          {step < 5 ? (
+                            <>
+                              {step === 4 ? 'Almost done' : `Question ${step} of ${totalSteps - 1}`}
+                            </>
+                          ) : (
+                            'Account'
+                          )}
+                        </span>
+                        <span>{Math.round(progressPercent)}%</span>
+                      </div>
+                      <div className="h-1.5 w-full rounded-full bg-muted">
+                        <div
+                          className="h-full rounded-full bg-primary transition-all duration-300"
+                          style={{ width: `${progressPercent}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    <AnimatePresence mode="wait" initial={false}>
+                      <motion.div
+                        key={step}
+                        initial={reduceMotion ? false : { opacity: 0, x: 16 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={reduceMotion ? undefined : { opacity: 0, x: -12 }}
+                        transition={reduceMotion ? { duration: 0 } : vtSpring.reveal}
+                        className="space-y-4"
+                      >
+                        {step === 1 ? (
                     <>
-                      <div className="space-y-1">
+                      <div className="flex flex-col gap-2">
                         <label className="text-sm font-medium text-foreground">
                           What&apos;s your biggest thumbnail problem?
                         </label>
@@ -226,8 +243,8 @@ export default function RegisterPage() {
                               className={cn(
                                 'flex items-center gap-2 rounded-lg border px-3 py-2.5 text-left text-xs font-medium transition-all duration-200',
                                 biggestProblem === option.value
-                                  ? 'border-primary bg-primary/10 text-primary shadow-sm shadow-primary/10'
-                                  : 'border-border bg-background text-muted-foreground hover:border-[color:var(--border-hover)] hover:text-foreground',
+                                  ? 'border-primary bg-primary/10 text-primary shadow-sm shadow-black/25 ring-1 ring-primary/25'
+                                  : 'border-border bg-background text-muted-foreground hover:border-[color:var(--border-hover)] hover:text-foreground active:scale-[0.99]',
                               )}
                             >
                               <option.icon className="h-4 w-4 shrink-0" />
@@ -247,7 +264,7 @@ export default function RegisterPage() {
                     </>
                   ) : step === 2 ? (
                     <>
-                      <div className="space-y-1">
+                      <div className="flex flex-col gap-2">
                         <label
                           htmlFor="register-subscribers"
                           className="text-sm font-medium text-foreground"
@@ -280,7 +297,7 @@ export default function RegisterPage() {
                     </>
                   ) : step === 3 ? (
                     <>
-                      <div className="space-y-1">
+                      <div className="flex flex-col gap-2">
                         <label htmlFor="register-uploads" className="text-sm font-medium text-foreground">
                           How many videos per week?
                         </label>
@@ -310,7 +327,7 @@ export default function RegisterPage() {
                     </>
                   ) : step === 4 ? (
                     <>
-                      <div className="space-y-1">
+                      <div className="flex flex-col gap-2">
                         <label htmlFor="register-channel-url" className="text-sm font-medium text-foreground">
                           YouTube link <span className="text-primary">*</span>
                         </label>
@@ -326,12 +343,18 @@ export default function RegisterPage() {
                             if (channelStepError) setChannelStepError('');
                           }}
                           className={inputClassName}
+                          aria-invalid={channelStepError ? true : undefined}
+                          aria-describedby={
+                            channelStepError ? 'register-channel-error register-channel-hint' : 'register-channel-hint'
+                          }
                         />
                         {channelStepError ? (
-                          <p className="text-sm text-destructive">{channelStepError}</p>
+                          <p id="register-channel-error" className="text-sm text-destructive" role="alert">
+                            {channelStepError}
+                          </p>
                         ) : null}
                       </div>
-                      <p className="text-center text-xs text-muted-foreground">
+                      <p id="register-channel-hint" className="text-center text-xs text-muted-foreground">
                         Channel, @handle, or video URL — we use it to personalize your workspace.
                       </p>
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -357,7 +380,7 @@ export default function RegisterPage() {
                       <div className="rounded-lg border border-primary/20 bg-primary/[0.08] px-3 py-2 text-xs text-foreground/90">
                         You&apos;re set — add email and password to finish.
                       </div>
-                      <div className="space-y-1">
+                      <div className="flex flex-col gap-2">
                         <label htmlFor="register-email" className="text-sm font-medium text-foreground">
                           Your email
                         </label>
@@ -369,9 +392,11 @@ export default function RegisterPage() {
                           onChange={(e) => setEmail(e.target.value)}
                           required
                           className={inputClassName}
+                          aria-invalid={error ? true : undefined}
+                          aria-describedby={error ? 'register-signup-error' : undefined}
                         />
                       </div>
-                      <div className="space-y-1">
+                      <div className="flex flex-col gap-2">
                         <label htmlFor="register-password" className="text-sm font-medium text-foreground">
                           Password
                         </label>
@@ -384,9 +409,15 @@ export default function RegisterPage() {
                           required
                           minLength={6}
                           className={inputClassName}
+                          aria-invalid={error ? true : undefined}
+                          aria-describedby={error ? 'register-signup-error' : undefined}
                         />
                       </div>
-                      {error ? <p className="text-sm text-destructive">{error}</p> : null}
+                      {error ? (
+                        <p id="register-signup-error" className="text-sm text-destructive" role="alert">
+                          {error}
+                        </p>
+                      ) : null}
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-2">
                         <button
                           type="button"
@@ -396,32 +427,41 @@ export default function RegisterPage() {
                           ← Edit onboarding answers
                         </button>
                         <Button type="submit" className="w-full sm:ml-auto sm:w-auto sm:min-w-[12rem]" disabled={signUp.isPending}>
-                          {signUp.isPending ? 'Creating account...' : 'Create account →'}
+                          {signUp.isPending ? 'Creating account…' : 'Create account →'}
                         </Button>
                       </div>
                     </>
                   )}
-                </form>
-              </>
-            ) : (
-              <div className="surface space-y-4 p-6">
-                <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-                  Confirm your email
-                </h1>
-                <p className="text-sm text-muted-foreground">
-                  We&apos;ve sent a confirmation link to <span className="font-medium">{email}</span>.
-                  Open it to activate your account, then sign in from the login page.
-                </p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => router.push(AppRoutes.home)}
+                      </motion.div>
+                    </AnimatePresence>
+                  </form>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="register-complete"
+                  className="surface space-y-4 p-6"
+                  initial={reduceMotion ? false : { opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={reduceMotion ? { duration: 0 } : vtSpring.reveal}
                 >
-                  Go to sign in
-                </Button>
-              </div>
-            )}
+                  <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+                    Confirm your email
+                  </h1>
+                  <p className="text-sm text-muted-foreground">
+                    We&apos;ve sent a confirmation link to <span className="font-medium">{email}</span>.
+                    Open it to activate your account, then sign in from the login page.
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => router.push(AppRoutes.home)}
+                  >
+                    Go to sign in
+                  </Button>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </main>
       </div>
@@ -432,12 +472,12 @@ export default function RegisterPage() {
         <div className="relative z-[2] w-full space-y-12 px-10">
           <div className="mx-auto max-w-xl space-y-6">
             <h2 className="text-3xl font-semibold leading-tight">
-              One template,
+              Store faces once.
               <br />
-              your product.
+              Reuse thumbnail recipes per upload.
             </h2>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              Auth, layout, and API wiring are done — focus on features your users care about.
+            <p className="max-w-[65ch] text-sm leading-relaxed text-muted-foreground">
+              Saved likenesses and niche-ready templates stay pinned to each workspace—less setup before every publish.
             </p>
           </div>
           <AuthThumbnailMarquee />

@@ -16,6 +16,9 @@ import { toast } from 'sonner';
 import { Trash2, Upload, UserCircle } from 'lucide-react';
 import { prepareAvatarImageFile } from '@/lib/prepare-avatar-image';
 import { SetPageFrame } from '@/components/layout/set-page-frame';
+import { EmptyState } from '@/components/ui/empty-state';
+import { InlineLoadError } from '@/components/ui/inline-load-error';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const AVATAR_ACCEPTED_FORMATS = 'PNG, JPG, WEBP';
 const AVATAR_SIZE_HINT_MB = 10;
@@ -44,7 +47,7 @@ export function AvatarsClient() {
   const [uploading, setUploading] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  const { data: items = [], isPending, isError, error } = useAvatarsList();
+  const { data: items = [], isPending, isError, error, refetch } = useAvatarsList();
   const createMutation = useCreateAvatarMutation();
   const deleteMutation = useDeleteAvatarMutation();
 
@@ -102,7 +105,7 @@ export function AvatarsClient() {
           </p>
         </CardHeader>
         <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-end">
-          <div className="min-w-0 flex-1 space-y-2">
+          <div className="flex min-w-0 flex-1 flex-col gap-2">
             <label htmlFor="avatar-name" className="text-xs font-medium text-muted-foreground">
               Label (optional)
             </label>
@@ -133,29 +136,38 @@ export function AvatarsClient() {
         </CardContent>
       </Card>
 
-      {listError && (
-        <p className="text-sm text-destructive" role="alert">
-          {listError}
-        </p>
-      )}
+      {listError ? (
+        <InlineLoadError
+          message={listError}
+          onRetry={hasSession ? () => void refetch() : undefined}
+        />
+      ) : null}
 
       {loading ? (
-        <p className="text-sm text-muted-foreground">Loading avatars…</p>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-busy="true" aria-label="Loading faces">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="overflow-hidden rounded-xl border border-border bg-card">
+              <Skeleton className="aspect-square w-full rounded-none" />
+              <div className="flex items-center justify-between gap-2 p-3">
+                <Skeleton className="h-4 flex-1 rounded" />
+                <Skeleton className="h-9 w-9 shrink-0 rounded-lg" />
+              </div>
+            </div>
+          ))}
+        </div>
       ) : hasSession && items.length === 0 ? (
         <Card>
-          <CardContent className="flex flex-col items-center gap-5 px-6 py-12 text-center sm:py-14">
-            <div
-              className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/15 text-primary ring-1 ring-primary/20"
-              aria-hidden
-            >
-              <UserCircle className="h-7 w-7" strokeWidth={1.75} />
-            </div>
-            <div className="space-y-2">
-              <p className="text-base font-semibold tracking-tight text-foreground">No saved faces yet</p>
-              <p className="mx-auto max-w-sm text-sm leading-relaxed text-muted-foreground">
-                Add a clear photo above — we&apos;ll use it as a reference when you generate thumbnails with your face.
-              </p>
-            </div>
+          <CardContent className="p-0">
+            <EmptyState
+              title="No saved faces yet"
+              description={
+                <>
+                  Add a clear photo above — we&apos;ll use it as a reference when you generate thumbnails with your
+                  face.
+                </>
+              }
+              icon={<UserCircle className="h-7 w-7" strokeWidth={1.75} aria-hidden />}
+            />
           </CardContent>
         </Card>
       ) : hasSession && items.length > 0 ? (

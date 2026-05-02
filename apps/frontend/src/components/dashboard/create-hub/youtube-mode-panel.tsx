@@ -21,13 +21,15 @@ export const YoutubeModePanel = memo(function YoutubeModePanel({
   youtubeMetaPreview,
 }: Props) {
   return (
-    <div className="flex h-full flex-col">
-      <label htmlFor="dash-youtube" className="mb-1 text-sm font-medium text-foreground">
-        YouTube URL
-      </label>
-      <p className="mb-2 text-xs text-muted-foreground">
-        Paste any youtube.com or youtu.be link. We will enrich title and channel metadata.
-      </p>
+    <div className="flex h-full flex-col gap-3">
+      <div className="flex flex-col gap-2">
+        <label htmlFor="dash-youtube" className="text-sm font-medium text-foreground">
+          YouTube URL
+        </label>
+        <p className="max-w-[65ch] text-xs leading-relaxed text-muted-foreground">
+          Accepts youtube.com or youtu.be links—we pull title, channel line, and poster art once the URL parses.
+        </p>
+      </div>
       <Input
         className="mt-0"
         id="dash-youtube"
@@ -67,7 +69,7 @@ export const YoutubeModePanel = memo(function YoutubeModePanel({
         ) : null}
       </div>
       <p
-        className="mt-1.5 min-h-5 text-sm text-destructive"
+        className="min-h-5 text-sm text-destructive"
         role={urlError ? 'alert' : undefined}
         aria-live="polite"
       >

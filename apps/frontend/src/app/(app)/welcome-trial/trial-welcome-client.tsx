@@ -17,9 +17,9 @@ import { toast } from 'sonner';
 import { trackEvent } from '@/lib/analytics';
 
 const VALUE_POINTS = [
-  'Analyze a YouTube URL and find thumbnail-worthy moments',
-  'Generate CTR-focused thumbnail concepts from real video frames',
-  'Use templates and face references when you want stronger control',
+  'Scan a YouTube URL for moments that naturally read well as thumbnails',
+  'Produce layout concepts tied to extracted frames—not generic stock composites',
+  'Layer templates and saved faces whenever you want the model to mimic a look',
 ] as const;
 
 export function TrialWelcomeClient() {
@@ -58,7 +58,7 @@ export function TrialWelcomeClient() {
   const loading = authLoading || isPending;
 
   return (
-    <div className="mx-auto grid min-h-[calc(100vh-12rem)] w-full max-w-6xl items-center gap-8 lg:grid-cols-[1.05fr_0.95fr]">
+    <div className="mx-auto grid min-h-[calc(100dvh-12rem)] w-full max-w-6xl items-center gap-8 lg:grid-cols-[1.05fr_0.95fr]">
       <SetPageFrame title="Start free trial" />
 
       <section className="space-y-7">
@@ -70,21 +70,24 @@ export function TrialWelcomeClient() {
           <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
             Start with {creditsCount} thumbnail generations.
           </h1>
-          <p className="max-w-2xl text-base leading-7 text-muted-foreground">
-            ViralThumblify is a paid product, but your first credits are free so you can test the
-            YouTube thumbnail pipeline on real videos before buying a pack.
+          <p className="max-w-[65ch] text-base leading-relaxed text-muted-foreground">
+            ViralThumblify stays paid-after-trial—you get starter credits now so every run touches real uploads
+            before you buy a larger pack.
           </p>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)_minmax(0,0.92fr)]">
           {[
             { label: `${creditsCount} credits`, detail: 'Included trial balance' },
             { label: 'No card', detail: 'Start without checkout' },
             { label: 'Paid later', detail: 'Upgrade when credits run out' },
-          ].map((item) => (
+          ].map((item, index) => (
             <div
               key={item.label}
-              className="rounded-2xl border border-white/[0.07] bg-card/55 p-4 shadow-sm shadow-black/10"
+              className={cn(
+                'rounded-2xl border border-white/[0.07] bg-card/55 p-4 shadow-[0_12px_32px_-18px_rgba(0,0,0,0.35)]',
+                index === 2 && 'sm:col-span-2 lg:col-span-1',
+              )}
             >
               <p className="text-lg font-semibold text-foreground">{item.label}</p>
               <p className="mt-1 text-xs text-muted-foreground">{item.detail}</p>
@@ -102,12 +105,9 @@ export function TrialWelcomeClient() {
             <p className="text-sm font-medium uppercase tracking-[0.18em] text-primary">
               What you unlock
             </p>
-            <h2 className="mt-3 text-2xl font-semibold text-foreground">
-              Generate before you pay
-            </h2>
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">
-              Use the trial to validate quality. When the credits are gone, we&apos;ll show credit
-              packs before the next paid action.
+            <h2 className="mt-3 text-2xl font-semibold text-foreground">Run thumbnails while credits remain</h2>
+            <p className="mt-2 max-w-[65ch] text-sm leading-relaxed text-muted-foreground">
+              Exhaust the starter balance on real uploads. Credit packs unlock only once you explicitly buy them.
             </p>
           </div>
 
@@ -129,7 +129,7 @@ export function TrialWelcomeClient() {
             onClick={() => startTrial.mutate()}
             disabled={loading || startTrial.isPending || !accessToken}
           >
-            {startTrial.isPending ? 'Starting trial...' : 'Start free trial'}
+            {startTrial.isPending ? 'Starting trial…' : 'Start free trial'}
             <ArrowRight className="h-4 w-4" />
           </Button>
 

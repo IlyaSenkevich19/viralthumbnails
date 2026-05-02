@@ -24,12 +24,17 @@ export function ProjectVariantsSourceCard({
 
   return (
     <section className="space-y-2">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Source</p>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Source</p>
+          <p className="mt-1 max-w-[65ch] text-[11px] leading-relaxed text-muted-foreground/90">
+            File or URL this project was spun up from—read-only summary.
+          </p>
+        </div>
         {pipelineJob ? (
           <p
             className={cn(
-              'rounded-full border px-2 py-0.5 text-[11px] font-medium',
+              'shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-medium whitespace-nowrap',
               pipelineBusy
                 ? 'border-primary/35 text-primary'
                 : pipelineFailed

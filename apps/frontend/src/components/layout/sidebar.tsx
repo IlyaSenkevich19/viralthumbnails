@@ -32,7 +32,7 @@ const navItems: Array<{
   soon?: boolean;
   adminOnly?: boolean;
 }> = [
-  { href: AppRoutes.create, label: 'Create', icon: PlusSquare },
+  { href: AppRoutes.create, label: 'Generate', icon: PlusSquare },
   { href: AppRoutes.projects, label: 'Projects', icon: FolderKanban },
   { href: AppRoutes.templates, label: 'Templates', icon: LayoutTemplate },
   { href: AppRoutes.avatars, label: 'My faces', icon: UserCircle },
@@ -115,7 +115,7 @@ function SidebarUserBlock({ collapsed, inDrawer }: { collapsed: boolean; inDrawe
         className={cn(
           'motion-base flex items-center gap-3 text-left',
           compact
-            ? 'size-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-primary p-0 text-sm font-semibold text-primary-foreground shadow-md shadow-primary/35 outline-none ring-offset-2 ring-offset-[var(--sidebar)] hover:brightness-110 focus-visible:ring-2 focus-visible:ring-ring'
+            ? 'size-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-primary p-0 text-sm font-semibold text-primary-foreground shadow-md shadow-black/45 outline-none ring-offset-2 ring-offset-[var(--sidebar)] hover:brightness-110 focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.96]'
             : 'w-full min-w-0 rounded-xl px-2 py-2.5 hover:bg-secondary',
         )}
         aria-expanded={open}

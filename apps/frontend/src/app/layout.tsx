@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import { Outfit } from 'next/font/google';
 import { brandWordmark } from '@/config/site';
 import { AuthProvider } from '@/contexts/auth-context';
 import { QueryProvider } from '@/components/providers/query-provider';
@@ -8,9 +8,10 @@ import { ToastProvider } from '@/components/providers/toast-provider';
 import { MarketingScripts } from '@/components/marketing/marketing-scripts';
 import './globals.css';
 
-const inter = Inter({
+const outfit = Outfit({
   subsets: ['latin'],
   variable: '--font-sans',
+  display: 'swap',
 });
 
 export const metadata: Metadata = {
@@ -24,8 +25,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={`antialiased min-h-screen bg-background text-foreground ${inter.className}`}>
+    <html lang="en" suppressHydrationWarning className={outfit.variable}>
+      <body className="min-h-[100dvh] bg-background font-sans text-foreground antialiased">
         <MarketingScripts />
         <ThemeProvider>
           <AuthProvider>

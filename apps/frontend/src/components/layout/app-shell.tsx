@@ -1,20 +1,24 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { usePathname } from 'next/navigation';
 import { useIsMutating } from '@tanstack/react-query';
 import { createProjectAndGenerateMutationKey } from '@/lib/hooks';
 import { PageFrameProvider } from '@/contexts/page-frame-context';
 import { Sidebar } from './sidebar';
 import { HeaderShell } from './header-shell';
-import { cn } from '@/lib/utils';
 import { InsufficientCreditsPaywall } from '@/components/paywall/insufficient-credits-paywall';
 
 const STORAGE_KEY = 'vt-sidebar-collapsed';
 const PROJECT_VARIANTS_ROUTE_RE = /^\/projects\/[^/]+\/variants$/;
 
+const drawerEase = [0.25, 1, 0.5, 1] as const;
+const drawerTween = { type: 'tween' as const, duration: 0.24, ease: drawerEase };
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const reduceMotion = useReducedMotion();
   const isProjectVariantsRoute = PROJECT_VARIANTS_ROUTE_RE.test(pathname ?? '');
   const creatingProject = useIsMutating({ mutationKey: createProjectAndGenerateMutationKey }) > 0;
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -73,7 +77,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-[var(--background)]">
+    <div className="flex h-[100dvh] max-h-[100dvh] min-h-[100dvh] flex-col overflow-hidden bg-[var(--background)]">
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <Sidebar
           collapsed={hydrated && sidebarCollapsed}
@@ -100,32 +104,38 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </PageFrameProvider>
       </div>
 
-      {/* Mobile drawer: when closed, wrapper must not capture hits (z-40 sits above header z-30). */}
-      <div
-        className={cn(
-          'fixed inset-0 z-40 lg:hidden',
-          mobileSidebarOpen ? 'pointer-events-auto' : 'pointer-events-none',
-        )}
-        aria-hidden={!mobileSidebarOpen}
-      >
-        <button
-          type="button"
-          tabIndex={mobileSidebarOpen ? 0 : -1}
-          aria-label={mobileSidebarOpen ? 'Close menu' : undefined}
-          className="absolute inset-0 z-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 ease-[var(--ease-standard)]"
-          style={{ opacity: mobileSidebarOpen ? 1 : 0, pointerEvents: mobileSidebarOpen ? 'auto' : 'none' }}
-          onClick={closeMobileSidebar}
-        />
-        <div
-          className="absolute inset-y-0 left-0 z-10 w-80 max-w-full border-r border-border bg-sidebar shadow-premium transition-transform duration-300 ease-[var(--ease-standard)]"
-          style={{
-            transform: mobileSidebarOpen ? 'translateX(0)' : 'translateX(-100%)',
-            pointerEvents: mobileSidebarOpen ? 'auto' : 'none',
-          }}
-        >
-          <Sidebar inDrawer onClose={closeMobileSidebar} />
-        </div>
-      </div>
+      {/* Mobile drawer: mounts only while open — AnimatePresence + reduced motion */}
+      <AnimatePresence>
+        {mobileSidebarOpen ? (
+          <motion.div key="mobile-sidebar-overlay" className="fixed inset-0 z-40 lg:hidden">
+            <motion.button
+              type="button"
+              aria-label="Close menu"
+              className="absolute inset-0 z-0 bg-black/60 backdrop-blur-sm"
+              initial={
+                reduceMotion
+                  ? { opacity: 1 }
+                  : { opacity: 0 }
+              }
+              animate={{ opacity: 1 }}
+              exit={{ opacity: reduceMotion ? 1 : 0 }}
+              transition={{
+                opacity: reduceMotion ? { duration: 0 } : { duration: 0.2, ease: drawerEase },
+              }}
+              onClick={closeMobileSidebar}
+            />
+            <motion.div
+              className="absolute inset-y-0 left-0 z-10 w-80 max-w-full border-r border-border bg-sidebar shadow-premium"
+              initial={reduceMotion ? { x: 0 } : { x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: reduceMotion ? 0 : '-100%' }}
+              transition={reduceMotion ? { duration: 0 } : drawerTween}
+            >
+              <Sidebar inDrawer onClose={closeMobileSidebar} />
+            </motion.div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
 
       {/* Root-level mount so stacking isn’t trapped under `z-0` layout; full-screen checkout overlay */}
       <InsufficientCreditsPaywall />

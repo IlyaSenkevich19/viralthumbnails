@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import Link from 'next/link';
 import { Mail } from 'lucide-react';
 import { AuthSplitLayout } from '@/components/auth/auth-split-layout';
@@ -8,8 +9,10 @@ import { buttonVariants } from '@/components/ui/button';
 import { AppRoutes } from '@/config/routes';
 import { cn } from '@/lib/utils';
 import { PASSWORD_RESET_EMAIL_SESSION_KEY } from '@/lib/auth-password-reset-flow';
+import { vtSpring } from '@/lib/motion-presets';
 
 export default function ResetLinkSentPage() {
+  const reduceMotion = useReducedMotion();
   const [hintEmail, setHintEmail] = useState<string | null>(null);
 
   useEffect(() => {
@@ -36,13 +39,17 @@ export default function ResetLinkSentPage() {
         <h1 className="text-3xl font-semibold tracking-tight text-foreground">
           Check your <span className="text-primary">inbox</span>
         </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          If there&apos;s a ViralThumblify account for that address, we sent a reset link—the email may take a
-          minute.
+        <p className="mt-2 max-w-[65ch] text-sm leading-relaxed text-muted-foreground">
+          Matching accounts receive a ViralThumblify reset link—delivery sometimes lags roughly a minute.
         </p>
       </div>
 
-      <div className="surface relative space-y-4 overflow-hidden p-6">
+      <motion.div
+        className="surface relative space-y-4 overflow-hidden p-6"
+        initial={reduceMotion ? false : { opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={reduceMotion ? { duration: 0 } : vtSpring.reveal}
+      >
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
         <div className="flex justify-center pt-2">
           <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/15 text-primary ring-1 ring-primary/20">
@@ -72,7 +79,7 @@ export default function ResetLinkSentPage() {
         >
           Back to sign in
         </Link>
-      </div>
+      </motion.div>
 
       <Link
         href={AppRoutes.auth.forgotPassword}

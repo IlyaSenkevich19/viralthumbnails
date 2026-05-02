@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { usePipelineJobStatus, useProjectWithVariants } from '@/lib/hooks';
 import { buttonVariants } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { InlineLoadError } from '@/components/ui/inline-load-error';
 import { cn } from '@/lib/utils';
 import { AppRoutes } from '@/config/routes';
 import { toast } from 'sonner';
@@ -133,9 +134,10 @@ function VariantsGalleryInner({ projectId }: { projectId: string }) {
           <ArrowLeft className="h-4 w-4" />
           Projects
         </Link>
-        <p className="text-sm text-destructive" role="alert">
-          {error instanceof Error ? error.message : 'Project not found'}
-        </p>
+        <InlineLoadError
+          message={error instanceof Error ? error.message : 'Project not found.'}
+          onRetry={() => void refetch()}
+        />
       </div>
     );
   }

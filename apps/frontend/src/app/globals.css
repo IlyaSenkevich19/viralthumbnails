@@ -236,6 +236,77 @@ textarea:-webkit-autofill:active {
   }
 }
 
+/*
+ * Sonner defaults to theme=light (`--normal-bg: #fff`), which clashes with VT dark chrome.
+ * `theme="dark"` + these tokens align toasts with --card / --primary / typography.
+ */
+[data-sonner-toaster][data-sonner-theme='dark'] {
+  --border-radius: var(--radius);
+  --normal-bg: color-mix(in srgb, var(--card) 94%, transparent);
+  --normal-bg-hover: var(--secondary);
+  --normal-border: var(--border);
+  --normal-border-hover: var(--border-hover);
+  --normal-text: var(--foreground);
+}
+
+[data-sonner-toaster][data-sonner-theme='dark'] [data-sonner-toast].vt-toast[data-styled='true'] {
+  box-shadow: var(--shadow-elevated);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+/* Neutral “message” toasts omit `type`; don’t override description on semantic rich-color toasts. */
+[data-sonner-toaster][data-sonner-theme='dark']
+  [data-sonner-toast].vt-toast[data-styled='true']:not([data-type='success']):not([data-type='info']):not(
+    [data-type='warning']
+  ):not([data-type='error'])
+  [data-description] {
+  color: var(--muted-foreground) !important;
+}
+
+[data-sonner-toaster][data-sonner-theme='dark']
+  [data-sonner-toast].vt-toast[data-styled='true']
+  [data-title] {
+  font-weight: 600;
+}
+
+[data-sonner-toaster][data-sonner-theme='dark']
+  [data-sonner-toast].vt-toast[data-styled='true']
+  [data-button]:not([data-cancel]) {
+  height: auto;
+  min-height: 30px;
+  padding: 0.375rem 0.875rem;
+  border-radius: var(--radius);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--primary-foreground) !important;
+  background: var(--primary) !important;
+}
+
+[data-sonner-toaster][data-sonner-theme='dark']
+  [data-sonner-toast].vt-toast[data-styled='true']
+  [data-button]:not([data-cancel]):focus-visible {
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--ring), transparent),
+    0 0 0 4px color-mix(in srgb, var(--background), transparent) !important;
+}
+
+[data-sonner-toaster][data-sonner-theme='dark']
+  [data-sonner-toast].vt-toast[data-styled='true']
+  [data-close-button] {
+  background: var(--muted) !important;
+  border-color: var(--border) !important;
+  color: var(--muted-foreground) !important;
+}
+
+[data-sonner-toaster][data-sonner-theme='dark']
+  [data-sonner-toast].vt-toast[data-styled='true']
+  [data-close-button]:hover {
+  background: var(--secondary) !important;
+  border-color: var(--border-hover) !important;
+  color: var(--foreground) !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .motion-base {
     transition: none;

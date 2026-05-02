@@ -30,7 +30,7 @@ export function LoginScreen() {
       {
         onSuccess: () => {
           toast.success('Welcome back!');
-          router.push(AppRoutes.welcomeTrial);
+          router.push(AppRoutes.create);
           router.refresh();
         },
         onError: (err) => {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useIsMutating } from '@tanstack/react-query';
 import { createProjectAndGenerateMutationKey } from '@/lib/hooks';
 import { PageFrameProvider } from '@/contexts/page-frame-context';
@@ -9,18 +9,13 @@ import { Sidebar } from './sidebar';
 import { HeaderShell } from './header-shell';
 import { cn } from '@/lib/utils';
 import { InsufficientCreditsPaywall } from '@/components/paywall/insufficient-credits-paywall';
-import { AppRoutes } from '@/config/routes';
-import { useGenerationCredits } from '@/lib/hooks/use-generation-credits';
 
 const STORAGE_KEY = 'vt-sidebar-collapsed';
 const PROJECT_VARIANTS_ROUTE_RE = /^\/projects\/[^/]+\/variants$/;
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const router = useRouter();
-  const { data: credits, isPending: creditsPending, isError: creditsError } = useGenerationCredits();
   const isProjectVariantsRoute = PROJECT_VARIANTS_ROUTE_RE.test(pathname ?? '');
-  const isTrialWelcomeRoute = pathname === AppRoutes.welcomeTrial;
   const creatingProject = useIsMutating({ mutationKey: createProjectAndGenerateMutationKey }) > 0;
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -61,12 +56,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       document.body.style.overflow = prev;
     };
   }, [mobileSidebarOpen]);
-
-  useEffect(() => {
-    if (creditsPending || creditsError || !credits) return;
-    if (credits.trialStarted || isTrialWelcomeRoute) return;
-    router.replace(AppRoutes.welcomeTrial);
-  }, [credits, creditsError, creditsPending, isTrialWelcomeRoute, router]);
 
   const openMobileSidebar = useCallback(() => setMobileSidebarOpen(true), []);
   const closeMobileSidebar = useCallback(() => setMobileSidebarOpen(false), []);

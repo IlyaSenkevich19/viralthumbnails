@@ -6,11 +6,12 @@ export function ToastProvider() {
   return (
     <Toaster
       position="top-right"
+      theme="dark"
       richColors
       closeButton
       toastOptions={{
         classNames: {
-          toast: 'backdrop-blur-xl bg-glass border border-border shadow-premium',
+          toast: 'vt-toast',
         },
       }}
     />

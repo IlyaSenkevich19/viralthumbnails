@@ -18,6 +18,7 @@ import { OpenRouterModule } from './modules/openrouter/openrouter.module';
 import { VideoThumbnailsModule } from './modules/video-thumbnails/video-thumbnails.module';
 import { ThumbnailPipelineModule } from './modules/thumbnail-pipeline/thumbnail-pipeline.module';
 import { LeadCrmModule } from './modules/lead-crm/lead-crm.module';
+import { SupportModule } from './modules/support/support.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { LeadCrmModule } from './modules/lead-crm/lead-crm.module';
     ]),
     SupabaseModule,
     LeadCrmModule,
+    SupportModule,
     AuthModule,
     HealthModule,
     ProjectsModule,

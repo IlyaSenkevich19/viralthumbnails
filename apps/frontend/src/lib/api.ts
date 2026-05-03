@@ -22,3 +22,4 @@ export * as billingApi from './api/billing';
 export * as thumbnailsApi from './api/thumbnails';
 export * as healthApi from './api/health';
 export { submitPublicLeadIntake } from './api/leads';
+export { submitSupportContact, type SupportContactPayload, type SupportContactSource } from './api/support';

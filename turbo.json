@@ -3,7 +3,10 @@
   "globalDependencies": ["**/.env.*local"],
   "globalPassThroughEnv": [
     "ADMIN_USER_IDS",
+    "CORS_ORIGINS",
     "FRONTEND_URL",
+    "TELEGRAM_BOT_TOKEN",
+    "TELEGRAM_SUPPORT_CHAT_ID",
     "LEAD_INTAKE_DEBUG",
     "LEAD_INTAKE_WEBHOOK_URL",
     "NEXT_PUBLIC_BACKEND_URL",

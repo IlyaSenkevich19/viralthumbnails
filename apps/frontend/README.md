@@ -80,6 +80,11 @@ From the **repo root**, `yarn dev` / `yarn build` runs `scripts/sync-frontend-en
 
 Не вызывайте URL Google Apps Script из браузера напрямую — секрет и контракт живут на сервере.
 
+### Support (Telegram)
+
+- Плавающий виджет: `src/components/support/support-widget.tsx` + `SupportWidgetApp` в `(app)/layout.tsx`. POST на `/api/support/contact` (или `NEXT_PUBLIC_SUPPORT_API_URL`, если задан).
+- **Лендинг** (отдельный репо): тот же UI в `ViralThumbnailsLanding/components/SupportWidget.tsx` — держите разметку в синке; там обязателен **`NEXT_PUBLIC_SUPPORT_API_URL`** на полный URL Nest. В Nest — **`CORS_ORIGINS`** с origin лендинга.
+
 **`apps/frontend/.env.development`** is loaded only for `next dev` and defaults `NEXT_PUBLIC_BACKEND_URL` to `http://localhost:3001`. Production builds on Vercel use **`NODE_ENV=production`**, so that file is not applied there — use Vercel env vars instead. See root **`README.md`** (“Local vs production”).
 
 ## Scripts

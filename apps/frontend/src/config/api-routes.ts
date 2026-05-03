@@ -13,6 +13,9 @@ export const ApiRoutes = {
   leads: {
     intake: '/leads/intake',
   },
+  support: {
+    contact: '/support/contact',
+  },
   billing: {
     credits: '/billing/credits',
     startTrial: '/billing/credits/start-trial',

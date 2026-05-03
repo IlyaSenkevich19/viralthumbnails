@@ -61,6 +61,9 @@ export function useThumbnailPipelineMutation(options?: PipelineRecoveryOptions) 
             throw new Error('Pipeline job finished without result payload');
           }
           clearPipelineRecoveryJob(options?.recoveryKey);
+          if (job.result.warnings?.length) {
+            toast.warning(job.result.warnings.join('\n'));
+          }
           return job.result;
         }
         if (job.status === 'failed') {

@@ -11,7 +11,10 @@ import { requestOpenRouterSingleThumbnailImage } from '../../openrouter/openrout
 import { userContentTextThenReferenceImages } from '../../openrouter/multipart-user-content';
 import type { OpenRouterMessage } from '../../openrouter/openrouter.types';
 import type { ReferenceBundle } from './pipeline-prompt-builder.service';
-import { THUMBNAIL_PROMPT_MAX_CHARS_OPENROUTER_MULTIMODAL } from '../../../common/optimized-thumbnail-prompt';
+import {
+  formatOpenRouterMultimodalTruncationWarning,
+  sliceOpenRouterMultimodalUserText,
+} from '../../../common/optimized-thumbnail-prompt';
 
 const MULTIMODAL_HEADER =
   'Generate a single 16:9 YouTube thumbnail image. Reference images appear in priority order: selected video frame if present (source truth), then template reference(s) (layout only), then face reference if present (likeness). Never place text over the face, eyes, mouth, hands, or main object.';
@@ -41,7 +44,7 @@ export class PipelineThumbnailGenerationService {
     reference?: ReferenceBundle;
     imageModelTier?: ThumbnailImageModelTier;
     onProgress?: (progress: { current: number; total: number; percent: number }) => Promise<void>;
-  }): Promise<GeneratedPipelineImage[]> {
+  }): Promise<{ variants: GeneratedPipelineImage[]; warnings: string[] }> {
     if (!this.openRouter.getApiKey()) {
       throw new Error('OPENROUTER_API_KEY is not set');
     }
@@ -53,14 +56,25 @@ export class PipelineThumbnailGenerationService {
 
     const out: GeneratedPipelineImage[] = [];
     const total = params.prompts.length;
+    let worstMultimodalTrim: { droppedChars: number; originalLen: number } | undefined;
     for (let i = 0; i < params.prompts.length; i++) {
       const prompt = params.prompts[i];
       try {
+        let multimodalUserText = prompt;
+        if (useMultimodal) {
+          const sliced = sliceOpenRouterMultimodalUserText(prompt);
+          multimodalUserText = sliced.text;
+          if (sliced.droppedChars > 0) {
+            if (!worstMultimodalTrim || sliced.droppedChars > worstMultimodalTrim.droppedChars) {
+              worstMultimodalTrim = {
+                droppedChars: sliced.droppedChars,
+                originalLen: sliced.originalLen,
+              };
+            }
+          }
+        }
         const content: OpenRouterMessage['content'] = useMultimodal
-          ? userContentTextThenReferenceImages(
-              `${MULTIMODAL_HEADER}\n\n${prompt.slice(0, THUMBNAIL_PROMPT_MAX_CHARS_OPENROUTER_MULTIMODAL)}`,
-              refUrls,
-            )
+          ? userContentTextThenReferenceImages(`${MULTIMODAL_HEADER}\n\n${multimodalUserText}`, refUrls)
           : prompt;
 
         const img = await requestOpenRouterSingleThumbnailImage({
@@ -95,6 +109,16 @@ export class PipelineThumbnailGenerationService {
       });
     }
 
-    return out;
+    const warnings: string[] = [];
+    if (worstMultimodalTrim) {
+      const msg = formatOpenRouterMultimodalTruncationWarning(
+        'thumbnail pipeline image generation',
+        worstMultimodalTrim,
+      );
+      warnings.push(msg);
+      this.logger.warn(`[vt-multimodal-prompt] ${msg}`);
+    }
+
+    return { variants: out, warnings };
   }
 }

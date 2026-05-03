@@ -62,7 +62,7 @@ export class ThumbnailPipelineExecutionService {
       editInstruction: body.edit_instruction,
     };
     const result = await this.orchestrator.run(runInput, onProgress);
-    const warnings: string[] = [];
+    const warnings: string[] = [...(result.warnings ?? [])];
     if (body.template_id?.trim() && resolvedRefs && !resolvedRefs.hasTemplateImage) {
       warnings.push(`Template reference not resolved: ${body.template_id.trim()}`);
     }

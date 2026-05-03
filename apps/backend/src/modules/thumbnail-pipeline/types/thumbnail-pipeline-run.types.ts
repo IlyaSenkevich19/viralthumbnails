@@ -57,4 +57,6 @@ export type ThumbnailPipelineRunResult = {
     imageGeneration?: string;
     imageEdit?: string;
   };
+  /** e.g. multimodal prompt truncation when reference images are attached. */
+  warnings?: string[];
 };

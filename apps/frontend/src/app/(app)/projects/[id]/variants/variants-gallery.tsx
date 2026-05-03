@@ -22,6 +22,9 @@ import {
   writePipelineRecoveryJob,
 } from '@/lib/pipeline/pipeline-recovery-storage';
 
+/** Dedupes pipeline warning toasts when React Strict Mode runs effects twice. */
+const pipelineJobWarningsToastSent = new Set<string>();
+
 function WorkspaceSkeleton() {
   return (
     <div className="flex flex-col gap-8 xl:flex-row">
@@ -73,6 +76,13 @@ function VariantsGalleryInner({ projectId }: { projectId: string }) {
         job_id: pipelineJobId,
         source_type: data?.source_type,
       });
+      if (status === 'succeeded') {
+        const w = pipelineJobQuery.data?.result?.warnings;
+        if (w?.length && !pipelineJobWarningsToastSent.has(pipelineJobId)) {
+          pipelineJobWarningsToastSent.add(pipelineJobId);
+          toast.warning(w.join('\n'));
+        }
+      }
     }
     if (status === 'succeeded' || status === 'failed') {
       clearPipelineRecoveryJob(pipelineRecoveryKey);

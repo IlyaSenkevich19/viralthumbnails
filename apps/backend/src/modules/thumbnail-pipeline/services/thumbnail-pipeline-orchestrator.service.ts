@@ -49,6 +49,8 @@ export class ThumbnailPipelineOrchestratorService {
       referenceId: runId,
     });
 
+    const runWarnings: string[] = [];
+
     try {
       await onProgress?.({ stage: 'analyzing_source', label: 'Analyzing source context' });
       const refined = await this.refinement.refineIfConfigured(input.userPrompt);
@@ -156,7 +158,7 @@ export class ThumbnailPipelineOrchestratorService {
             );
           });
           modelsUsed.imageEdit = this.thumbnailEdit.editModel();
-          variants = await this.thumbnailEdit.editVideoFrameVariants({
+          const frameEdit = await this.thumbnailEdit.editVideoFrameVariants({
             baseFrameDataUrl: selectedFramePreviewDataUrl,
             variantBaseFrameDataUrls,
             prompts: imagePromptsUsed,
@@ -175,9 +177,11 @@ export class ThumbnailPipelineOrchestratorService {
                 }
               : undefined,
           });
+          variants = frameEdit.variants;
+          runWarnings.push(...frameEdit.warnings);
         } else {
           modelsUsed.imageGeneration = this.thumbnailGen.imageModel(imageTier);
-          variants = await this.thumbnailGen.generateVariants({
+          const genPack = await this.thumbnailGen.generateVariants({
             prompts: imagePromptsUsed,
             reference: refBundle,
             imageModelTier: imageTier,
@@ -193,6 +197,8 @@ export class ThumbnailPipelineOrchestratorService {
                 }
               : undefined,
           });
+          variants = genPack.variants;
+          runWarnings.push(...genPack.warnings);
         }
         if (!variants.length) {
           throw new BadGatewayException({
@@ -206,12 +212,16 @@ export class ThumbnailPipelineOrchestratorService {
       let edited: ThumbnailPipelineRunResult['edited'];
       if (input.baseImageDataUrl?.trim() && input.editInstruction?.trim()) {
         modelsUsed.imageEdit = this.thumbnailEdit.editModel();
-        edited = await this.thumbnailEdit.editThumbnail({
+        const editedPack = await this.thumbnailEdit.editThumbnail({
           baseImageDataUrl: input.baseImageDataUrl.trim(),
           instruction: input.editInstruction.trim(),
           templateReferenceDataUrls: templateUrls,
           faceReferenceDataUrls: faceUrls,
         });
+        edited = { buffer: editedPack.buffer, contentType: editedPack.contentType };
+        if (editedPack.warnings?.length) {
+          runWarnings.push(...editedPack.warnings);
+        }
       }
 
       const generatedCount = variants?.length ?? 0;
@@ -244,6 +254,7 @@ export class ThumbnailPipelineOrchestratorService {
         variants,
         edited,
         modelsUsed,
+        warnings: runWarnings.length ? runWarnings : undefined,
       };
     } catch (e) {
       try {

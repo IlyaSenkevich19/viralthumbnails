@@ -7,7 +7,10 @@ import { OpenRouterClient } from '../../openrouter/openrouter.client';
 import { requestOpenRouterSingleThumbnailImage } from '../../openrouter/openrouter-requests';
 import { userContentTextThenReferenceImages } from '../../openrouter/multipart-user-content';
 import type { OpenRouterMessage } from '../../openrouter/openrouter.types';
-import { THUMBNAIL_PROMPT_MAX_CHARS_OPENROUTER_MULTIMODAL } from '../../../common/optimized-thumbnail-prompt';
+import {
+  formatOpenRouterMultimodalTruncationWarning,
+  sliceOpenRouterMultimodalUserText,
+} from '../../../common/optimized-thumbnail-prompt';
 
 const EDIT_HEADER =
   'You are editing an existing 16:9 YouTube thumbnail. After this paragraph: first image is the current thumbnail; following images are template and/or face references in that order. Apply the edit instructions while preserving readability and contrast. Never place text over the face, eyes, mouth, hands, or main object.';
@@ -40,7 +43,7 @@ export class PipelineThumbnailEditingService {
     instruction: string;
     templateReferenceDataUrls?: string[];
     faceReferenceDataUrls?: string[];
-  }): Promise<{ buffer: Buffer; contentType: string }> {
+  }): Promise<{ buffer: Buffer; contentType: string; warnings?: string[] }> {
     if (!this.openRouter.getApiKey()) {
       throw new Error('OPENROUTER_API_KEY is not set');
     }
@@ -50,8 +53,16 @@ export class PipelineThumbnailEditingService {
     const faces = params.faceReferenceDataUrls ?? [];
     const ordered = [params.baseImageDataUrl, ...templates, ...faces];
 
-    const body = `${EDIT_HEADER}\n\n${params.instruction.trim().slice(0, THUMBNAIL_PROMPT_MAX_CHARS_OPENROUTER_MULTIMODAL)}`;
+    const instructionTrim = sliceOpenRouterMultimodalUserText(params.instruction.trim());
+    const body = `${EDIT_HEADER}\n\n${instructionTrim.text}`;
     const content: OpenRouterMessage['content'] = userContentTextThenReferenceImages(body, ordered);
+    const trimWarning =
+      instructionTrim.droppedChars > 0
+        ? formatOpenRouterMultimodalTruncationWarning('thumbnail pipeline base-image edit', instructionTrim)
+        : null;
+    if (trimWarning) {
+      this.logger.warn(`[vt-multimodal-prompt] ${trimWarning}`);
+    }
 
     const or = getOpenRouterConfig(this.config);
     const timeoutMs = or.projectGenTimeoutMs;
@@ -69,7 +80,11 @@ export class PipelineThumbnailEditingService {
       if (!img) {
         throw new Error('Pipeline image edit: no image in model response');
       }
-      return { buffer: img.buffer, contentType: img.contentType };
+      return {
+        buffer: img.buffer,
+        contentType: img.contentType,
+        warnings: trimWarning ? [trimWarning] : undefined,
+      };
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       if (msg.includes('timed out')) {
@@ -87,7 +102,7 @@ export class PipelineThumbnailEditingService {
     faceReferenceDataUrls?: string[];
     prioritizeFace?: boolean;
     onProgress?: (progress: { current: number; total: number; percent: number }) => Promise<void>;
-  }): Promise<EditedPipelineImage[]> {
+  }): Promise<{ variants: EditedPipelineImage[]; warnings: string[] }> {
     if (!this.openRouter.getApiKey()) {
       throw new Error('OPENROUTER_API_KEY is not set');
     }
@@ -97,7 +112,9 @@ export class PipelineThumbnailEditingService {
     const faces = params.faceReferenceDataUrls ?? [];
     const timeoutMs = getOpenRouterConfig(this.config).projectGenTimeoutMs;
     const out: EditedPipelineImage[] = [];
+    const warnings: string[] = [];
     const total = params.prompts.length;
+    let worstMultimodalTrim: { droppedChars: number; originalLen: number } | undefined;
 
     const referencePolicy = [
       templates.length
@@ -116,7 +133,16 @@ export class PipelineThumbnailEditingService {
       const prompt = params.prompts[i];
       const baseFrameDataUrl = params.variantBaseFrameDataUrls?.[i] ?? params.baseFrameDataUrl;
       const ordered = [baseFrameDataUrl, ...templates, ...faces];
-      const body = `${VIDEO_FRAME_EDIT_HEADER}\n\n${referencePolicy}\n\nNegative overlay rules: no artificial red circles, no arrows, no yellow dots, no target rings, no fake annotation graphics, no fake UI markers.\n\nEdit instructions:\n${prompt.trim().slice(0, THUMBNAIL_PROMPT_MAX_CHARS_OPENROUTER_MULTIMODAL)}`;
+      const instructionTrim = sliceOpenRouterMultimodalUserText(prompt.trim());
+      if (instructionTrim.droppedChars > 0) {
+        if (!worstMultimodalTrim || instructionTrim.droppedChars > worstMultimodalTrim.droppedChars) {
+          worstMultimodalTrim = {
+            droppedChars: instructionTrim.droppedChars,
+            originalLen: instructionTrim.originalLen,
+          };
+        }
+      }
+      const body = `${VIDEO_FRAME_EDIT_HEADER}\n\n${referencePolicy}\n\nNegative overlay rules: no artificial red circles, no arrows, no yellow dots, no target rings, no fake annotation graphics, no fake UI markers.\n\nEdit instructions:\n${instructionTrim.text}`;
       const content: OpenRouterMessage['content'] = userContentTextThenReferenceImages(body, ordered);
       try {
         const img = await requestOpenRouterSingleThumbnailImage({
@@ -152,6 +178,15 @@ export class PipelineThumbnailEditingService {
       });
     }
 
-    return out;
+    if (worstMultimodalTrim) {
+      const msg = formatOpenRouterMultimodalTruncationWarning(
+        'thumbnail pipeline video-frame edit',
+        worstMultimodalTrim,
+      );
+      warnings.push(msg);
+      this.logger.warn(`[vt-multimodal-prompt] ${msg}`);
+    }
+
+    return { variants: out, warnings };
   }
 }

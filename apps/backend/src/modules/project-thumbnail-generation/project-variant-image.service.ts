@@ -11,8 +11,9 @@ import {
   resolveThumbnailStyleInstruction,
 } from '../../common/thumbnail-prompt-guidelines';
 import {
+  formatOpenRouterMultimodalTruncationWarning,
   generateOptimizedThumbnailPrompt,
-  THUMBNAIL_PROMPT_MAX_CHARS_OPENROUTER_MULTIMODAL,
+  sliceOpenRouterMultimodalUserText,
 } from '../../common/optimized-thumbnail-prompt';
 import { userContentTextThenReferenceImages } from '../openrouter/multipart-user-content';
 import { OpenRouterClient } from '../openrouter/openrouter.client';
@@ -544,7 +545,12 @@ export class ProjectVariantImageService {
 
     const header =
       'Generate a single 16:9 YouTube thumbnail image. After this paragraph, reference images appear in order (template first, then face if present).';
-    const fullPrompt = `${header}\n\n${opts.prompt.slice(0, THUMBNAIL_PROMPT_MAX_CHARS_OPENROUTER_MULTIMODAL)}`;
+    const promptSlice = sliceOpenRouterMultimodalUserText(opts.prompt);
+    if (promptSlice.droppedChars > 0) {
+      const msg = formatOpenRouterMultimodalTruncationWarning('project variant image', promptSlice);
+      this.logger.warn(`[vt-multimodal-prompt] variant=${opts.variantId} ${msg}`);
+    }
+    const fullPrompt = `${header}\n\n${promptSlice.text}`;
 
     const content =
       opts.referenceDataUrls.length > 0

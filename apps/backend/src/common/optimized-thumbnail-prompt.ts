@@ -22,6 +22,33 @@ export type ThumbnailPromptVariantFocus = 'face-focus' | 'text-focus' | 'scene-f
  */
 export const THUMBNAIL_PROMPT_MAX_CHARS_OPENROUTER_MULTIMODAL = 12_000;
 
+/** User text segment sent inside OpenRouter multimodal messages (before reference images). */
+export function sliceOpenRouterMultimodalUserText(userText: string): {
+  text: string;
+  droppedChars: number;
+  originalLen: number;
+} {
+  const originalLen = userText.length;
+  const cap = THUMBNAIL_PROMPT_MAX_CHARS_OPENROUTER_MULTIMODAL;
+  if (originalLen <= cap) {
+    return { text: userText, droppedChars: 0, originalLen };
+  }
+  return { text: userText.slice(0, cap), droppedChars: originalLen - cap, originalLen };
+}
+
+/** Non-null when {@link sliceOpenRouterMultimodalUserText} dropped characters; for logs and API `warnings`. */
+export function formatOpenRouterMultimodalTruncationWarning(
+  context: string,
+  info: { droppedChars: number; originalLen: number },
+): string {
+  return (
+    `OpenRouter multimodal prompt was truncated (${context}): ` +
+    `removed ${info.droppedChars} of ${info.originalLen} characters ` +
+    `(cap THUMBNAIL_PROMPT_MAX_CHARS_OPENROUTER_MULTIMODAL=${THUMBNAIL_PROMPT_MAX_CHARS_OPENROUTER_MULTIMODAL}). ` +
+    `Shorten templates or creator notes if the image drifts from your intent.`
+  );
+}
+
 export type PromptComplianceResult = {
   score: number;
   passed: number;

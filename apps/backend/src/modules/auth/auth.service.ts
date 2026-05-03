@@ -1,7 +1,8 @@
-import { BadGatewayException, Injectable, Logger } from '@nestjs/common';
+import { BadGatewayException, forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SupabaseService } from '../supabase/supabase.service';
 import { LeadCrmWebhookService } from '../lead-crm/lead-crm-webhook.service';
+import { ManualCreditService } from '../billing/manual-credit.service';
 import type { CompleteLeadQualificationDto } from './dto/complete-lead-qualification.dto';
 
 @Injectable()
@@ -12,6 +13,8 @@ export class AuthService {
     private readonly config: ConfigService,
     private readonly supabase: SupabaseService,
     private readonly leadCrm: LeadCrmWebhookService,
+    @Inject(forwardRef(() => ManualCreditService))
+    private readonly manualCredit: ManualCreditService,
   ) {}
 
   async getBootstrap(userId: string) {
@@ -23,12 +26,16 @@ export class AuthService {
         email: null as string | null,
         trialStarted: true,
         leadQualificationCompleted: true,
+        pendingCreditsClaimed: 0,
       };
     }
     const client = this.supabase.getAdminClient();
 
     const { data: authData, error: authErr } = await client.auth.admin.getUserById(userId);
     if (authErr) throw authErr;
+
+    let trialStarted = true;
+    let leadQualificationCompleted = true;
 
     const { data: profile, error: profileErr } = await client
       .from('profiles')
@@ -40,24 +47,33 @@ export class AuthService {
       this.logger.warn(
         `[auth/me] profiles select failed (${profileErr.message}) — returning permissive bootstrap. Run migration 013_lead_qualification_completed_at.sql if this persists.`,
       );
-      return {
-        id: authData.user.id,
-        email: authData.user.email ?? null,
-        trialStarted: true,
-        leadQualificationCompleted: true,
+    } else if (profile) {
+      const row = profile as {
+        trial_started_at?: string | null;
+        lead_qualification_completed_at?: string | null;
       };
+      trialStarted = Boolean(row.trial_started_at);
+      leadQualificationCompleted = Boolean(row.lead_qualification_completed_at);
     }
 
-    const row = profile as {
-      trial_started_at?: string | null;
-      lead_qualification_completed_at?: string | null;
-    } | null;
+    const email = authData.user.email ?? null;
+    let pendingCreditsClaimed = 0;
+    if (email?.trim()) {
+      try {
+        const r = await this.manualCredit.claimPendingForUser(authData.user.id, email);
+        pendingCreditsClaimed = r.creditsTotal;
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        this.logger.warn(`[auth/me] claimPendingForUser: ${msg}`);
+      }
+    }
 
     return {
       id: authData.user.id,
-      email: authData.user.email ?? null,
-      trialStarted: Boolean(row?.trial_started_at),
-      leadQualificationCompleted: Boolean(row?.lead_qualification_completed_at),
+      email,
+      trialStarted,
+      leadQualificationCompleted,
+      pendingCreditsClaimed,
     };
   }
 

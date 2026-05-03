@@ -8,6 +8,8 @@ export type AuthBootstrapDto = {
   trialStarted: boolean;
   /** Present on API ≥ lead-qual migration; absent older backends default to `true` in {@link fetchAuthBootstrap} consumers. */
   leadQualificationCompleted?: boolean;
+  /** Credits applied from `pending_manual_credits` on this `/auth/me` call (mediator MVP). */
+  pendingCreditsClaimed?: number;
 };
 
 export type CompleteLeadQualificationPayload = LeadAttribution & {

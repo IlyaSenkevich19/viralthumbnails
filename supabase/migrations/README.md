@@ -19,6 +19,7 @@ Apply **в порядке номеров** на вашей БД (или чере
 | `012_trial_start_gate.sql` | Поля/логика старта триала в `profiles` |
 | `013_lead_qualification_completed_at.sql` | Время завершения квала лида в приложении (`profiles.lead_qualification_completed_at`) |
 | `014_manual_credit_claims.sql` | Идемпотентность ручных оплат + `lookup_auth_user_id_by_email` для `POST /api/billing/manual-credit` |
+| `015_pending_manual_credits.sql` | Оплаты до регистрации; начисление при `GET /auth/me` (claim по email) |
 
 **Важно:** не удаляйте файлы миграций, которые уже применены в окружениях — это ломает историю. Новые изменения схемы — только **новыми** файлами с большим номером.
 

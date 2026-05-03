@@ -4,13 +4,24 @@
 
 Связанные материалы: [`manual-payments-crediting-plan.md`](./manual-payments-crediting-plan.md), чеклист в [`next-session-tasks.md`](./next-session-tasks.md) §4.
 
-### Тестовый endpoint в репозитории (Nest)
+### Реализация в репозитории (Nest)
 
-После миграции **`014_manual_credit_claims.sql`** и переменной **`MANUAL_BILLING_WEBHOOK_SECRET`**:
+Миграции: **`014_manual_credit_claims.sql`**, **`015_pending_manual_credits.sql`**. Env: **`MANUAL_BILLING_WEBHOOK_SECRET`**.
 
-- **`POST /api/billing/manual-credit`** (без JWT), заголовок **`X-Manual-Billing-Secret`**: то же значение, что в env.
-- Тело JSON: `email`, `external_payment_id` (уникальный id оплаты от посредника), `credits` (целое 1…50000), опционально `plan_code`, `source`.
-- Идемпотентность по **`external_payment_id`** + строка в **`manual_credit_claims`**; в **`credit_ledger`** запись с `reason: purchase`, `reference_type: manual_external_payment`.
+#### `POST /api/billing/manual-credit` (без JWT)
+
+Заголовок **`X-Manual-Billing-Secret`** = значение из env.  
+Тело: `email`, `external_payment_id`, `credits` (1…50000), опционально `plan_code`, `source`.
+
+| Ситуация | Ответ (суть) |
+|----------|----------------|
+| Пользователь с этим email **есть** | Начисление сразу → `manual_credit_claims` + `credit_ledger`, `pending: false`. |
+| Пользователя **нет** | Строка в **`pending_manual_credits`**, `pending: true` (кредиты начислятся после регистрации). |
+| Повтор того же `external_payment_id` | `duplicate: true` (и `pending: true`, если ещё в очереди). |
+
+#### Синк после регистрации
+
+При каждом **`GET /api/auth/me`** Nest вызывает **`claimPendingForUser`**: все строки `pending_manual_credits` со статусом `pending` и **тем же email** (нормализованный lower-case), что у сессии, начисляются и помечаются `applied`. В ответе bootstrap опционально поле **`pendingCreditsClaimed`** — сумма кредитов, применённых за этот запрос (удобно для отладки).
 
 Пример `curl` (локально):
 

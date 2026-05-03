@@ -35,7 +35,7 @@
    - оплаченный пакет/сумму;
    - timestamp.
 3. Автоматизация вызывает backend endpoint:
-   - `POST /api/billing/manual-credit`
+   - `POST /api/billing/manual-credit` (реализовано в Nest — см. `docs/payments-mvp-email-to-credits.md`, миграция `014_manual_credit_claims.sql`, заголовок `X-Manual-Billing-Secret`).
 4. Backend:
    - ищет пользователя по email;
    - вычисляет количество кредитов по таблице соответствий;

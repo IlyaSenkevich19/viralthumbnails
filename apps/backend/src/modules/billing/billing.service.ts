@@ -251,6 +251,81 @@ export class BillingService {
     };
   }
 
+  /**
+   * Adds generation credits after external (mediator) payment. Idempotent claim row must be inserted by caller first.
+   * Writes `credit_ledger` with reason `purchase`, reference_type `manual_external_payment`.
+   */
+  async grantManualExternalPaymentCredits(params: {
+    userId: string;
+    credits: number;
+    externalPaymentId: string;
+    email: string;
+    metadata?: Record<string, unknown>;
+  }): Promise<{ newBalance: number; totalGranted: number }> {
+    const amount = Math.floor(params.credits);
+    if (amount <= 0) {
+      throw new ForbiddenException({ code: 'INVALID_CREDITS', message: 'credits must be a positive integer.' });
+    }
+    if (amount > 50_000) {
+      throw new ForbiddenException({ code: 'CREDITS_CAP', message: 'credits exceeds maximum allowed per request.' });
+    }
+
+    await this.ensureProfileRow(params.userId);
+    const client = this.supabase.getAdminClient();
+
+    for (let attempt = 0; attempt < RESERVE_RETRY; attempt++) {
+      const { data: row, error: selErr } = await client
+        .from('profiles')
+        .select('generation_credits_balance, generation_credits_total_granted')
+        .eq('id', params.userId)
+        .maybeSingle();
+      if (selErr) throw new InternalServerErrorException(selErr.message);
+      if (!row) {
+        throw new InternalServerErrorException('Profile row missing after ensureProfileRow.');
+      }
+      const bal = row.generation_credits_balance as number;
+      const tg =
+        (row.generation_credits_total_granted as number | null) ??
+        (row as { generation_credits_quota?: number }).generation_credits_quota ??
+        DEFAULT_CREDITS.totalGranted;
+      const newBal = bal + amount;
+      const newTg = tg + amount;
+
+      const { data: updated, error: upErr } = await client
+        .from('profiles')
+        .update({
+          generation_credits_balance: newBal,
+          generation_credits_total_granted: newTg,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', params.userId)
+        .eq('generation_credits_balance', bal)
+        .select('id')
+        .maybeSingle();
+      if (upErr) throw new InternalServerErrorException(upErr.message);
+      if (updated) {
+        await this.appendCreditLedgerEntry({
+          userId: params.userId,
+          delta: amount,
+          balanceAfter: newBal,
+          reason: 'purchase',
+          referenceType: 'manual_external_payment',
+          referenceId: params.externalPaymentId,
+          metadata: {
+            email: params.email,
+            ...params.metadata,
+          },
+        });
+        return { newBalance: newBal, totalGranted: newTg };
+      }
+    }
+
+    throw new ConflictException({
+      code: 'CREDITS_GRANT_CONFLICT',
+      message: 'Could not apply credits. Please retry.',
+    });
+  }
+
   async getCreditLedger(userId: string, limit = 30) {
     const client = this.supabase.getAdminClient();
     const safeLimit = Math.min(100, Math.max(1, Math.floor(limit)));

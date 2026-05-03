@@ -1,19 +1,6 @@
 # Задачи на следующую сессию (продукт / интеграции)
 
-Краткий чеклист — можно отмечать по мере выполнения.
-
----
-
-## 1. Регистрация и авторизация через Google
-
-- [ ] Проверить в **Supabase**: провайдер Google включён, redirect URLs для **prod** и **staging** совпадают с реальными origin.
-- [ ] В **Google Cloud Console**: OAuth client (web), authorized redirect URIs из документации Supabase.
-- [ ] Прогнать флоу: **Login / Register** (`GoogleSignInButton` → `authApi.signInWithGoogle`), редирект на `/create`, затем при новом пользователе — **модалка квала** → `/welcome-trial` при `trialStarted === false`.
-- [ ] Убедиться, что новый пользователь получает `profiles` и миграция **`013_lead_qualification_completed_at.sql`** применена в Supabase.
-
-**Код:** `apps/frontend/src/lib/api/auth.ts`, `google-sign-in-button.tsx`, `login-screen.tsx`, `auth/register/page.tsx`, `components/layout/lead-qualification-gate.tsx`, `components/onboarding/lead-qualification-modal.tsx`.
-
-## 3. Аналитика
+## 2. Аналитика
 
 - [ ] Проверить **env** для GTM / dataLayer (см. `marketing-scripts.tsx`, `analytics-listeners.tsx`, `lib/analytics.ts`).
 - [ ] В проде: события доходят (`signup_started`, `signup_completed`, `lead_qualification_*`, `trial_started`, `generation_*`, credits — grep по `trackEvent`).
@@ -21,7 +8,7 @@
 
 ---
 
-## 4. Регрессионное тестирование
+## 3. Регрессионное тестирование
 
 - [ ] Auth: email + Google, sign-out, сессия после reload.
 - [ ] Квал: новый пользователь → модалка → CRM → `GET /auth/me` с `leadQualificationCompleted: true`.
@@ -31,19 +18,15 @@
 
 ---
 
-## 5. Поддержка пользователей (чат / тикеты)
+## 4. Оплаты MVP (ссылка от посредника → письмо → зачисление кредитов)
 
-**Варианты (не только Intercom):**
+**Кратко:** посредник даёт платёжную ссылку → письмо с email плательщика → сопоставить пользователя → начислить кредиты. Подробно: сравнение вариантов (ручное, Apps Script, Zapier/Make/n8n, poller в Nest), почему это не как Support Widget, рекомендуемые этапы и техтребования — в **[`docs/payments-mvp-email-to-credits.md`](./payments-mvp-email-to-credits.md)**.
 
-| Вариант | Суть |
-|--------|------|
-| **Telegram-бот отдельно** | Например [telegram-support-bot](https://github.com/bostrot/telegram-support-bot) — свой процесс/Docker; в приложении — кнопка «Написать в Telegram». |
-| **Виджет SaaS** | Tawk, Crisp, Help Scout, Zendesk. |
-| **Свой виджет** | `POST` на Nest → почта или Telegram; нужны **rate limit** + валидация. |
+### Чеклист
 
-- [ ] Выбрать канал.
-- [ ] Endpoint + секреты при своём виджете.
-- [ ] CTA в UI.
+- [ ] Прочитать **`docs/payments-mvp-email-to-credits.md`** и выбрать этап (A ручной → B автоматизация → C Stripe).
+- [ ] Зафиксировать у посредника **пример письма** после оплаты.
+- [ ] Начисление только через **ledger / billing** (см. `manual-payments-crediting-plan.md`), с секретом и идемпотентностью при любом HTTP из автоматики.
 
 ---
 

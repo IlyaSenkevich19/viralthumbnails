@@ -27,7 +27,7 @@ API for **ViralThumblify**: Supabase-backed projects, thumbnail variants, templa
 | **SupportModule** | **`POST /api/support/contact`** (публично, throttle) → Telegram `sendMessage` (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_SUPPORT_CHAT_ID`); honeypot `company` |
 | **HealthModule** | Liveness |
 | **StorageModule** | Загрузки и signed URL: проекты, шаблоны, аватары, временное видео для pipeline и итоговые картинки |
-| **BillingModule** | Резерв и возврат кредитов: варианты проекта и **`pipeline/run`** (`creditsForThumbnailPipelineRun`) |
+| **BillingModule** | Резерв и возврат кредитов: варианты проекта и **`pipeline/run`** (`creditsForThumbnailPipelineRun`); **`POST /api/billing/manual-credit`** (без JWT, секрет `X-Manual-Billing-Secret`) — начисление после оплаты посредником, см. `docs/payments-mvp-email-to-credits.md` |
 | **OpenRouterModule** (`@Global`) | Один экземпляр `OpenRouterClient` на всё приложение |
 | **ProjectThumbnailGenerationModule** | `ProjectVariantImageService` — картинка для одной строки `thumbnail_variants` (OpenRouter или placeholder) |
 | **ProjectsModule** | CRUD проектов; `ProjectGenerationService` — оркестрация N вариантов + биллинг + вызов `ProjectVariantImageService` |
@@ -198,6 +198,9 @@ curl -s -H "Authorization: Bearer <supabase_access_token>" http://localhost:3001
 #   -d '{"lead_session_id":"…","channel_url":"https://youtube.com/…","funnel_stage":"landing"}'
 # curl -s -X POST http://localhost:3001/api/support/contact -H "Content-Type: application/json" \
 #   -d '{"email":"you@example.com","message":"Hello","source":"landing"}'
+# curl -s -X POST http://localhost:3001/api/billing/manual-credit -H "Content-Type: application/json" \
+#   -H "X-Manual-Billing-Secret: $MANUAL_BILLING_WEBHOOK_SECRET" \
+#   -d '{"email":"buyer@example.com","external_payment_id":"test_001","credits":50}'
 ```
 
 Use Swagger at `/api/docs` for authenticated routes (`Authorize` with the same Bearer token).

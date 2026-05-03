@@ -18,7 +18,7 @@ function clean(value: string | null): string | undefined {
   return v ? v : undefined;
 }
 
-export function collectLeadAttribution(): LeadAttribution {
+export function collectLeadAttribution(opts?: { source?: string }): LeadAttribution {
   if (typeof window === 'undefined') return {};
   const params = new URLSearchParams(window.location.search);
 
@@ -32,7 +32,7 @@ export function collectLeadAttribution(): LeadAttribution {
     fbclid: clean(params.get('fbclid')),
     referrer: clean(document.referrer || null),
     page_path: clean(window.location.pathname),
-    source: 'app_register',
+    source: opts?.source ?? 'app_register',
   };
 
   const raw = window.localStorage.getItem(STORAGE_KEY);
@@ -55,7 +55,7 @@ export function collectLeadAttribution(): LeadAttribution {
     fbclid: fresh.fbclid ?? saved.fbclid,
     referrer: fresh.referrer ?? saved.referrer,
     page_path: fresh.page_path,
-    source: fresh.source,
+    source: fresh.source ?? saved.source,
   };
 
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));

@@ -12,6 +12,7 @@ export function TrialWelcomeGate({ children }: { children: ReactNode }) {
     accessToken,
     user,
     trialStarted,
+    leadQualificationCompleted,
     isLoading: authLoading,
   } = useAuth();
 
@@ -20,8 +21,17 @@ export function TrialWelcomeGate({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (authLoading || !isSignedIn || isWelcomeRoute) return;
+    if (leadQualificationCompleted === false || leadQualificationCompleted === null) return;
     if (trialStarted === false) router.replace(AppRoutes.welcomeTrial);
-  }, [authLoading, isSignedIn, isWelcomeRoute, pathname, router, trialStarted]);
+  }, [
+    authLoading,
+    isSignedIn,
+    isWelcomeRoute,
+    pathname,
+    router,
+    trialStarted,
+    leadQualificationCompleted,
+  ]);
 
   return <>{children}</>;
 }

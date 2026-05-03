@@ -32,7 +32,7 @@ export function TrialWelcomeClient() {
     accessToken,
     isLoading: authLoading,
     trialStarted,
-    refreshTrialBootstrap,
+    refreshAuthBootstrap,
   } = useAuth();
   const { data: credits, isPending, isError, refetch } = useGenerationCredits();
 
@@ -51,7 +51,7 @@ export function TrialWelcomeClient() {
       if (user?.id) {
         queryClient.setQueryData(queryKeys.billing.credits(user.id), nextCredits);
       }
-      await refreshTrialBootstrap();
+      await refreshAuthBootstrap();
       toast.success('Starter credits unlocked');
       router.replace(AppRoutes.create);
     },

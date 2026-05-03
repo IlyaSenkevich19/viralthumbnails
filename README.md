@@ -24,7 +24,7 @@ The backend uses **`FRONTEND_URL`** for CORS — use your real frontend origin i
 
 1. **Node**: use `.nvmrc` (`nvm use`).
 
-2. **Supabase**: create a project, enable Email (or other) auth. Run SQL migrations in order from `supabase/migrations/` (at minimum **001** → **002** → **003_generation_credits** → **007_profiles_auto_create**). **007** adds a trigger on `auth.users` and backfills `profiles` for existing users — without it, billing/generation often fails for new accounts.
+2. **Supabase**: create a project, enable Email (or other) auth. Run SQL migrations in order from `supabase/migrations/` (at minimum **001** → **002** → both **003_*** → **007_profiles_auto_create**; then **008**+ as in `supabase/migrations/README.md`). **007** adds a trigger on `auth.users` and backfills `profiles` for existing users — without it, billing/generation often fails for new accounts. Для квала лидов и триала примените также **012**, **013** (см. таблицу в `supabase/migrations/README.md`).
 
 3. **Env**: `cp .env.example .env` and fill Supabase keys. `yarn dev` / `yarn build` sync `NEXT_PUBLIC_*` into `apps/frontend/.env.local` via `scripts/sync-frontend-env.js`.
 
@@ -53,7 +53,8 @@ yarn dev
 - Frontend sign-in/sign-up uses Supabase client auth in `apps/frontend/src/lib/api/auth.ts`.
 - Frontend middleware in `apps/frontend/src/lib/supabase/middleware.ts` protects non-public routes.
 - Backend validates Bearer JWT with Supabase in `apps/backend/src/modules/auth/guards/supabase.guard.ts`.
-- Backend `GET /api/auth/me` reads user by id through Supabase Admin API in `apps/backend/src/modules/auth/auth.service.ts`.
+- Backend `GET /api/auth/me` reads user by id through Supabase Admin API in `apps/backend/src/modules/auth/auth.service.ts` (в т.ч. `trialStarted`, `leadQualificationCompleted`).
+- **Квалификация лида:** короткий `/auth/register` → после входа в приложение модалка (`LeadQualificationGate`) → **`POST /api/auth/lead-qualification`** (Bearer) → Nest **`LeadCrmWebhookService`** → Google Apps Script. Публичные формы (лендинг) → **`POST /api/leads/intake`** без JWT. URL вебхука только на сервере (`LEAD_INTAKE_WEBHOOK_URL` в `.env`), не в клиенте.
 
 ## Troubleshooting
 

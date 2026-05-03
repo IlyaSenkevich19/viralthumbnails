@@ -17,7 +17,7 @@
 
 | Area | Paths |
 |------|--------|
-| Public | `/` (sign in), `/auth/register` |
+| Public | `/` (sign in), `/auth/register` (короткая форма: Google или email+пароль; квал лидов — модалка после входа в приложение) |
 | App shell (sidebar) | `/dashboard`, `/projects`, `/projects/[id]`, `/projects/[id]/variants`, `/templates`, `/avatars`, `/credits`, `/settings` (+ admin `/admin/youtube-inspiration`) |
 
 Protected routes rely on **middleware** + Supabase session (`src/middleware.ts`, `src/lib/supabase/middleware.ts`).  
@@ -71,7 +71,14 @@ NEXT_PUBLIC_BACKEND_URL=http://localhost:3001
 
 ### Monorepo env sync
 
-From the **repo root**, `yarn dev` / `yarn build` runs `scripts/sync-frontend-env.js`, which copies selected `NEXT_PUBLIC_*` (and related) vars from root **`.env`** into **`apps/frontend/.env.local`**. After changing root env, rerun dev or sync so the frontend picks them up.
+From the **repo root**, `yarn dev` / `yarn build` runs `scripts/sync-frontend-env.js`, which copies **`NEXT_PUBLIC_*`** from root **`.env`** into **`apps/frontend/.env.local`**. CRM webhook (`LEAD_INTAKE_WEBHOOK_URL`) остаётся только в корневом `.env` для Nest — в фронтовый `.env.local` не копируется.
+
+### Leads / CRM (через backend)
+
+- **В приложении (после логина):** `POST /api/auth/lead-qualification` с Bearer — см. `completeLeadQualification` в `src/lib/api/auth-bootstrap.ts`, модалка `LeadQualificationModal`.
+- **Публично (лендинг, без JWT):** `POST /api/leads/intake` — обёртка `submitPublicLeadIntake` в `src/lib/api/leads.ts` (тот же origin `/api/...` → rewrite на Nest).
+
+Не вызывайте URL Google Apps Script из браузера напрямую — секрет и контракт живут на сервере.
 
 **`apps/frontend/.env.development`** is loaded only for `next dev` and defaults `NEXT_PUBLIC_BACKEND_URL` to `http://localhost:3001`. Production builds on Vercel use **`NODE_ENV=production`**, so that file is not applied there — use Vercel env vars instead. See root **`README.md`** (“Local vs production”).
 
@@ -110,6 +117,7 @@ yarn lint
 1. Login/register: Supabase client in `src/lib/supabase/client.ts`.
 2. `AuthProvider` exposes session + token for API calls and Query `enabled` flags.
 3. Middleware refreshes session and gates protected routes (redirect to `/` when unauthenticated).
+4. Пока `leadQualificationCompleted === false` в `/auth/me`, в приложении показывается модалка квала; отправка — `completeLeadQualification` → `POST /api/auth/lead-qualification` (CRM на сервере, см. раздел Leads / CRM выше).
 
 ## Deployment (e.g. Vercel)
 

@@ -67,6 +67,20 @@
 
 ---
 
+## Вариант C (текущий монорепо): Nest → Apps Script Webhook
+
+**Правильный путь:** браузер → **ваш API** (Next rewrite на Nest) → **Google Apps Script** (`doPost`). Не вызывать URL скрипта из клиентского JS — иначе URL в бандле, сложнее ротировать секреты и лимитировать спам.
+
+В репозитории:
+
+- Общая логика формирования JSON и `fetch` на `LEAD_INTAKE_WEBHOOK_URL` — **`LeadCrmWebhookService`** (`apps/backend/src/modules/lead-crm/lead-crm-webhook.service.ts`).
+- **Публичные лиды (лендинг, без логина):** `POST /api/leads/intake` — `LeadsController`, DTO `PublicLeadIntakeDto` (опционально `email`, `funnel_stage`).
+- **После входа в приложение (квал):** `POST /api/auth/lead-qualification` с Bearer — email из Supabase JWT, `funnel_stage: post_app_qualification_completed`, затем поле `profiles.lead_qualification_completed_at`.
+
+Оба эндпоинта шлют **один и тот же контракт**, что ожидает ваш Apps Script (в т.ч. `lead_session_id` для upsert строки).
+
+---
+
 ## Минимальные поля события формы (payload)
 
 ```json
@@ -133,13 +147,13 @@
 
 1. Добавить форму на лендинге (или расширить текущую).
 2. Подключить сбор UTM/gclid в hidden поля.
-3. Реализовать отправку в Google Sheets (A или B).
+3. Отправлять **`POST`** на origin приложения **`/api/leads/intake`** (JSON как в таблице выше) — запрос уйдёт на Nest и далее в Apps Script (вариант **C**). Либо варианты **A/B** из разделов выше, если без Nest.
 4. Добавить GA4 событие `lead_submit`.
 5. QA:
    - форма отправляется;
    - строка появляется в Sheet;
    - UTM/gclid не теряются;
-   - дубль отправки корректно обрабатывается.
+   - дубль отправки корректно обрабатывается (по `lead_session_id` в скрипте).
 
 ---
 

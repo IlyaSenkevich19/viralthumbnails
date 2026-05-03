@@ -22,7 +22,8 @@ API for **ViralThumblify**: Supabase-backed projects, thumbnail variants, templa
 |---------------|-----------------|
 | **ConfigModule** (+ `openrouter.config.ts`, `video-pipeline.config.ts`, `openrouter-models.ts`) | Env: `OPENROUTER_API_KEY`; **Phase 0:** лимит длительности — константа `VIDEO_PIPELINE_MAX_DURATION_SECONDS` в коде; опционально `YOUTUBE_DATA_API_KEY` для YouTube; slug’и — **`openrouter-models.ts`** |
 | **SupabaseModule** | Admin-клиент Supabase для БД и Storage с сервера |
-| **AuthModule** | Проверка JWT (`SupabaseGuard`), `GET /api/auth/me` |
+| **AuthModule** | Проверка JWT (`SupabaseGuard`), `GET /api/auth/me`, `POST /api/auth/lead-qualification` (квал после входа → CRM + `profiles.lead_qualification_completed_at`) |
+| **LeadCrmModule** | **`POST /api/leads/intake`** (публично, throttle) + **`LeadCrmWebhookService`** — единственная отправка JSON в Google Apps Script (`LEAD_INTAKE_WEBHOOK_URL`); используется и из Auth |
 | **HealthModule** | Liveness |
 | **StorageModule** | Загрузки и signed URL: проекты, шаблоны, аватары, временное видео для pipeline и итоговые картинки |
 | **BillingModule** | Резерв и возврат кредитов: варианты проекта и **`pipeline/run`** (`creditsForThumbnailPipelineRun`) |
@@ -114,6 +115,20 @@ Slug’и — идентификаторы на [OpenRouter](https://openrouter.
 OPENROUTER_API_KEY=
 ```
 
+### CRM / leads (optional)
+
+Nest читает из того же корневого **`.env`**. Без URL вебхука эндпоинты квала и публичного intake отвечают успехом, но **не** шлют данные наружу.
+
+| Variable | Role |
+|----------|------|
+| `LEAD_INTAKE_WEBHOOK_URL` | Google Apps Script Web App URL (`doPost`) — единственное место исходящего запроса в CRM |
+| `LEAD_INTAKE_DEBUG` | `1` — подробнее логировать ответы вебхука (по коду сервиса) |
+
+```env
+LEAD_INTAKE_WEBHOOK_URL=
+LEAD_INTAKE_DEBUG=0
+```
+
 `POST /api/thumbnails/pipeline/run-video` (Bearer, `multipart/form-data`): field `file` **or** `videoUrl`, optional `count` (1–12), `style`, `prompt`, `template_id`, `avatar_id`, `prioritize_face`. Внутри: ingest видео -> `pipeline/run` -> persist project.
 
 `POST /api/thumbnails/pipeline/run` (Bearer, JSON): модульный OpenRouter-пайплайн (always-on). Поля: `user_prompt` (обязательно), опционально `video_url`, `template_reference_data_urls`, `face_reference_data_urls`, `variant_count`, `generate_images`, `prioritize_face`, `base_image_data_url` + `edit_instruction`, `persist_project`. Ответ включает `run_id`, **`credits_charged`**, `analysis`, `image_prompts_used`, `models_used`, `persisted_project`, при `generate_images: true` — `variants[].image_base64`. Модели шагов — **`src/config/openrouter-models.ts`** (`PIPELINE_STEP_MODELS`).
@@ -165,6 +180,9 @@ yarn lint
 curl -s http://localhost:3001/
 curl -s http://localhost:3001/api/health
 curl -s -H "Authorization: Bearer <supabase_access_token>" http://localhost:3001/api/auth/me
+# Публичный лид в CRM (тело как в Google Sheets / Apps Script `doPost`):
+# curl -s -X POST http://localhost:3001/api/leads/intake -H "Content-Type: application/json" \
+#   -d '{"lead_session_id":"…","channel_url":"https://youtube.com/…","funnel_stage":"landing"}'
 ```
 
 Use Swagger at `/api/docs` for authenticated routes (`Authorize` with the same Bearer token).

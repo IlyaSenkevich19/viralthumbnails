@@ -9,6 +9,8 @@
 ## Auth & shell
 
 - [ ] Вход (email или Google) ведёт на `/create`
+- [ ] Новый пользователь: после входа показывается **модалка квала** (`LeadQualificationGate`); после отправки — CRM получает строку (если задан `LEAD_INTAKE_WEBHOOK_URL`), `GET /api/auth/me` отдаёт `leadQualificationCompleted: true`
+- [ ] `/auth/register` — короткая форма (Google / email+пароль), без длинного мастера на странице
 - [ ] Header: кредиты без «прыжка» вёрстки, кнопка Create, после reload ок
 - [ ] Sidebar: подсветка текущего раздела
 

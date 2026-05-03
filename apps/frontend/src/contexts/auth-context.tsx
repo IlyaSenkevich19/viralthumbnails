@@ -11,8 +11,10 @@ interface AuthContextType {
   accessToken: string | null;
   /** Set only when signed in (`user` present); `false` means user still needs `/welcome-trial`. */
   trialStarted: boolean | null;
-  /** Re-read `/auth/me` after mutations (e.g. start trial). */
-  refreshTrialBootstrap: () => Promise<void>;
+  /** `false` = show in-app lead qualification; `true` = done; `null` = not loaded or signed out. */
+  leadQualificationCompleted: boolean | null;
+  /** Re-read `/auth/me` after mutations (e.g. start trial, complete lead qualification). */
+  refreshAuthBootstrap: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -21,6 +23,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [trialStarted, setTrialStarted] = useState<boolean | null>(null);
+  const [leadQualificationCompleted, setLeadQualificationCompleted] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const hydrate = useCallback(async (session: Session | null) => {
@@ -28,17 +31,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setAccessToken(session?.access_token ?? null);
     if (!session?.access_token || !session.user) {
       setTrialStarted(null);
+      setLeadQualificationCompleted(null);
       return;
     }
     try {
       const me = await fetchAuthBootstrap(session.access_token);
       setTrialStarted(me.trialStarted);
+      setLeadQualificationCompleted(me.leadQualificationCompleted ?? true);
     } catch {
       setTrialStarted(true);
+      setLeadQualificationCompleted(true);
     }
   }, []);
 
-  const refreshTrialBootstrap = useCallback(async () => {
+  const refreshAuthBootstrap = useCallback(async () => {
     const supabase = createClient();
     const {
       data: { session },
@@ -46,13 +52,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const t = session?.access_token;
     if (!session?.user || !t) {
       setTrialStarted(null);
+      setLeadQualificationCompleted(null);
       return;
     }
     try {
       const me = await fetchAuthBootstrap(t);
       setTrialStarted(me.trialStarted);
+      setLeadQualificationCompleted(me.leadQualificationCompleted ?? true);
     } catch {
       setTrialStarted(true);
+      setLeadQualificationCompleted(true);
     }
   }, []);
 
@@ -96,7 +105,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         accessToken,
         trialStarted,
-        refreshTrialBootstrap,
+        leadQualificationCompleted,
+        refreshAuthBootstrap,
       }}
     >
       {children}

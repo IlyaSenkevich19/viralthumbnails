@@ -8,6 +8,10 @@ export const ApiRoutes = {
   healthSetup: '/health/setup',
   auth: {
     me: '/auth/me',
+    leadQualification: '/auth/lead-qualification',
+  },
+  leads: {
+    intake: '/leads/intake',
   },
   billing: {
     credits: '/billing/credits',

@@ -1,6 +1,6 @@
 # Задачи на следующую сессию (продукт / интеграции)
 
-Краткий чеклист из обсуждения — можно отмечать по мере выполнения.
+Краткий чеклист — можно отмечать по мере выполнения.
 
 ---
 
@@ -8,36 +8,45 @@
 
 - [ ] Проверить в **Supabase**: провайдер Google включён, redirect URLs для **prod** и **staging** совпадают с реальными origin.
 - [ ] В **Google Cloud Console**: OAuth client (web), authorized redirect URIs из документации Supabase.
-- [ ] Прогнать флоу: **Login** (`GoogleSignInButton` → `authApi.signInWithGoogle`) и редирект после OAuth (сейчас в коде редирект на create — убедиться, что это желаемое поведение).
-- [ ] Убедиться, что новый пользователь получает профиль / не ломается триал (`/auth/me`, `TrialWelcomeGate`).
+- [ ] Прогнать флоу: **Login / Register** (`GoogleSignInButton` → `authApi.signInWithGoogle`), редирект на `/create`, затем при новом пользователе — **модалка квала** → `/welcome-trial` при `trialStarted === false`.
+- [ ] Убедиться, что новый пользователь получает `profiles` и миграция **`013_lead_qualification_completed_at.sql`** применена в Supabase.
 
-**Код ориентиры:** `apps/frontend/src/lib/api/auth.ts`, `google-sign-in-button.tsx`, `login-screen.tsx`, `use-auth-mutations.ts`.
+**Код:** `apps/frontend/src/lib/api/auth.ts`, `google-sign-in-button.tsx`, `login-screen.tsx`, `auth/register/page.tsx`, `components/layout/lead-qualification-gate.tsx`, `components/onboarding/lead-qualification-modal.tsx`.
 
 ---
 
-## 2. Квалификация лидов (вопросы и момент показа)
+## 2. Лиды и CRM (Google Sheets)
 
-- [ ] Зафиксировать **продуктово**: какие поля обязательны, какие опциональны, на каком шаге (только register vs после входа / перед триалом).
-- [ ] Сверить с текущей реализацией: метаданные signup (`SignUpLeadMetadata` в `auth.ts`), `lead-attribution.ts`, `lead-intake` API, форма `auth/register` (`LeadCustomSelect` и т.д.).
-- [ ] При необходимости: упростить форму, перенести часть вопросов, добавить сохранение в CRM/таблицу — по выбранному сценарию.
+**Реализовано:** один серверный путь в вебхук — `LeadCrmWebhookService` (`apps/backend/src/modules/lead-crm/`):
+
+| Эндпоинт | Назначение |
+|----------|------------|
+| `POST /api/leads/intake` | Публично (без JWT), throttle; лендинги / тесты `curl`. |
+| `POST /api/auth/lead-qualification` | После входа, Bearer; email из JWT; выставляет `lead_qualification_completed_at`. |
+
+Клиент **никогда** не шлёт запросы напрямую на URL Apps Script — только на свой origin `/api/...` → rewrite на Nest.
+
+- [ ] В проде: **`LEAD_INTAKE_WEBHOOK_URL`** в env бэкенда (корневой `.env` читается Nest).
+- [ ] Проверить строку в Google Sheet после тестового `POST /api/leads/intake` и после прохождения модалки квала.
+
+**Док:** `docs/landing-crm-google-sheets-plan.md`, `apps/backend/README.md`.
 
 ---
 
 ## 3. Аналитика
 
 - [ ] Проверить **env** для GTM / dataLayer (см. `marketing-scripts.tsx`, `analytics-listeners.tsx`, `lib/analytics.ts`).
-- [ ] В проде: события доходят (signup, paywall, trial_started, generation_*, credits и т.д. — grep по `trackEvent`).
-- [ ] При необходимости: единая схема имён событий, документация для маркетинга, consent/cookie если нужно по юрисдикции.
+- [ ] В проде: события доходят (`signup_started`, `signup_completed`, `lead_qualification_*`, `trial_started`, `generation_*`, credits — grep по `trackEvent`).
+- [ ] При необходимости: единая схема имён событий для маркетинга.
 
 ---
 
 ## 4. Регрессионное тестирование
 
-После пунктов 1–3 (или параллельно по смоук-листу):
-
 - [ ] Auth: email + Google, sign-out, сессия после reload.
+- [ ] Квал: новый пользователь → модалка → CRM → `GET /auth/me` с `leadQualificationCompleted: true`.
 - [ ] Триал: `/welcome-trial` vs app по `trialStarted` из `/auth/me`.
-- [ ] Пайплайн / кредиты / paywall (в т.ч. без блока «How thumbnail runs debit credits» — если откатывать UI, проверить заново).
+- [ ] Пайплайн / кредиты / paywall.
 - [ ] Ключевые страницы: create, projects, variants, credits.
 
 ---
@@ -48,14 +57,14 @@
 
 | Вариант | Суть |
 |--------|------|
-| **Telegram-бот отдельно** | Например [telegram-support-bot](https://github.com/bostrot/telegram-support-bot) — свой процесс/Docker, тикеты в группе; в приложении — кнопка «Написать в Telegram». GPL-3.0 — держать отдельным репо/сервисом удобнее. |
-| **Виджет SaaS** | Tawk (бесплатный tier), Crisp, Help Scout, Zendesk — чат в углу сайта без Telegram у пользователя. |
-| **Свой виджет** | Кнопка внизу → модалка → `POST` на Nest → **почта** или **Telegram** (`sendMessage`). Почта: SMTP/DNS; **Telegram обычно проще** по интеграции, но везде нужны **rate limit** + валидация от спама. |
+| **Telegram-бот отдельно** | Например [telegram-support-bot](https://github.com/bostrot/telegram-support-bot) — свой процесс/Docker; в приложении — кнопка «Написать в Telegram». |
+| **Виджет SaaS** | Tawk, Crisp, Help Scout, Zendesk. |
+| **Свой виджет** | `POST` на Nest → почта или Telegram; нужны **rate limit** + валидация. |
 
-- [ ] Выбрать канал (Telegram-only / виджет / гибрид).
-- [ ] Если свой виджет: endpoint + секреты (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` или почтовый провайдер).
-- [ ] Повесить CTA в UI (например `AppShell` / settings / footer).
+- [ ] Выбрать канал.
+- [ ] Endpoint + секреты при своём виджете.
+- [ ] CTA в UI.
 
 ---
 
-*Файл можно переименовать или перенести в Notion — главное, что список собран в одном месте.*
+*Файл можно перенести в Notion — главное, что список собран в одном месте.*

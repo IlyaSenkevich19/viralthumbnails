@@ -17,6 +17,7 @@ import { BillingModule } from './modules/billing/billing.module';
 import { OpenRouterModule } from './modules/openrouter/openrouter.module';
 import { VideoThumbnailsModule } from './modules/video-thumbnails/video-thumbnails.module';
 import { ThumbnailPipelineModule } from './modules/thumbnail-pipeline/thumbnail-pipeline.module';
+import { LeadCrmModule } from './modules/lead-crm/lead-crm.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { ThumbnailPipelineModule } from './modules/thumbnail-pipeline/thumbnail-
       },
     ]),
     SupabaseModule,
+    LeadCrmModule,
     AuthModule,
     HealthModule,
     ProjectsModule,

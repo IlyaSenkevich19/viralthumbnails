@@ -16,6 +16,8 @@ Apply **в порядке номеров** на вашей БД (или чере
 | `009_pipeline_video_temp_storage_alignment.sql` | Видео temp для пайплайна |
 | `010_thumbnail_pipeline_jobs.sql` | Таблица job’ов пайплайна |
 | `011_thumbnail_pipeline_jobs_progress_and_active_guard.sql` | Прогресс и гварды job’ов |
+| `012_trial_start_gate.sql` | Поля/логика старта триала в `profiles` |
+| `013_lead_qualification_completed_at.sql` | Время завершения квала лида в приложении (`profiles.lead_qualification_completed_at`) |
 
 **Важно:** не удаляйте файлы миграций, которые уже применены в окружениях — это ломает историю. Новые изменения схемы — только **новыми** файлами с большим номером.
 

@@ -80,17 +80,6 @@ export default function RegisterPage() {
               <h1 className="min-w-0 text-3xl font-semibold tracking-tight text-foreground">
                 Create your <span className="text-primary">account</span>
               </h1>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Use Google or email. You&apos;ll answer a few quick questions right after you enter the app.
-              </p>
-            </div>
-
-            <GoogleSignInButton onClick={handleGoogle} loading={googleBusy} disabled={busy} />
-
-            <div className="flex items-center gap-2">
-              <div className="h-px flex-1 bg-border" />
-              <span className="text-xs text-muted-foreground">or</span>
-              <div className="h-px flex-1 bg-border" />
             </div>
 
             <motion.form
@@ -145,6 +134,14 @@ export default function RegisterPage() {
                 {busy ? 'Creating account…' : 'Create account →'}
               </Button>
             </motion.form>
+
+            <div className="flex items-center gap-2">
+              <div className="h-px flex-1 bg-border" />
+              <span className="text-xs text-muted-foreground">or</span>
+              <div className="h-px flex-1 bg-border" />
+            </div>
+
+            <GoogleSignInButton onClick={handleGoogle} loading={googleBusy} disabled={busy} />
           </>
         ) : (
           <motion.div

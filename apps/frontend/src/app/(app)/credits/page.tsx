@@ -82,18 +82,6 @@ export default function CreditsPricingPage() {
     <div className="space-y-10 pb-8">
       <SetPageFrame title="Credits" />
 
-      <div className="flex justify-end sm:justify-start">
-        <InfoHint
-          buttonLabel="About credits and this page"
-          helpBody={
-            <p className="text-foreground">
-              Credits fund thumbnail runs and edits. Your balance updates after each pipeline completes; refunds show up
-              automatically when a run fails mid-flight or credits are reconciled after a faulty job.
-            </p>
-          }
-        />
-      </div>
-
       <section className="surface-dashboard relative overflow-hidden rounded-2xl p-5 sm:p-6">
         <div
           className="pointer-events-none absolute -right-16 -top-20 h-52 w-52 rounded-full bg-primary/10 blur-3xl"

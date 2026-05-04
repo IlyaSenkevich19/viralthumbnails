@@ -39,16 +39,6 @@ export function AuthSplitLayout({ headerRight, children }: AuthSplitLayoutProps)
                 <br />
                 Generate thumbnails; revise until they stick.
               </h2>
-              <InfoHint
-                className="shrink-0"
-                buttonLabel="How ViralThumblify fits your workflow"
-                helpBody={
-                  <p>
-                    One flow covers typed prompts, file uploads, or a pasted YouTube link. Outputs stay anchored to real
-                    frames from your footage instead of drifting into generic composites.
-                  </p>
-                }
-              />
             </div>
           </div>
           <AuthThumbnailMarquee />

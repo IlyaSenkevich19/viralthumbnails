@@ -3,7 +3,6 @@
 import type { ReactNode } from 'react';
 import { BrandWordmark } from '@/components/layout/brand-wordmark';
 import { AuthThumbnailMarquee } from '@/components/auth/auth-thumbnail-marquee';
-import { InfoHint } from '@/components/ui/info-hint';
 
 type AuthSplitLayoutProps = {
   /** Right side of the header (e.g. Sign up / Sign in links). */

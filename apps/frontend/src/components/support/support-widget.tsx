@@ -3,6 +3,8 @@
 /**
  * Support contact → POST /api/support/contact → Telegram.
  * Keep markup/classes in sync with ViralThumbnailsLanding/components/SupportWidget.tsx
+ * Pointer-events: wrapper must stay `pointer-events-none`; only the launcher + open panel use `pointer-events-auto`
+ * so the inactive panel footprint does not block the page underneath.
  */
 
 import { useEffect, useState } from 'react';
@@ -114,7 +116,7 @@ export function SupportWidget({ source, defaultEmail = '', postUrl: postUrlProp 
   }
 
   return (
-    <div className="fixed bottom-5 right-5 z-50 flex flex-col items-end">
+    <div className="pointer-events-none fixed bottom-5 right-5 z-50 flex flex-col items-end">
       <div
         className={`mb-3 w-[320px] origin-bottom-right overflow-hidden rounded-2xl border border-zinc-700 bg-zinc-900 shadow-2xl shadow-black/40 transition-all duration-300 sm:w-[340px] ${
           open
@@ -264,7 +266,7 @@ export function SupportWidget({ source, defaultEmail = '', postUrl: postUrlProp 
         type="button"
         onClick={() => setOpen(!open)}
         aria-label={open ? 'Close support' : 'Open support'}
-        className={`relative flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-red-600 to-red-500 shadow-lg shadow-red-900/40 transition-all duration-300 hover:shadow-xl hover:shadow-red-900/50 ${
+        className={`pointer-events-auto relative flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-red-600 to-red-500 shadow-lg shadow-red-900/40 transition-all duration-300 hover:shadow-xl hover:shadow-red-900/50 ${
           mounted ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
         } ${open ? 'rotate-0' : 'hover:scale-105'}`}
       >

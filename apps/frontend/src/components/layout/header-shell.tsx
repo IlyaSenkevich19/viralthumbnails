@@ -100,7 +100,7 @@ export function HeaderShell({
   return (
     <header
       className={cn(
-        'sticky top-0 z-30 shrink-0 border-b border-border bg-card/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.08)] backdrop-blur-xl',
+        'sticky top-0 z-30 shrink-0 border-b border-border bg-card/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.08)] ring-1 ring-white/[0.04] backdrop-blur-xl',
         className,
       )}
     >

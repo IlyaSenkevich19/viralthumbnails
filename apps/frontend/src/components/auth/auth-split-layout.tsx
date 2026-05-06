@@ -28,8 +28,7 @@ export function AuthSplitLayout({ headerRight, children }: AuthSplitLayoutProps)
       </div>
 
       <div className="relative hidden w-1/2 items-center justify-center overflow-hidden border-l border-border bg-card text-foreground lg:flex">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(255,59,59,0.08),_transparent_55%),_radial-gradient(ellipse_at_bottom_left,_rgba(255,255,255,0.04),_transparent_55%)]" />
-        <div className="absolute inset-0 bg-[linear-gradient(to_bottom,_transparent_60%,_rgba(0,0,0,0.15))]" />
+        <div className="vt-ambient-auth-hero pointer-events-none absolute inset-0" aria-hidden />
         <div className="relative z-[2] w-full space-y-12 px-10">
           <div className="mx-auto max-w-xl space-y-6">
             <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">

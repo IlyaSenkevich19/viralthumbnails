@@ -20,7 +20,8 @@
 }
 
 :root {
-  --sidebar: #20242b;
+  /* Rail: closer to canvas so auth → app does not feel like a theme swap */
+  --sidebar: #252a32;
   --background: #2b3038;
   --foreground: #f2f4f8;
   --card: #343a44;
@@ -52,6 +53,20 @@
   --duration-slow: 320ms;
   --ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
   --route-progress-bar: color-mix(in srgb, var(--foreground) 55%, transparent);
+  /* Shared ambient lighting: auth hero (strong) vs app canvas (muted) */
+  --vt-ambient-auth-hero-image: radial-gradient(
+      ellipse 100% 82% at 100% 0%,
+      color-mix(in srgb, var(--primary) 12%, transparent),
+      transparent 55%
+    ),
+    radial-gradient(ellipse 62% 52% at 0% 100%, rgba(255, 255, 255, 0.05), transparent 55%),
+    linear-gradient(to bottom, transparent 60%, rgba(0, 0, 0, 0.15));
+  --vt-ambient-canvas-image: radial-gradient(
+      ellipse 92% 70% at 100% -4%,
+      color-mix(in srgb, var(--primary) 7%, transparent),
+      transparent 56%
+    ),
+    radial-gradient(ellipse 56% 44% at 0% 100%, rgba(255, 255, 255, 0.03), transparent 52%);
 }
 
 .light {
@@ -75,6 +90,20 @@
   --input: #e2e8f0;
   --ring: rgba(255, 59, 59, 0.35);
   --route-progress-bar: color-mix(in srgb, var(--foreground) 42%, transparent);
+  --sidebar: #f1f5f9;
+  --vt-ambient-auth-hero-image: radial-gradient(
+      ellipse 100% 82% at 100% 0%,
+      color-mix(in srgb, var(--primary) 9%, transparent),
+      transparent 55%
+    ),
+    radial-gradient(ellipse 62% 52% at 0% 100%, rgba(15, 23, 42, 0.05), transparent 55%),
+    linear-gradient(to bottom, transparent 62%, rgba(15, 23, 42, 0.06));
+  --vt-ambient-canvas-image: radial-gradient(
+      ellipse 92% 70% at 100% -4%,
+      color-mix(in srgb, var(--primary) 5%, transparent),
+      transparent 56%
+    ),
+    radial-gradient(ellipse 56% 44% at 0% 100%, rgba(15, 23, 42, 0.035), transparent 52%);
 }
 
 body {
@@ -129,6 +158,16 @@ textarea:-webkit-autofill:active {
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.06),
       var(--shadow-soft);
+  }
+
+  /** Auth marketing column: same layered light as token --vt-ambient-auth-hero-image */
+  .vt-ambient-auth-hero {
+    background-image: var(--vt-ambient-auth-hero-image);
+  }
+
+  /** App main column: muted continuity from auth / marketing side */
+  .vt-app-canvas-ambient {
+    background-image: var(--vt-ambient-canvas-image);
   }
 
   /** Dashboard create hub — same red/soft-light DNA as login hero panel */

@@ -12,6 +12,7 @@ import {
   useTemplateNiches,
   useTemplatesList,
 } from '@/lib/hooks';
+import { creditsForProjectVariantBatch } from '@/lib/credit-costs';
 import { assertSufficientCredits } from '@/lib/paywall-notify';
 import { pickThumbnailStyles } from '@/lib/thumbnail-style-matrix';
 import { toast } from 'sonner';
@@ -159,7 +160,7 @@ export function ProjectVariantsWorkspace({
       ),
     [generateCount],
   );
-  const generationCreditCost = clampedGenerateCount + 1;
+  const generationCreditCost = creditsForProjectVariantBatch(clampedGenerateCount);
 
   const handleGenerate = useCallback(() => {
     if (!accessToken) {
